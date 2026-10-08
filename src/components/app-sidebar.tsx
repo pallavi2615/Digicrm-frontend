@@ -13,7 +13,7 @@ import {
   Calendar, Video, BarChart3, Sparkles, FileText, Zap, Bell, Settings, ScrollText,
   Landmark, Home, Laptop, Package, Stethoscope, GraduationCap, ShieldCheck, Car, Plane, Factory,
   Rocket, LifeBuoy, Radio, Crown, Layers, Inbox, TrendingUp, Activity, Wallet, HandCoins,
-  Clock, IndianRupee, CreditCard, BookOpen, Store, Palette, ShoppingBag,
+  Clock, IndianRupee, CreditCard, BookOpen, Store, Palette, ShoppingBag,Target, MapPin, Network,Handshake,
   type LucideIcon,
 } from "lucide-react";
 
@@ -24,6 +24,7 @@ type NavItem = {
   adminOnly?: boolean;
   superAdminOnly?: boolean;
   managerUp?: boolean;
+  industries?: string[];
 };
 
 const primary: NavItem[] = [
@@ -77,6 +78,20 @@ const industrySubNav: Record<string, NavItem[]> = {
     { title: "Tickets & Tasks", url: "/it/tickets", icon: CheckSquare },
     { title: "Pipeline", url: "/it/pipeline", icon: TrendingUp },
   ],
+  "/realestate": [
+    { title: "Dashboard", url: "/realestate", icon: LayoutDashboard },
+    { title: "Lead360", url: "/realestate/leads", icon: Users },
+    { title: "Projects & Inventory", url: "/realestate/projects", icon: Building2 },
+    { title: "MatchAI", url: "/realestate/match", icon: Target },
+    { title: "Site Visits", url: "/realestate/visits", icon: MapPin },
+    { title: "Pipeline", url: "/realestate/pipeline", icon: KanbanSquare },
+    { title: "Deals & Payments", url: "/realestate/deals", icon: Handshake },
+    { title: "Partners & Routing", url: "/realestate/partners", icon: Network },
+    { title: "AI Copilot", url: "/realestate/copilot", icon: Sparkles },
+    { title: "Analytics", url: "/realestate/analytics", icon: BarChart3 },
+    { title: "Clients & KYC", url: "/realestate/clients", icon: UserCircle },
+    { title: "Listings", url: "/realestate/properties", icon: Home },
+  ],
 };
 
 const insights: NavItem[] = [
@@ -97,9 +112,9 @@ const system: NavItem[] = [
   { title: "Partner Payouts", url: "/partner", icon: HandCoins },
   { title: "Education AI", url: "/education-setup", icon: GraduationCap },
   { title: "DigiPortal", url: "/portal", icon: Layers },
-  { title: "Buyer Portal", url: "/buyer", icon: ShoppingBag },
-  { title: "Student Portal", url: "/student-portal", icon: Home },
-  { title: "Brand Portal", url: "/brand", icon: Palette },
+  { title: "Buyer Portal", url: "/buyer", icon: ShoppingBag,industries: ["property"] },
+  { title: "Student Portal", url: "/student-portal", icon: Home, industries: ["education", "coaching"] },
+  { title: "Brand Portal", url: "/brand", icon: Palette, industries: ["creator"] },
   { title: "Notifications", url: "/notifications", icon: Bell },
   { title: "Feature Matrix", url: "/feature-matrix", icon: ShieldCheck, adminOnly: true },
   { title: "Settings", url: "/settings", icon: Settings },
@@ -194,13 +209,19 @@ export function AppSidebar() {
       : "Industry CRMs";
 
   const filterByRole = (items: NavItem[]): NavItem[] => {
-    return items.filter((item) => {
-      if (item.superAdminOnly) return isSuperAdmin;
-      if (item.adminOnly) return isAdmin;
-      if (item.managerUp) return isManager;
-      return true;
-    });
-  };
+  return items.filter((item) => {
+    if (item.superAdminOnly) return isSuperAdmin;
+    if (item.adminOnly) return isAdmin;
+    if (item.managerUp) return isManager;
+    if (item.industries && item.industries.length > 0) {
+      if (isSuperAdmin) return true;
+      if (!activeGroup) return false;
+      return item.industries.includes(activeGroup);
+    }
+
+    return true;
+  });
+};
 
   const renderGroup = (label: string, items: NavItem[]) => {
     const visibleItems = filterByRole(items);

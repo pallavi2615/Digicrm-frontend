@@ -141,7 +141,7 @@ function VisitsPage() {
             const unit = units.find((u: any) => u.id === v.property_id);
             return (
               <div key={v.id} className="border rounded-md p-3 flex flex-wrap gap-3 items-start">
-                <div className="min-w-[180px]">
+                <div className="min-w-45">
                   <div className="font-medium">{lead?.full_name ?? "—"}</div>
                   <div className="text-xs text-muted-foreground">{unit?.title ?? "—"}</div>
                 </div>

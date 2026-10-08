@@ -20,20 +20,20 @@ export const Route = createFileRoute("/_authenticated/realestate")({
   component: RealEstateLayout,
 });
 
-const tabs = [
-  { to: "/realestate", label: "Dashboard", icon: LayoutDashboard, exact: true },
-  { to: "/realestate/leads", label: "Lead360", icon: Users },
-  { to: "/realestate/projects", label: "Projects & Inventory", icon: Building2 },
-  { to: "/realestate/match", label: "MatchAI", icon: Target },
-  { to: "/realestate/visits", label: "Site Visits", icon: MapPin },
-  { to: "/realestate/pipeline", label: "Pipeline", icon: KanbanSquare },
-  { to: "/realestate/deals", label: "Deals & Payments", icon: Handshake },
-  { to: "/realestate/partners", label: "Partners & Routing", icon: Network },
-  { to: "/realestate/copilot", label: "AI Copilot", icon: Sparkles },
-  { to: "/realestate/analytics", label: "Analytics", icon: BarChart3 },
-  { to: "/realestate/clients", label: "Clients & KYC", icon: UserCircle },
-  { to: "/realestate/properties", label: "Listings", icon: HomeIcon },
-];
+// const tabs = [
+//   { to: "/realestate", label: "Dashboard", icon: LayoutDashboard, exact: true },
+//   { to: "/realestate/leads", label: "Lead360", icon: Users },
+//   { to: "/realestate/projects", label: "Projects & Inventory", icon: Building2 },
+//   { to: "/realestate/match", label: "MatchAI", icon: Target },
+//   { to: "/realestate/visits", label: "Site Visits", icon: MapPin },
+//   { to: "/realestate/pipeline", label: "Pipeline", icon: KanbanSquare },
+//   { to: "/realestate/deals", label: "Deals & Payments", icon: Handshake },
+//   { to: "/realestate/partners", label: "Partners & Routing", icon: Network },
+//   { to: "/realestate/copilot", label: "AI Copilot", icon: Sparkles },
+//   { to: "/realestate/analytics", label: "Analytics", icon: BarChart3 },
+//   { to: "/realestate/clients", label: "Clients & KYC", icon: UserCircle },
+//   { to: "/realestate/properties", label: "Listings", icon: HomeIcon },
+// ];
 
 function RealEstateLayout() {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
@@ -55,7 +55,7 @@ function RealEstateLayout() {
               </p>
             </div>
           </div>
-          <nav className="flex gap-1 overflow-x-auto -mb-px">
+          {/* <nav className="flex gap-1 overflow-x-auto -mb-px">
             {tabs.map((t) => (
               <Link
                 key={t.to}
@@ -71,7 +71,7 @@ function RealEstateLayout() {
                 {t.label}
               </Link>
             ))}
-          </nav>
+          </nav> */}
         </div>
       </div>
       <div className="flex-1 overflow-auto">
