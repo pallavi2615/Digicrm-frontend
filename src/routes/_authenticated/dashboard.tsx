@@ -249,18 +249,18 @@ async function fetchMonthlyRevenue(): Promise<RevenueItem[]> {
   return rows.map((item, index) => ({
     label: stringValue(
       item.label ??
-        item.month ??
-        item.month_name ??
-        item.period ??
-        item.name,
+      item.month ??
+      item.month_name ??
+      item.period ??
+      item.name,
       `Month ${index + 1}`
     ),
 
     revenue: numberValue(
       item.revenue ??
-        item.amount ??
-        item.value ??
-        item.total_revenue
+      item.amount ??
+      item.value ??
+      item.total_revenue
     ),
 
     deals:
@@ -286,16 +286,16 @@ async function fetchSources(): Promise<SourceItem[]> {
   return rows.map((item) => ({
     name: stringValue(
       item.name ??
-        item.source ??
-        item.label,
+      item.source ??
+      item.label,
       "Unknown"
     ),
 
     value: numberValue(
       item.value ??
-        item.count ??
-        item.lead_count ??
-        item.total
+      item.count ??
+      item.lead_count ??
+      item.total
     ),
   }));
 }
@@ -317,16 +317,16 @@ async function fetchFunnel(): Promise<FunnelItem[]> {
   return rows.map((item) => ({
     stage: stringValue(
       item.label ??
-        item.stage ??
-        item.name,
+      item.stage ??
+      item.name,
       "Unknown"
     ),
 
     value: numberValue(
       item.count ??
-        item.value ??
-        item.lead_count ??
-        item.total
+      item.value ??
+      item.lead_count ??
+      item.total
     ),
   }));
 }
@@ -378,24 +378,24 @@ async function fetchPipeline(): Promise<PipelineItem[]> {
   return rows.map((item) => ({
     stage: stringValue(
       item.stage ??
-        item.pipeline_stage ??
-        item.name ??
-        item.label,
+      item.pipeline_stage ??
+      item.name ??
+      item.label,
       "Unknown"
     ),
 
     count: numberValue(
       item.count ??
-        item.proposal_count ??
-        item.deal_count ??
-        item.total
+      item.proposal_count ??
+      item.deal_count ??
+      item.total
     ),
 
     value: numberValue(
       item.value ??
-        item.pipeline_value ??
-        item.amount ??
-        item.total_value
+      item.pipeline_value ??
+      item.amount ??
+      item.total_value
     ),
   }));
 }
@@ -429,19 +429,19 @@ async function fetchTopPerformers(): Promise<PerformerItem[]> {
   return rows.map((item, index) => ({
     name: stringValue(
       item.owner ??
-        item.name ??
-        item.owner_name ??
-        item.user_name ??
-        item.full_name ??
-        item.source,
+      item.name ??
+      item.owner_name ??
+      item.user_name ??
+      item.full_name ??
+      item.source,
       `Performer ${index + 1}`
     ),
 
     revenue: numberValue(
       item.revenue ??
-        item.total_revenue ??
-        item.amount ??
-        item.value
+      item.total_revenue ??
+      item.amount ??
+      item.value
     ),
 
     deals:
@@ -542,9 +542,8 @@ function KpiCard({
           </div>
 
           <div
-            className={`h-10 w-10 rounded-lg flex items-center justify-center ${
-              accent ?? "bg-primary/10 text-primary"
-            }`}
+            className={`h-10 w-10 rounded-lg flex items-center justify-center ${accent ?? "bg-primary/10 text-primary"
+              }`}
           >
             <Icon className="h-5 w-5" />
           </div>
@@ -721,9 +720,8 @@ function SortableKpi({
     <div
       ref={setNodeRef}
       style={style}
-      className={`relative ${
-        editing ? "ring-2 ring-primary/30 rounded-xl" : ""
-      }`}
+      className={`relative ${editing ? "ring-2 ring-primary/30 rounded-xl" : ""
+        }`}
     >
       {editing && (
         <div className="absolute top-1 right-1 z-10 flex gap-0.5">
@@ -1328,8 +1326,8 @@ function Dashboard() {
                             key={i}
                             fill={
                               CHART_RAW[
-                                i %
-                                  CHART_RAW.length
+                              i %
+                              CHART_RAW.length
                               ]
                             }
                           />
@@ -1339,13 +1337,15 @@ function Dashboard() {
 
                     <Tooltip
                       contentStyle={{
-                        background:
-                          "var(--popover)",
-                        border:
-                          "1px solid var(--border)",
+                        background: "var(--popover)",
+                        border: "1px solid var(--border)",
                         borderRadius: 8,
-                        color:
-                          "var(--popover-foreground)",
+                      }}
+                      itemStyle={{
+                        color: "var(--popover-foreground)",
+                      }}
+                      labelStyle={{
+                        color: "var(--popover-foreground)",
                       }}
                     />
 

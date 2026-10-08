@@ -46,12 +46,12 @@ import { Route as AuthenticatedSettingsPackRouteImport } from './routes/_authent
 import { Route as AuthenticatedSettingsCmsRouteImport } from './routes/_authenticated/settings-cms'
 import { Route as AuthenticatedSettingsRouteImport } from './routes/_authenticated/settings'
 import { Route as AuthenticatedReportsRouteImport } from './routes/_authenticated/reports'
-import { Route as AuthenticatedRealestateRouteImport } from './routes/_authenticated/realestate'
 import { Route as AuthenticatedProposalsRouteImport } from './routes/_authenticated/proposals'
 import { Route as AuthenticatedProductsalesRouteImport } from './routes/_authenticated/productsales'
 import { Route as AuthenticatedPortalRouteImport } from './routes/_authenticated/portal'
 import { Route as AuthenticatedPipelineRouteImport } from './routes/_authenticated/pipeline'
 import { Route as AuthenticatedPayoutHistoryRouteImport } from './routes/_authenticated/payout-history'
+import { Route as AuthenticatedPayoutAccountsRouteImport } from './routes/_authenticated/payout-accounts'
 import { Route as AuthenticatedPaymentsRouteImport } from './routes/_authenticated/payments'
 import { Route as AuthenticatedPartnerRouteImport } from './routes/_authenticated/partner'
 import { Route as AuthenticatedOnboardingRouteImport } from './routes/_authenticated/onboarding'
@@ -66,6 +66,7 @@ import { Route as AuthenticatedInboundRouteImport } from './routes/_authenticate
 import { Route as AuthenticatedFollowupsRouteImport } from './routes/_authenticated/followups'
 import { Route as AuthenticatedFintechRouteImport } from './routes/_authenticated/fintech'
 import { Route as AuthenticatedFeatureMatrixRouteImport } from './routes/_authenticated/feature-matrix'
+import { Route as AuthenticatedEducationSetupRouteImport } from './routes/_authenticated/education-setup'
 import { Route as AuthenticatedDigiverifyRouteImport } from './routes/_authenticated/digiverify'
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
 import { Route as AuthenticatedContactsRouteImport } from './routes/_authenticated/contacts'
@@ -73,24 +74,37 @@ import { Route as AuthenticatedCompaniesRouteImport } from './routes/_authentica
 import { Route as AuthenticatedChooseIndustryRouteImport } from './routes/_authenticated/choose-industry'
 import { Route as AuthenticatedCashflowRouteImport } from './routes/_authenticated/cashflow'
 import { Route as AuthenticatedCalendarRouteImport } from './routes/_authenticated/calendar'
+import { Route as AuthenticatedBuyerRouteImport } from './routes/_authenticated/buyer'
+import { Route as AuthenticatedBrandRouteImport } from './routes/_authenticated/brand'
 import { Route as AuthenticatedAutomationRouteImport } from './routes/_authenticated/automation'
 import { Route as AuthenticatedAuditLogsRouteImport } from './routes/_authenticated/audit-logs'
 import { Route as AuthenticatedAiRouteImport } from './routes/_authenticated/ai'
 import { Route as AuthenticatedAffiliatesRouteImport } from './routes/_authenticated/affiliates'
+import { Route as AuthenticatedAdminTemplatesRouteImport } from './routes/_authenticated/admin-templates'
 import { Route as AuthenticatedAdminPacksRouteImport } from './routes/_authenticated/admin-packs'
 import { Route as AuthenticatedAdminRouteImport } from './routes/_authenticated/admin'
+import { Route as AuthenticatedRealestateRouteRouteImport } from './routes/_authenticated/realestate/route'
 import { Route as IndustriesGroupIndexRouteImport } from './routes/industries.$group.index'
-import { Route as AuthenticatedRealestateIndexRouteImport } from './routes/_authenticated/realestate.index'
+import { Route as AuthenticatedRealestateIndexRouteImport } from './routes/_authenticated/realestate/index'
 import { Route as AuthenticatedProductsalesIndexRouteImport } from './routes/_authenticated/productsales.index'
 import { Route as AuthenticatedPacksIndexRouteImport } from './routes/_authenticated/packs.index'
 import { Route as AuthenticatedItIndexRouteImport } from './routes/_authenticated/it.index'
 import { Route as AuthenticatedFintechIndexRouteImport } from './routes/_authenticated/fintech.index'
+import { Route as AuthenticatedBrandIndexRouteImport } from './routes/_authenticated/brand.index'
 import { Route as IndustriesGroupSlugRouteImport } from './routes/industries.$group.$slug'
 import { Route as ApiPublicRolePdfRouteImport } from './routes/api/public/role-pdf'
 import { Route as AuthenticatedTicketsIdRouteImport } from './routes/_authenticated/tickets_.$id'
-import { Route as AuthenticatedRealestatePropertiesRouteImport } from './routes/_authenticated/realestate.properties'
-import { Route as AuthenticatedRealestatePipelineRouteImport } from './routes/_authenticated/realestate.pipeline'
-import { Route as AuthenticatedRealestateClientsRouteImport } from './routes/_authenticated/realestate.clients'
+import { Route as AuthenticatedRealestateVisitsRouteImport } from './routes/_authenticated/realestate/visits'
+import { Route as AuthenticatedRealestatePropertiesRouteImport } from './routes/_authenticated/realestate/properties'
+import { Route as AuthenticatedRealestateProjectsRouteImport } from './routes/_authenticated/realestate/projects'
+import { Route as AuthenticatedRealestatePipelineRouteImport } from './routes/_authenticated/realestate/pipeline'
+import { Route as AuthenticatedRealestatePartnersRouteImport } from './routes/_authenticated/realestate/partners'
+import { Route as AuthenticatedRealestateMatchRouteImport } from './routes/_authenticated/realestate/match'
+import { Route as AuthenticatedRealestateLeadsRouteImport } from './routes/_authenticated/realestate/leads'
+import { Route as AuthenticatedRealestateDealsRouteImport } from './routes/_authenticated/realestate/deals'
+import { Route as AuthenticatedRealestateCopilotRouteImport } from './routes/_authenticated/realestate/copilot'
+import { Route as AuthenticatedRealestateClientsRouteImport } from './routes/_authenticated/realestate/clients'
+import { Route as AuthenticatedRealestateAnalyticsRouteImport } from './routes/_authenticated/realestate/analytics'
 import { Route as AuthenticatedProductsalesProductsRouteImport } from './routes/_authenticated/productsales.products'
 import { Route as AuthenticatedProductsalesOrdersRouteImport } from './routes/_authenticated/productsales.orders'
 import { Route as AuthenticatedProductsalesCommissionsRouteImport } from './routes/_authenticated/productsales.commissions'
@@ -102,10 +116,13 @@ import { Route as AuthenticatedFintechPipelineRouteImport } from './routes/_auth
 import { Route as AuthenticatedFintechLendersRouteImport } from './routes/_authenticated/fintech.lenders'
 import { Route as AuthenticatedFintechCommissionsRouteImport } from './routes/_authenticated/fintech.commissions'
 import { Route as AuthenticatedFintechApplicationsRouteImport } from './routes/_authenticated/fintech.applications'
+import { Route as AuthenticatedBrandMarketplaceRouteImport } from './routes/_authenticated/brand.marketplace'
+import { Route as AuthenticatedBrandCampaignsRouteImport } from './routes/_authenticated/brand.campaigns'
 import { Route as AuthenticatedIndustrySlugIndexRouteImport } from './routes/_authenticated/industry.$slug.index'
 import { Route as PortalApplyGroupSlugRouteImport } from './routes/portal.apply.$group.$slug'
 import { Route as AuthenticatedPacksGroupSlugRouteImport } from './routes/_authenticated/packs.$group.$slug'
 import { Route as AuthenticatedIndustrySlugSectionRouteImport } from './routes/_authenticated/industry.$slug.$section'
+import { Route as AuthenticatedBrandCampaignIdRouteImport } from './routes/_authenticated/brand.campaign.$id'
 import { Route as AuthenticatedAffiliatesIdReferralsRouteImport } from './routes/_authenticated/affiliates_.$id.referrals'
 import { Route as ApiPublicInboundMetaTenantSlugRouteImport } from './routes/api/public/inbound.meta.$tenantSlug'
 import { Route as ApiPublicInboundLeadsTenantSlugRouteImport } from './routes/api/public/inbound.leads.$tenantSlug'
@@ -303,11 +320,6 @@ const AuthenticatedReportsRoute = AuthenticatedReportsRouteImport.update({
   path: '/reports',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
-const AuthenticatedRealestateRoute = AuthenticatedRealestateRouteImport.update({
-  id: '/realestate',
-  path: '/realestate',
-  getParentRoute: () => AuthenticatedRouteRoute,
-} as any)
 const AuthenticatedProposalsRoute = AuthenticatedProposalsRouteImport.update({
   id: '/proposals',
   path: '/proposals',
@@ -333,6 +345,12 @@ const AuthenticatedPayoutHistoryRoute =
   AuthenticatedPayoutHistoryRouteImport.update({
     id: '/payout-history',
     path: '/payout-history',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedPayoutAccountsRoute =
+  AuthenticatedPayoutAccountsRouteImport.update({
+    id: '/payout-accounts',
+    path: '/payout-accounts',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
 const AuthenticatedPaymentsRoute = AuthenticatedPaymentsRouteImport.update({
@@ -410,6 +428,12 @@ const AuthenticatedFeatureMatrixRoute =
     path: '/feature-matrix',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
+const AuthenticatedEducationSetupRoute =
+  AuthenticatedEducationSetupRouteImport.update({
+    id: '/education-setup',
+    path: '/education-setup',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedDigiverifyRoute = AuthenticatedDigiverifyRouteImport.update({
   id: '/digiverify',
   path: '/digiverify',
@@ -446,6 +470,16 @@ const AuthenticatedCalendarRoute = AuthenticatedCalendarRouteImport.update({
   path: '/calendar',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedBuyerRoute = AuthenticatedBuyerRouteImport.update({
+  id: '/buyer',
+  path: '/buyer',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedBrandRoute = AuthenticatedBrandRouteImport.update({
+  id: '/brand',
+  path: '/brand',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const AuthenticatedAutomationRoute = AuthenticatedAutomationRouteImport.update({
   id: '/automation',
   path: '/automation',
@@ -466,6 +500,12 @@ const AuthenticatedAffiliatesRoute = AuthenticatedAffiliatesRouteImport.update({
   path: '/affiliates',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedAdminTemplatesRoute =
+  AuthenticatedAdminTemplatesRouteImport.update({
+    id: '/admin-templates',
+    path: '/admin-templates',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedAdminPacksRoute = AuthenticatedAdminPacksRouteImport.update({
   id: '/admin-packs',
   path: '/admin-packs',
@@ -476,6 +516,12 @@ const AuthenticatedAdminRoute = AuthenticatedAdminRouteImport.update({
   path: '/admin',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedRealestateRouteRoute =
+  AuthenticatedRealestateRouteRouteImport.update({
+    id: '/realestate',
+    path: '/realestate',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const IndustriesGroupIndexRoute = IndustriesGroupIndexRouteImport.update({
   id: '/',
   path: '/',
@@ -485,7 +531,7 @@ const AuthenticatedRealestateIndexRoute =
   AuthenticatedRealestateIndexRouteImport.update({
     id: '/',
     path: '/',
-    getParentRoute: () => AuthenticatedRealestateRoute,
+    getParentRoute: () => AuthenticatedRealestateRouteRoute,
   } as any)
 const AuthenticatedProductsalesIndexRoute =
   AuthenticatedProductsalesIndexRouteImport.update({
@@ -509,6 +555,11 @@ const AuthenticatedFintechIndexRoute =
     path: '/',
     getParentRoute: () => AuthenticatedFintechRoute,
   } as any)
+const AuthenticatedBrandIndexRoute = AuthenticatedBrandIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => AuthenticatedBrandRoute,
+} as any)
 const IndustriesGroupSlugRoute = IndustriesGroupSlugRouteImport.update({
   id: '/$slug',
   path: '/$slug',
@@ -524,23 +575,71 @@ const AuthenticatedTicketsIdRoute = AuthenticatedTicketsIdRouteImport.update({
   path: '/tickets/$id',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedRealestateVisitsRoute =
+  AuthenticatedRealestateVisitsRouteImport.update({
+    id: '/visits',
+    path: '/visits',
+    getParentRoute: () => AuthenticatedRealestateRouteRoute,
+  } as any)
 const AuthenticatedRealestatePropertiesRoute =
   AuthenticatedRealestatePropertiesRouteImport.update({
     id: '/properties',
     path: '/properties',
-    getParentRoute: () => AuthenticatedRealestateRoute,
+    getParentRoute: () => AuthenticatedRealestateRouteRoute,
+  } as any)
+const AuthenticatedRealestateProjectsRoute =
+  AuthenticatedRealestateProjectsRouteImport.update({
+    id: '/projects',
+    path: '/projects',
+    getParentRoute: () => AuthenticatedRealestateRouteRoute,
   } as any)
 const AuthenticatedRealestatePipelineRoute =
   AuthenticatedRealestatePipelineRouteImport.update({
     id: '/pipeline',
     path: '/pipeline',
-    getParentRoute: () => AuthenticatedRealestateRoute,
+    getParentRoute: () => AuthenticatedRealestateRouteRoute,
+  } as any)
+const AuthenticatedRealestatePartnersRoute =
+  AuthenticatedRealestatePartnersRouteImport.update({
+    id: '/partners',
+    path: '/partners',
+    getParentRoute: () => AuthenticatedRealestateRouteRoute,
+  } as any)
+const AuthenticatedRealestateMatchRoute =
+  AuthenticatedRealestateMatchRouteImport.update({
+    id: '/match',
+    path: '/match',
+    getParentRoute: () => AuthenticatedRealestateRouteRoute,
+  } as any)
+const AuthenticatedRealestateLeadsRoute =
+  AuthenticatedRealestateLeadsRouteImport.update({
+    id: '/leads',
+    path: '/leads',
+    getParentRoute: () => AuthenticatedRealestateRouteRoute,
+  } as any)
+const AuthenticatedRealestateDealsRoute =
+  AuthenticatedRealestateDealsRouteImport.update({
+    id: '/deals',
+    path: '/deals',
+    getParentRoute: () => AuthenticatedRealestateRouteRoute,
+  } as any)
+const AuthenticatedRealestateCopilotRoute =
+  AuthenticatedRealestateCopilotRouteImport.update({
+    id: '/copilot',
+    path: '/copilot',
+    getParentRoute: () => AuthenticatedRealestateRouteRoute,
   } as any)
 const AuthenticatedRealestateClientsRoute =
   AuthenticatedRealestateClientsRouteImport.update({
     id: '/clients',
     path: '/clients',
-    getParentRoute: () => AuthenticatedRealestateRoute,
+    getParentRoute: () => AuthenticatedRealestateRouteRoute,
+  } as any)
+const AuthenticatedRealestateAnalyticsRoute =
+  AuthenticatedRealestateAnalyticsRouteImport.update({
+    id: '/analytics',
+    path: '/analytics',
+    getParentRoute: () => AuthenticatedRealestateRouteRoute,
   } as any)
 const AuthenticatedProductsalesProductsRoute =
   AuthenticatedProductsalesProductsRouteImport.update({
@@ -605,6 +704,18 @@ const AuthenticatedFintechApplicationsRoute =
     path: '/applications',
     getParentRoute: () => AuthenticatedFintechRoute,
   } as any)
+const AuthenticatedBrandMarketplaceRoute =
+  AuthenticatedBrandMarketplaceRouteImport.update({
+    id: '/marketplace',
+    path: '/marketplace',
+    getParentRoute: () => AuthenticatedBrandRoute,
+  } as any)
+const AuthenticatedBrandCampaignsRoute =
+  AuthenticatedBrandCampaignsRouteImport.update({
+    id: '/campaigns',
+    path: '/campaigns',
+    getParentRoute: () => AuthenticatedBrandRoute,
+  } as any)
 const AuthenticatedIndustrySlugIndexRoute =
   AuthenticatedIndustrySlugIndexRouteImport.update({
     id: '/',
@@ -627,6 +738,12 @@ const AuthenticatedIndustrySlugSectionRoute =
     id: '/$section',
     path: '/$section',
     getParentRoute: () => AuthenticatedIndustrySlugRoute,
+  } as any)
+const AuthenticatedBrandCampaignIdRoute =
+  AuthenticatedBrandCampaignIdRouteImport.update({
+    id: '/campaign/$id',
+    path: '/campaign/$id',
+    getParentRoute: () => AuthenticatedBrandRoute,
   } as any)
 const AuthenticatedAffiliatesIdReferralsRoute =
   AuthenticatedAffiliatesIdReferralsRouteImport.update({
@@ -661,12 +778,16 @@ export interface FileRoutesByFullPath {
   '/products': typeof ProductsRouteWithChildren
   '/reset-password': typeof ResetPasswordRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
+  '/realestate': typeof AuthenticatedRealestateRouteRouteWithChildren
   '/admin': typeof AuthenticatedAdminRoute
   '/admin-packs': typeof AuthenticatedAdminPacksRoute
+  '/admin-templates': typeof AuthenticatedAdminTemplatesRoute
   '/affiliates': typeof AuthenticatedAffiliatesRoute
   '/ai': typeof AuthenticatedAiRoute
   '/audit-logs': typeof AuthenticatedAuditLogsRoute
   '/automation': typeof AuthenticatedAutomationRoute
+  '/brand': typeof AuthenticatedBrandRouteWithChildren
+  '/buyer': typeof AuthenticatedBuyerRoute
   '/calendar': typeof AuthenticatedCalendarRoute
   '/cashflow': typeof AuthenticatedCashflowRoute
   '/choose-industry': typeof AuthenticatedChooseIndustryRoute
@@ -674,6 +795,7 @@ export interface FileRoutesByFullPath {
   '/contacts': typeof AuthenticatedContactsRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/digiverify': typeof AuthenticatedDigiverifyRoute
+  '/education-setup': typeof AuthenticatedEducationSetupRoute
   '/feature-matrix': typeof AuthenticatedFeatureMatrixRoute
   '/fintech': typeof AuthenticatedFintechRouteWithChildren
   '/followups': typeof AuthenticatedFollowupsRoute
@@ -688,12 +810,12 @@ export interface FileRoutesByFullPath {
   '/onboarding': typeof AuthenticatedOnboardingRoute
   '/partner': typeof AuthenticatedPartnerRoute
   '/payments': typeof AuthenticatedPaymentsRoute
+  '/payout-accounts': typeof AuthenticatedPayoutAccountsRoute
   '/payout-history': typeof AuthenticatedPayoutHistoryRoute
   '/pipeline': typeof AuthenticatedPipelineRoute
   '/portal': typeof AuthenticatedPortalRoute
   '/productsales': typeof AuthenticatedProductsalesRouteWithChildren
   '/proposals': typeof AuthenticatedProposalsRoute
-  '/realestate': typeof AuthenticatedRealestateRouteWithChildren
   '/reports': typeof AuthenticatedReportsRoute
   '/settings': typeof AuthenticatedSettingsRoute
   '/settings-cms': typeof AuthenticatedSettingsCmsRoute
@@ -717,6 +839,8 @@ export interface FileRoutesByFullPath {
   '/blog/': typeof BlogIndexRoute
   '/industries/': typeof IndustriesIndexRoute
   '/products/': typeof ProductsIndexRoute
+  '/brand/campaigns': typeof AuthenticatedBrandCampaignsRoute
+  '/brand/marketplace': typeof AuthenticatedBrandMarketplaceRoute
   '/fintech/applications': typeof AuthenticatedFintechApplicationsRoute
   '/fintech/commissions': typeof AuthenticatedFintechCommissionsRoute
   '/fintech/lenders': typeof AuthenticatedFintechLendersRoute
@@ -728,12 +852,21 @@ export interface FileRoutesByFullPath {
   '/productsales/commissions': typeof AuthenticatedProductsalesCommissionsRoute
   '/productsales/orders': typeof AuthenticatedProductsalesOrdersRoute
   '/productsales/products': typeof AuthenticatedProductsalesProductsRoute
+  '/realestate/analytics': typeof AuthenticatedRealestateAnalyticsRoute
   '/realestate/clients': typeof AuthenticatedRealestateClientsRoute
+  '/realestate/copilot': typeof AuthenticatedRealestateCopilotRoute
+  '/realestate/deals': typeof AuthenticatedRealestateDealsRoute
+  '/realestate/leads': typeof AuthenticatedRealestateLeadsRoute
+  '/realestate/match': typeof AuthenticatedRealestateMatchRoute
+  '/realestate/partners': typeof AuthenticatedRealestatePartnersRoute
   '/realestate/pipeline': typeof AuthenticatedRealestatePipelineRoute
+  '/realestate/projects': typeof AuthenticatedRealestateProjectsRoute
   '/realestate/properties': typeof AuthenticatedRealestatePropertiesRoute
+  '/realestate/visits': typeof AuthenticatedRealestateVisitsRoute
   '/tickets/$id': typeof AuthenticatedTicketsIdRoute
   '/api/public/role-pdf': typeof ApiPublicRolePdfRoute
   '/industries/$group/$slug': typeof IndustriesGroupSlugRoute
+  '/brand/': typeof AuthenticatedBrandIndexRoute
   '/fintech/': typeof AuthenticatedFintechIndexRoute
   '/it/': typeof AuthenticatedItIndexRoute
   '/packs/': typeof AuthenticatedPacksIndexRoute
@@ -741,6 +874,7 @@ export interface FileRoutesByFullPath {
   '/realestate/': typeof AuthenticatedRealestateIndexRoute
   '/industries/$group/': typeof IndustriesGroupIndexRoute
   '/affiliates/$id/referrals': typeof AuthenticatedAffiliatesIdReferralsRoute
+  '/brand/campaign/$id': typeof AuthenticatedBrandCampaignIdRoute
   '/industry/$slug/$section': typeof AuthenticatedIndustrySlugSectionRoute
   '/packs/$group/$slug': typeof AuthenticatedPacksGroupSlugRoute
   '/portal/apply/$group/$slug': typeof PortalApplyGroupSlugRoute
@@ -762,10 +896,12 @@ export interface FileRoutesByTo {
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/admin': typeof AuthenticatedAdminRoute
   '/admin-packs': typeof AuthenticatedAdminPacksRoute
+  '/admin-templates': typeof AuthenticatedAdminTemplatesRoute
   '/affiliates': typeof AuthenticatedAffiliatesRoute
   '/ai': typeof AuthenticatedAiRoute
   '/audit-logs': typeof AuthenticatedAuditLogsRoute
   '/automation': typeof AuthenticatedAutomationRoute
+  '/buyer': typeof AuthenticatedBuyerRoute
   '/calendar': typeof AuthenticatedCalendarRoute
   '/cashflow': typeof AuthenticatedCashflowRoute
   '/choose-industry': typeof AuthenticatedChooseIndustryRoute
@@ -773,6 +909,7 @@ export interface FileRoutesByTo {
   '/contacts': typeof AuthenticatedContactsRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/digiverify': typeof AuthenticatedDigiverifyRoute
+  '/education-setup': typeof AuthenticatedEducationSetupRoute
   '/feature-matrix': typeof AuthenticatedFeatureMatrixRoute
   '/followups': typeof AuthenticatedFollowupsRoute
   '/inbound': typeof AuthenticatedInboundRoute
@@ -785,6 +922,7 @@ export interface FileRoutesByTo {
   '/onboarding': typeof AuthenticatedOnboardingRoute
   '/partner': typeof AuthenticatedPartnerRoute
   '/payments': typeof AuthenticatedPaymentsRoute
+  '/payout-accounts': typeof AuthenticatedPayoutAccountsRoute
   '/payout-history': typeof AuthenticatedPayoutHistoryRoute
   '/pipeline': typeof AuthenticatedPipelineRoute
   '/portal': typeof AuthenticatedPortalRoute
@@ -811,6 +949,8 @@ export interface FileRoutesByTo {
   '/blog': typeof BlogIndexRoute
   '/industries': typeof IndustriesIndexRoute
   '/products': typeof ProductsIndexRoute
+  '/brand/campaigns': typeof AuthenticatedBrandCampaignsRoute
+  '/brand/marketplace': typeof AuthenticatedBrandMarketplaceRoute
   '/fintech/applications': typeof AuthenticatedFintechApplicationsRoute
   '/fintech/commissions': typeof AuthenticatedFintechCommissionsRoute
   '/fintech/lenders': typeof AuthenticatedFintechLendersRoute
@@ -821,12 +961,21 @@ export interface FileRoutesByTo {
   '/productsales/commissions': typeof AuthenticatedProductsalesCommissionsRoute
   '/productsales/orders': typeof AuthenticatedProductsalesOrdersRoute
   '/productsales/products': typeof AuthenticatedProductsalesProductsRoute
+  '/realestate/analytics': typeof AuthenticatedRealestateAnalyticsRoute
   '/realestate/clients': typeof AuthenticatedRealestateClientsRoute
+  '/realestate/copilot': typeof AuthenticatedRealestateCopilotRoute
+  '/realestate/deals': typeof AuthenticatedRealestateDealsRoute
+  '/realestate/leads': typeof AuthenticatedRealestateLeadsRoute
+  '/realestate/match': typeof AuthenticatedRealestateMatchRoute
+  '/realestate/partners': typeof AuthenticatedRealestatePartnersRoute
   '/realestate/pipeline': typeof AuthenticatedRealestatePipelineRoute
+  '/realestate/projects': typeof AuthenticatedRealestateProjectsRoute
   '/realestate/properties': typeof AuthenticatedRealestatePropertiesRoute
+  '/realestate/visits': typeof AuthenticatedRealestateVisitsRoute
   '/tickets/$id': typeof AuthenticatedTicketsIdRoute
   '/api/public/role-pdf': typeof ApiPublicRolePdfRoute
   '/industries/$group/$slug': typeof IndustriesGroupSlugRoute
+  '/brand': typeof AuthenticatedBrandIndexRoute
   '/fintech': typeof AuthenticatedFintechIndexRoute
   '/it': typeof AuthenticatedItIndexRoute
   '/packs': typeof AuthenticatedPacksIndexRoute
@@ -834,6 +983,7 @@ export interface FileRoutesByTo {
   '/realestate': typeof AuthenticatedRealestateIndexRoute
   '/industries/$group': typeof IndustriesGroupIndexRoute
   '/affiliates/$id/referrals': typeof AuthenticatedAffiliatesIdReferralsRoute
+  '/brand/campaign/$id': typeof AuthenticatedBrandCampaignIdRoute
   '/industry/$slug/$section': typeof AuthenticatedIndustrySlugSectionRoute
   '/packs/$group/$slug': typeof AuthenticatedPacksGroupSlugRoute
   '/portal/apply/$group/$slug': typeof PortalApplyGroupSlugRoute
@@ -857,12 +1007,16 @@ export interface FileRoutesById {
   '/products': typeof ProductsRouteWithChildren
   '/reset-password': typeof ResetPasswordRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
+  '/_authenticated/realestate': typeof AuthenticatedRealestateRouteRouteWithChildren
   '/_authenticated/admin': typeof AuthenticatedAdminRoute
   '/_authenticated/admin-packs': typeof AuthenticatedAdminPacksRoute
+  '/_authenticated/admin-templates': typeof AuthenticatedAdminTemplatesRoute
   '/_authenticated/affiliates': typeof AuthenticatedAffiliatesRoute
   '/_authenticated/ai': typeof AuthenticatedAiRoute
   '/_authenticated/audit-logs': typeof AuthenticatedAuditLogsRoute
   '/_authenticated/automation': typeof AuthenticatedAutomationRoute
+  '/_authenticated/brand': typeof AuthenticatedBrandRouteWithChildren
+  '/_authenticated/buyer': typeof AuthenticatedBuyerRoute
   '/_authenticated/calendar': typeof AuthenticatedCalendarRoute
   '/_authenticated/cashflow': typeof AuthenticatedCashflowRoute
   '/_authenticated/choose-industry': typeof AuthenticatedChooseIndustryRoute
@@ -870,6 +1024,7 @@ export interface FileRoutesById {
   '/_authenticated/contacts': typeof AuthenticatedContactsRoute
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
   '/_authenticated/digiverify': typeof AuthenticatedDigiverifyRoute
+  '/_authenticated/education-setup': typeof AuthenticatedEducationSetupRoute
   '/_authenticated/feature-matrix': typeof AuthenticatedFeatureMatrixRoute
   '/_authenticated/fintech': typeof AuthenticatedFintechRouteWithChildren
   '/_authenticated/followups': typeof AuthenticatedFollowupsRoute
@@ -884,12 +1039,12 @@ export interface FileRoutesById {
   '/_authenticated/onboarding': typeof AuthenticatedOnboardingRoute
   '/_authenticated/partner': typeof AuthenticatedPartnerRoute
   '/_authenticated/payments': typeof AuthenticatedPaymentsRoute
+  '/_authenticated/payout-accounts': typeof AuthenticatedPayoutAccountsRoute
   '/_authenticated/payout-history': typeof AuthenticatedPayoutHistoryRoute
   '/_authenticated/pipeline': typeof AuthenticatedPipelineRoute
   '/_authenticated/portal': typeof AuthenticatedPortalRoute
   '/_authenticated/productsales': typeof AuthenticatedProductsalesRouteWithChildren
   '/_authenticated/proposals': typeof AuthenticatedProposalsRoute
-  '/_authenticated/realestate': typeof AuthenticatedRealestateRouteWithChildren
   '/_authenticated/reports': typeof AuthenticatedReportsRoute
   '/_authenticated/settings': typeof AuthenticatedSettingsRoute
   '/_authenticated/settings-cms': typeof AuthenticatedSettingsCmsRoute
@@ -913,6 +1068,8 @@ export interface FileRoutesById {
   '/blog/': typeof BlogIndexRoute
   '/industries/': typeof IndustriesIndexRoute
   '/products/': typeof ProductsIndexRoute
+  '/_authenticated/brand/campaigns': typeof AuthenticatedBrandCampaignsRoute
+  '/_authenticated/brand/marketplace': typeof AuthenticatedBrandMarketplaceRoute
   '/_authenticated/fintech/applications': typeof AuthenticatedFintechApplicationsRoute
   '/_authenticated/fintech/commissions': typeof AuthenticatedFintechCommissionsRoute
   '/_authenticated/fintech/lenders': typeof AuthenticatedFintechLendersRoute
@@ -924,12 +1081,21 @@ export interface FileRoutesById {
   '/_authenticated/productsales/commissions': typeof AuthenticatedProductsalesCommissionsRoute
   '/_authenticated/productsales/orders': typeof AuthenticatedProductsalesOrdersRoute
   '/_authenticated/productsales/products': typeof AuthenticatedProductsalesProductsRoute
+  '/_authenticated/realestate/analytics': typeof AuthenticatedRealestateAnalyticsRoute
   '/_authenticated/realestate/clients': typeof AuthenticatedRealestateClientsRoute
+  '/_authenticated/realestate/copilot': typeof AuthenticatedRealestateCopilotRoute
+  '/_authenticated/realestate/deals': typeof AuthenticatedRealestateDealsRoute
+  '/_authenticated/realestate/leads': typeof AuthenticatedRealestateLeadsRoute
+  '/_authenticated/realestate/match': typeof AuthenticatedRealestateMatchRoute
+  '/_authenticated/realestate/partners': typeof AuthenticatedRealestatePartnersRoute
   '/_authenticated/realestate/pipeline': typeof AuthenticatedRealestatePipelineRoute
+  '/_authenticated/realestate/projects': typeof AuthenticatedRealestateProjectsRoute
   '/_authenticated/realestate/properties': typeof AuthenticatedRealestatePropertiesRoute
+  '/_authenticated/realestate/visits': typeof AuthenticatedRealestateVisitsRoute
   '/_authenticated/tickets_/$id': typeof AuthenticatedTicketsIdRoute
   '/api/public/role-pdf': typeof ApiPublicRolePdfRoute
   '/industries/$group/$slug': typeof IndustriesGroupSlugRoute
+  '/_authenticated/brand/': typeof AuthenticatedBrandIndexRoute
   '/_authenticated/fintech/': typeof AuthenticatedFintechIndexRoute
   '/_authenticated/it/': typeof AuthenticatedItIndexRoute
   '/_authenticated/packs/': typeof AuthenticatedPacksIndexRoute
@@ -937,6 +1103,7 @@ export interface FileRoutesById {
   '/_authenticated/realestate/': typeof AuthenticatedRealestateIndexRoute
   '/industries/$group/': typeof IndustriesGroupIndexRoute
   '/_authenticated/affiliates_/$id/referrals': typeof AuthenticatedAffiliatesIdReferralsRoute
+  '/_authenticated/brand/campaign/$id': typeof AuthenticatedBrandCampaignIdRoute
   '/_authenticated/industry/$slug/$section': typeof AuthenticatedIndustrySlugSectionRoute
   '/_authenticated/packs/$group/$slug': typeof AuthenticatedPacksGroupSlugRoute
   '/portal/apply/$group/$slug': typeof PortalApplyGroupSlugRoute
@@ -960,12 +1127,16 @@ export interface FileRouteTypes {
     | '/products'
     | '/reset-password'
     | '/sitemap.xml'
+    | '/realestate'
     | '/admin'
     | '/admin-packs'
+    | '/admin-templates'
     | '/affiliates'
     | '/ai'
     | '/audit-logs'
     | '/automation'
+    | '/brand'
+    | '/buyer'
     | '/calendar'
     | '/cashflow'
     | '/choose-industry'
@@ -973,6 +1144,7 @@ export interface FileRouteTypes {
     | '/contacts'
     | '/dashboard'
     | '/digiverify'
+    | '/education-setup'
     | '/feature-matrix'
     | '/fintech'
     | '/followups'
@@ -987,12 +1159,12 @@ export interface FileRouteTypes {
     | '/onboarding'
     | '/partner'
     | '/payments'
+    | '/payout-accounts'
     | '/payout-history'
     | '/pipeline'
     | '/portal'
     | '/productsales'
     | '/proposals'
-    | '/realestate'
     | '/reports'
     | '/settings'
     | '/settings-cms'
@@ -1016,6 +1188,8 @@ export interface FileRouteTypes {
     | '/blog/'
     | '/industries/'
     | '/products/'
+    | '/brand/campaigns'
+    | '/brand/marketplace'
     | '/fintech/applications'
     | '/fintech/commissions'
     | '/fintech/lenders'
@@ -1027,12 +1201,21 @@ export interface FileRouteTypes {
     | '/productsales/commissions'
     | '/productsales/orders'
     | '/productsales/products'
+    | '/realestate/analytics'
     | '/realestate/clients'
+    | '/realestate/copilot'
+    | '/realestate/deals'
+    | '/realestate/leads'
+    | '/realestate/match'
+    | '/realestate/partners'
     | '/realestate/pipeline'
+    | '/realestate/projects'
     | '/realestate/properties'
+    | '/realestate/visits'
     | '/tickets/$id'
     | '/api/public/role-pdf'
     | '/industries/$group/$slug'
+    | '/brand/'
     | '/fintech/'
     | '/it/'
     | '/packs/'
@@ -1040,6 +1223,7 @@ export interface FileRouteTypes {
     | '/realestate/'
     | '/industries/$group/'
     | '/affiliates/$id/referrals'
+    | '/brand/campaign/$id'
     | '/industry/$slug/$section'
     | '/packs/$group/$slug'
     | '/portal/apply/$group/$slug'
@@ -1061,10 +1245,12 @@ export interface FileRouteTypes {
     | '/sitemap.xml'
     | '/admin'
     | '/admin-packs'
+    | '/admin-templates'
     | '/affiliates'
     | '/ai'
     | '/audit-logs'
     | '/automation'
+    | '/buyer'
     | '/calendar'
     | '/cashflow'
     | '/choose-industry'
@@ -1072,6 +1258,7 @@ export interface FileRouteTypes {
     | '/contacts'
     | '/dashboard'
     | '/digiverify'
+    | '/education-setup'
     | '/feature-matrix'
     | '/followups'
     | '/inbound'
@@ -1084,6 +1271,7 @@ export interface FileRouteTypes {
     | '/onboarding'
     | '/partner'
     | '/payments'
+    | '/payout-accounts'
     | '/payout-history'
     | '/pipeline'
     | '/portal'
@@ -1110,6 +1298,8 @@ export interface FileRouteTypes {
     | '/blog'
     | '/industries'
     | '/products'
+    | '/brand/campaigns'
+    | '/brand/marketplace'
     | '/fintech/applications'
     | '/fintech/commissions'
     | '/fintech/lenders'
@@ -1120,12 +1310,21 @@ export interface FileRouteTypes {
     | '/productsales/commissions'
     | '/productsales/orders'
     | '/productsales/products'
+    | '/realestate/analytics'
     | '/realestate/clients'
+    | '/realestate/copilot'
+    | '/realestate/deals'
+    | '/realestate/leads'
+    | '/realestate/match'
+    | '/realestate/partners'
     | '/realestate/pipeline'
+    | '/realestate/projects'
     | '/realestate/properties'
+    | '/realestate/visits'
     | '/tickets/$id'
     | '/api/public/role-pdf'
     | '/industries/$group/$slug'
+    | '/brand'
     | '/fintech'
     | '/it'
     | '/packs'
@@ -1133,6 +1332,7 @@ export interface FileRouteTypes {
     | '/realestate'
     | '/industries/$group'
     | '/affiliates/$id/referrals'
+    | '/brand/campaign/$id'
     | '/industry/$slug/$section'
     | '/packs/$group/$slug'
     | '/portal/apply/$group/$slug'
@@ -1155,12 +1355,16 @@ export interface FileRouteTypes {
     | '/products'
     | '/reset-password'
     | '/sitemap.xml'
+    | '/_authenticated/realestate'
     | '/_authenticated/admin'
     | '/_authenticated/admin-packs'
+    | '/_authenticated/admin-templates'
     | '/_authenticated/affiliates'
     | '/_authenticated/ai'
     | '/_authenticated/audit-logs'
     | '/_authenticated/automation'
+    | '/_authenticated/brand'
+    | '/_authenticated/buyer'
     | '/_authenticated/calendar'
     | '/_authenticated/cashflow'
     | '/_authenticated/choose-industry'
@@ -1168,6 +1372,7 @@ export interface FileRouteTypes {
     | '/_authenticated/contacts'
     | '/_authenticated/dashboard'
     | '/_authenticated/digiverify'
+    | '/_authenticated/education-setup'
     | '/_authenticated/feature-matrix'
     | '/_authenticated/fintech'
     | '/_authenticated/followups'
@@ -1182,12 +1387,12 @@ export interface FileRouteTypes {
     | '/_authenticated/onboarding'
     | '/_authenticated/partner'
     | '/_authenticated/payments'
+    | '/_authenticated/payout-accounts'
     | '/_authenticated/payout-history'
     | '/_authenticated/pipeline'
     | '/_authenticated/portal'
     | '/_authenticated/productsales'
     | '/_authenticated/proposals'
-    | '/_authenticated/realestate'
     | '/_authenticated/reports'
     | '/_authenticated/settings'
     | '/_authenticated/settings-cms'
@@ -1211,6 +1416,8 @@ export interface FileRouteTypes {
     | '/blog/'
     | '/industries/'
     | '/products/'
+    | '/_authenticated/brand/campaigns'
+    | '/_authenticated/brand/marketplace'
     | '/_authenticated/fintech/applications'
     | '/_authenticated/fintech/commissions'
     | '/_authenticated/fintech/lenders'
@@ -1222,12 +1429,21 @@ export interface FileRouteTypes {
     | '/_authenticated/productsales/commissions'
     | '/_authenticated/productsales/orders'
     | '/_authenticated/productsales/products'
+    | '/_authenticated/realestate/analytics'
     | '/_authenticated/realestate/clients'
+    | '/_authenticated/realestate/copilot'
+    | '/_authenticated/realestate/deals'
+    | '/_authenticated/realestate/leads'
+    | '/_authenticated/realestate/match'
+    | '/_authenticated/realestate/partners'
     | '/_authenticated/realestate/pipeline'
+    | '/_authenticated/realestate/projects'
     | '/_authenticated/realestate/properties'
+    | '/_authenticated/realestate/visits'
     | '/_authenticated/tickets_/$id'
     | '/api/public/role-pdf'
     | '/industries/$group/$slug'
+    | '/_authenticated/brand/'
     | '/_authenticated/fintech/'
     | '/_authenticated/it/'
     | '/_authenticated/packs/'
@@ -1235,6 +1451,7 @@ export interface FileRouteTypes {
     | '/_authenticated/realestate/'
     | '/industries/$group/'
     | '/_authenticated/affiliates_/$id/referrals'
+    | '/_authenticated/brand/campaign/$id'
     | '/_authenticated/industry/$slug/$section'
     | '/_authenticated/packs/$group/$slug'
     | '/portal/apply/$group/$slug'
@@ -1531,13 +1748,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedReportsRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
-    '/_authenticated/realestate': {
-      id: '/_authenticated/realestate'
-      path: '/realestate'
-      fullPath: '/realestate'
-      preLoaderRoute: typeof AuthenticatedRealestateRouteImport
-      parentRoute: typeof AuthenticatedRouteRoute
-    }
     '/_authenticated/proposals': {
       id: '/_authenticated/proposals'
       path: '/proposals'
@@ -1571,6 +1781,13 @@ declare module '@tanstack/react-router' {
       path: '/payout-history'
       fullPath: '/payout-history'
       preLoaderRoute: typeof AuthenticatedPayoutHistoryRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/payout-accounts': {
+      id: '/_authenticated/payout-accounts'
+      path: '/payout-accounts'
+      fullPath: '/payout-accounts'
+      preLoaderRoute: typeof AuthenticatedPayoutAccountsRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/payments': {
@@ -1671,6 +1888,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedFeatureMatrixRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/education-setup': {
+      id: '/_authenticated/education-setup'
+      path: '/education-setup'
+      fullPath: '/education-setup'
+      preLoaderRoute: typeof AuthenticatedEducationSetupRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/digiverify': {
       id: '/_authenticated/digiverify'
       path: '/digiverify'
@@ -1720,6 +1944,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedCalendarRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/buyer': {
+      id: '/_authenticated/buyer'
+      path: '/buyer'
+      fullPath: '/buyer'
+      preLoaderRoute: typeof AuthenticatedBuyerRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/brand': {
+      id: '/_authenticated/brand'
+      path: '/brand'
+      fullPath: '/brand'
+      preLoaderRoute: typeof AuthenticatedBrandRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/automation': {
       id: '/_authenticated/automation'
       path: '/automation'
@@ -1748,6 +1986,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAffiliatesRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/admin-templates': {
+      id: '/_authenticated/admin-templates'
+      path: '/admin-templates'
+      fullPath: '/admin-templates'
+      preLoaderRoute: typeof AuthenticatedAdminTemplatesRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/admin-packs': {
       id: '/_authenticated/admin-packs'
       path: '/admin-packs'
@@ -1762,6 +2007,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAdminRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/realestate': {
+      id: '/_authenticated/realestate'
+      path: '/realestate'
+      fullPath: '/realestate'
+      preLoaderRoute: typeof AuthenticatedRealestateRouteRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/industries/$group/': {
       id: '/industries/$group/'
       path: '/'
@@ -1774,7 +2026,7 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/realestate/'
       preLoaderRoute: typeof AuthenticatedRealestateIndexRouteImport
-      parentRoute: typeof AuthenticatedRealestateRoute
+      parentRoute: typeof AuthenticatedRealestateRouteRoute
     }
     '/_authenticated/productsales/': {
       id: '/_authenticated/productsales/'
@@ -1804,6 +2056,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedFintechIndexRouteImport
       parentRoute: typeof AuthenticatedFintechRoute
     }
+    '/_authenticated/brand/': {
+      id: '/_authenticated/brand/'
+      path: '/'
+      fullPath: '/brand/'
+      preLoaderRoute: typeof AuthenticatedBrandIndexRouteImport
+      parentRoute: typeof AuthenticatedBrandRoute
+    }
     '/industries/$group/$slug': {
       id: '/industries/$group/$slug'
       path: '/$slug'
@@ -1825,26 +2084,82 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedTicketsIdRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/realestate/visits': {
+      id: '/_authenticated/realestate/visits'
+      path: '/visits'
+      fullPath: '/realestate/visits'
+      preLoaderRoute: typeof AuthenticatedRealestateVisitsRouteImport
+      parentRoute: typeof AuthenticatedRealestateRouteRoute
+    }
     '/_authenticated/realestate/properties': {
       id: '/_authenticated/realestate/properties'
       path: '/properties'
       fullPath: '/realestate/properties'
       preLoaderRoute: typeof AuthenticatedRealestatePropertiesRouteImport
-      parentRoute: typeof AuthenticatedRealestateRoute
+      parentRoute: typeof AuthenticatedRealestateRouteRoute
+    }
+    '/_authenticated/realestate/projects': {
+      id: '/_authenticated/realestate/projects'
+      path: '/projects'
+      fullPath: '/realestate/projects'
+      preLoaderRoute: typeof AuthenticatedRealestateProjectsRouteImport
+      parentRoute: typeof AuthenticatedRealestateRouteRoute
     }
     '/_authenticated/realestate/pipeline': {
       id: '/_authenticated/realestate/pipeline'
       path: '/pipeline'
       fullPath: '/realestate/pipeline'
       preLoaderRoute: typeof AuthenticatedRealestatePipelineRouteImport
-      parentRoute: typeof AuthenticatedRealestateRoute
+      parentRoute: typeof AuthenticatedRealestateRouteRoute
+    }
+    '/_authenticated/realestate/partners': {
+      id: '/_authenticated/realestate/partners'
+      path: '/partners'
+      fullPath: '/realestate/partners'
+      preLoaderRoute: typeof AuthenticatedRealestatePartnersRouteImport
+      parentRoute: typeof AuthenticatedRealestateRouteRoute
+    }
+    '/_authenticated/realestate/match': {
+      id: '/_authenticated/realestate/match'
+      path: '/match'
+      fullPath: '/realestate/match'
+      preLoaderRoute: typeof AuthenticatedRealestateMatchRouteImport
+      parentRoute: typeof AuthenticatedRealestateRouteRoute
+    }
+    '/_authenticated/realestate/leads': {
+      id: '/_authenticated/realestate/leads'
+      path: '/leads'
+      fullPath: '/realestate/leads'
+      preLoaderRoute: typeof AuthenticatedRealestateLeadsRouteImport
+      parentRoute: typeof AuthenticatedRealestateRouteRoute
+    }
+    '/_authenticated/realestate/deals': {
+      id: '/_authenticated/realestate/deals'
+      path: '/deals'
+      fullPath: '/realestate/deals'
+      preLoaderRoute: typeof AuthenticatedRealestateDealsRouteImport
+      parentRoute: typeof AuthenticatedRealestateRouteRoute
+    }
+    '/_authenticated/realestate/copilot': {
+      id: '/_authenticated/realestate/copilot'
+      path: '/copilot'
+      fullPath: '/realestate/copilot'
+      preLoaderRoute: typeof AuthenticatedRealestateCopilotRouteImport
+      parentRoute: typeof AuthenticatedRealestateRouteRoute
     }
     '/_authenticated/realestate/clients': {
       id: '/_authenticated/realestate/clients'
       path: '/clients'
       fullPath: '/realestate/clients'
       preLoaderRoute: typeof AuthenticatedRealestateClientsRouteImport
-      parentRoute: typeof AuthenticatedRealestateRoute
+      parentRoute: typeof AuthenticatedRealestateRouteRoute
+    }
+    '/_authenticated/realestate/analytics': {
+      id: '/_authenticated/realestate/analytics'
+      path: '/analytics'
+      fullPath: '/realestate/analytics'
+      preLoaderRoute: typeof AuthenticatedRealestateAnalyticsRouteImport
+      parentRoute: typeof AuthenticatedRealestateRouteRoute
     }
     '/_authenticated/productsales/products': {
       id: '/_authenticated/productsales/products'
@@ -1923,6 +2238,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedFintechApplicationsRouteImport
       parentRoute: typeof AuthenticatedFintechRoute
     }
+    '/_authenticated/brand/marketplace': {
+      id: '/_authenticated/brand/marketplace'
+      path: '/marketplace'
+      fullPath: '/brand/marketplace'
+      preLoaderRoute: typeof AuthenticatedBrandMarketplaceRouteImport
+      parentRoute: typeof AuthenticatedBrandRoute
+    }
+    '/_authenticated/brand/campaigns': {
+      id: '/_authenticated/brand/campaigns'
+      path: '/campaigns'
+      fullPath: '/brand/campaigns'
+      preLoaderRoute: typeof AuthenticatedBrandCampaignsRouteImport
+      parentRoute: typeof AuthenticatedBrandRoute
+    }
     '/_authenticated/industry/$slug/': {
       id: '/_authenticated/industry/$slug/'
       path: '/'
@@ -1951,6 +2280,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedIndustrySlugSectionRouteImport
       parentRoute: typeof AuthenticatedIndustrySlugRoute
     }
+    '/_authenticated/brand/campaign/$id': {
+      id: '/_authenticated/brand/campaign/$id'
+      path: '/campaign/$id'
+      fullPath: '/brand/campaign/$id'
+      preLoaderRoute: typeof AuthenticatedBrandCampaignIdRouteImport
+      parentRoute: typeof AuthenticatedBrandRoute
+    }
     '/_authenticated/affiliates_/$id/referrals': {
       id: '/_authenticated/affiliates_/$id/referrals'
       path: '/affiliates/$id/referrals'
@@ -1974,6 +2310,61 @@ declare module '@tanstack/react-router' {
     }
   }
 }
+
+interface AuthenticatedRealestateRouteRouteChildren {
+  AuthenticatedRealestateAnalyticsRoute: typeof AuthenticatedRealestateAnalyticsRoute
+  AuthenticatedRealestateClientsRoute: typeof AuthenticatedRealestateClientsRoute
+  AuthenticatedRealestateCopilotRoute: typeof AuthenticatedRealestateCopilotRoute
+  AuthenticatedRealestateDealsRoute: typeof AuthenticatedRealestateDealsRoute
+  AuthenticatedRealestateLeadsRoute: typeof AuthenticatedRealestateLeadsRoute
+  AuthenticatedRealestateMatchRoute: typeof AuthenticatedRealestateMatchRoute
+  AuthenticatedRealestatePartnersRoute: typeof AuthenticatedRealestatePartnersRoute
+  AuthenticatedRealestatePipelineRoute: typeof AuthenticatedRealestatePipelineRoute
+  AuthenticatedRealestateProjectsRoute: typeof AuthenticatedRealestateProjectsRoute
+  AuthenticatedRealestatePropertiesRoute: typeof AuthenticatedRealestatePropertiesRoute
+  AuthenticatedRealestateVisitsRoute: typeof AuthenticatedRealestateVisitsRoute
+  AuthenticatedRealestateIndexRoute: typeof AuthenticatedRealestateIndexRoute
+}
+
+const AuthenticatedRealestateRouteRouteChildren: AuthenticatedRealestateRouteRouteChildren =
+  {
+    AuthenticatedRealestateAnalyticsRoute:
+      AuthenticatedRealestateAnalyticsRoute,
+    AuthenticatedRealestateClientsRoute: AuthenticatedRealestateClientsRoute,
+    AuthenticatedRealestateCopilotRoute: AuthenticatedRealestateCopilotRoute,
+    AuthenticatedRealestateDealsRoute: AuthenticatedRealestateDealsRoute,
+    AuthenticatedRealestateLeadsRoute: AuthenticatedRealestateLeadsRoute,
+    AuthenticatedRealestateMatchRoute: AuthenticatedRealestateMatchRoute,
+    AuthenticatedRealestatePartnersRoute: AuthenticatedRealestatePartnersRoute,
+    AuthenticatedRealestatePipelineRoute: AuthenticatedRealestatePipelineRoute,
+    AuthenticatedRealestateProjectsRoute: AuthenticatedRealestateProjectsRoute,
+    AuthenticatedRealestatePropertiesRoute:
+      AuthenticatedRealestatePropertiesRoute,
+    AuthenticatedRealestateVisitsRoute: AuthenticatedRealestateVisitsRoute,
+    AuthenticatedRealestateIndexRoute: AuthenticatedRealestateIndexRoute,
+  }
+
+const AuthenticatedRealestateRouteRouteWithChildren =
+  AuthenticatedRealestateRouteRoute._addFileChildren(
+    AuthenticatedRealestateRouteRouteChildren,
+  )
+
+interface AuthenticatedBrandRouteChildren {
+  AuthenticatedBrandCampaignsRoute: typeof AuthenticatedBrandCampaignsRoute
+  AuthenticatedBrandMarketplaceRoute: typeof AuthenticatedBrandMarketplaceRoute
+  AuthenticatedBrandIndexRoute: typeof AuthenticatedBrandIndexRoute
+  AuthenticatedBrandCampaignIdRoute: typeof AuthenticatedBrandCampaignIdRoute
+}
+
+const AuthenticatedBrandRouteChildren: AuthenticatedBrandRouteChildren = {
+  AuthenticatedBrandCampaignsRoute: AuthenticatedBrandCampaignsRoute,
+  AuthenticatedBrandMarketplaceRoute: AuthenticatedBrandMarketplaceRoute,
+  AuthenticatedBrandIndexRoute: AuthenticatedBrandIndexRoute,
+  AuthenticatedBrandCampaignIdRoute: AuthenticatedBrandCampaignIdRoute,
+}
+
+const AuthenticatedBrandRouteWithChildren =
+  AuthenticatedBrandRoute._addFileChildren(AuthenticatedBrandRouteChildren)
 
 interface AuthenticatedFintechRouteChildren {
   AuthenticatedFintechApplicationsRoute: typeof AuthenticatedFintechApplicationsRoute
@@ -2034,27 +2425,6 @@ const AuthenticatedProductsalesRouteWithChildren =
     AuthenticatedProductsalesRouteChildren,
   )
 
-interface AuthenticatedRealestateRouteChildren {
-  AuthenticatedRealestateClientsRoute: typeof AuthenticatedRealestateClientsRoute
-  AuthenticatedRealestatePipelineRoute: typeof AuthenticatedRealestatePipelineRoute
-  AuthenticatedRealestatePropertiesRoute: typeof AuthenticatedRealestatePropertiesRoute
-  AuthenticatedRealestateIndexRoute: typeof AuthenticatedRealestateIndexRoute
-}
-
-const AuthenticatedRealestateRouteChildren: AuthenticatedRealestateRouteChildren =
-  {
-    AuthenticatedRealestateClientsRoute: AuthenticatedRealestateClientsRoute,
-    AuthenticatedRealestatePipelineRoute: AuthenticatedRealestatePipelineRoute,
-    AuthenticatedRealestatePropertiesRoute:
-      AuthenticatedRealestatePropertiesRoute,
-    AuthenticatedRealestateIndexRoute: AuthenticatedRealestateIndexRoute,
-  }
-
-const AuthenticatedRealestateRouteWithChildren =
-  AuthenticatedRealestateRoute._addFileChildren(
-    AuthenticatedRealestateRouteChildren,
-  )
-
 interface AuthenticatedIndustrySlugRouteChildren {
   AuthenticatedIndustrySlugSectionRoute: typeof AuthenticatedIndustrySlugSectionRoute
   AuthenticatedIndustrySlugIndexRoute: typeof AuthenticatedIndustrySlugIndexRoute
@@ -2073,12 +2443,16 @@ const AuthenticatedIndustrySlugRouteWithChildren =
   )
 
 interface AuthenticatedRouteRouteChildren {
+  AuthenticatedRealestateRouteRoute: typeof AuthenticatedRealestateRouteRouteWithChildren
   AuthenticatedAdminRoute: typeof AuthenticatedAdminRoute
   AuthenticatedAdminPacksRoute: typeof AuthenticatedAdminPacksRoute
+  AuthenticatedAdminTemplatesRoute: typeof AuthenticatedAdminTemplatesRoute
   AuthenticatedAffiliatesRoute: typeof AuthenticatedAffiliatesRoute
   AuthenticatedAiRoute: typeof AuthenticatedAiRoute
   AuthenticatedAuditLogsRoute: typeof AuthenticatedAuditLogsRoute
   AuthenticatedAutomationRoute: typeof AuthenticatedAutomationRoute
+  AuthenticatedBrandRoute: typeof AuthenticatedBrandRouteWithChildren
+  AuthenticatedBuyerRoute: typeof AuthenticatedBuyerRoute
   AuthenticatedCalendarRoute: typeof AuthenticatedCalendarRoute
   AuthenticatedCashflowRoute: typeof AuthenticatedCashflowRoute
   AuthenticatedChooseIndustryRoute: typeof AuthenticatedChooseIndustryRoute
@@ -2086,6 +2460,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedContactsRoute: typeof AuthenticatedContactsRoute
   AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
   AuthenticatedDigiverifyRoute: typeof AuthenticatedDigiverifyRoute
+  AuthenticatedEducationSetupRoute: typeof AuthenticatedEducationSetupRoute
   AuthenticatedFeatureMatrixRoute: typeof AuthenticatedFeatureMatrixRoute
   AuthenticatedFintechRoute: typeof AuthenticatedFintechRouteWithChildren
   AuthenticatedFollowupsRoute: typeof AuthenticatedFollowupsRoute
@@ -2100,12 +2475,12 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedOnboardingRoute: typeof AuthenticatedOnboardingRoute
   AuthenticatedPartnerRoute: typeof AuthenticatedPartnerRoute
   AuthenticatedPaymentsRoute: typeof AuthenticatedPaymentsRoute
+  AuthenticatedPayoutAccountsRoute: typeof AuthenticatedPayoutAccountsRoute
   AuthenticatedPayoutHistoryRoute: typeof AuthenticatedPayoutHistoryRoute
   AuthenticatedPipelineRoute: typeof AuthenticatedPipelineRoute
   AuthenticatedPortalRoute: typeof AuthenticatedPortalRoute
   AuthenticatedProductsalesRoute: typeof AuthenticatedProductsalesRouteWithChildren
   AuthenticatedProposalsRoute: typeof AuthenticatedProposalsRoute
-  AuthenticatedRealestateRoute: typeof AuthenticatedRealestateRouteWithChildren
   AuthenticatedReportsRoute: typeof AuthenticatedReportsRoute
   AuthenticatedSettingsRoute: typeof AuthenticatedSettingsRoute
   AuthenticatedSettingsCmsRoute: typeof AuthenticatedSettingsCmsRoute
@@ -2127,12 +2502,17 @@ interface AuthenticatedRouteRouteChildren {
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
+  AuthenticatedRealestateRouteRoute:
+    AuthenticatedRealestateRouteRouteWithChildren,
   AuthenticatedAdminRoute: AuthenticatedAdminRoute,
   AuthenticatedAdminPacksRoute: AuthenticatedAdminPacksRoute,
+  AuthenticatedAdminTemplatesRoute: AuthenticatedAdminTemplatesRoute,
   AuthenticatedAffiliatesRoute: AuthenticatedAffiliatesRoute,
   AuthenticatedAiRoute: AuthenticatedAiRoute,
   AuthenticatedAuditLogsRoute: AuthenticatedAuditLogsRoute,
   AuthenticatedAutomationRoute: AuthenticatedAutomationRoute,
+  AuthenticatedBrandRoute: AuthenticatedBrandRouteWithChildren,
+  AuthenticatedBuyerRoute: AuthenticatedBuyerRoute,
   AuthenticatedCalendarRoute: AuthenticatedCalendarRoute,
   AuthenticatedCashflowRoute: AuthenticatedCashflowRoute,
   AuthenticatedChooseIndustryRoute: AuthenticatedChooseIndustryRoute,
@@ -2140,6 +2520,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedContactsRoute: AuthenticatedContactsRoute,
   AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
   AuthenticatedDigiverifyRoute: AuthenticatedDigiverifyRoute,
+  AuthenticatedEducationSetupRoute: AuthenticatedEducationSetupRoute,
   AuthenticatedFeatureMatrixRoute: AuthenticatedFeatureMatrixRoute,
   AuthenticatedFintechRoute: AuthenticatedFintechRouteWithChildren,
   AuthenticatedFollowupsRoute: AuthenticatedFollowupsRoute,
@@ -2154,12 +2535,12 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedOnboardingRoute: AuthenticatedOnboardingRoute,
   AuthenticatedPartnerRoute: AuthenticatedPartnerRoute,
   AuthenticatedPaymentsRoute: AuthenticatedPaymentsRoute,
+  AuthenticatedPayoutAccountsRoute: AuthenticatedPayoutAccountsRoute,
   AuthenticatedPayoutHistoryRoute: AuthenticatedPayoutHistoryRoute,
   AuthenticatedPipelineRoute: AuthenticatedPipelineRoute,
   AuthenticatedPortalRoute: AuthenticatedPortalRoute,
   AuthenticatedProductsalesRoute: AuthenticatedProductsalesRouteWithChildren,
   AuthenticatedProposalsRoute: AuthenticatedProposalsRoute,
-  AuthenticatedRealestateRoute: AuthenticatedRealestateRouteWithChildren,
   AuthenticatedReportsRoute: AuthenticatedReportsRoute,
   AuthenticatedSettingsRoute: AuthenticatedSettingsRoute,
   AuthenticatedSettingsCmsRoute: AuthenticatedSettingsCmsRoute,
