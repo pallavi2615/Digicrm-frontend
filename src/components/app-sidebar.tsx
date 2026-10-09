@@ -128,13 +128,13 @@ const adminOnly: NavItem[] = [
   { title: "Conversions", url: "/landing-conversions", icon: TrendingUp },
   { title: "Affiliates", url: "/affiliates", icon: Users },
   { title: "Payout History", url: "/payout-history", icon: Wallet },
-  { title: "Tenants", url: "/settings-tenants", icon: Layers },
   { title: "Pack Settings", url: "/settings-pack", icon: Settings },
   { title: "New Workspace", url: "/onboarding", icon: Layers },
 ];
 
 const superAdminOnly: NavItem[] = [
   { title: "Super Admin", url: "/admin", icon: Crown },
+  { title: "Tenants", url: "/settings-tenants", icon: Layers },
   { title: "Industry Pack CMS", url: "/admin-packs", icon: Layers },
   { title: "Template Builder", url: "/admin-templates", icon: Layers },
   { title: "Plans & Features", url: "/settings-plans", icon: Crown },
