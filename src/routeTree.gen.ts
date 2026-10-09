@@ -85,6 +85,7 @@ import { Route as AuthenticatedAdminPacksRouteImport } from './routes/_authentic
 import { Route as AuthenticatedAdminRouteImport } from './routes/_authenticated/admin'
 import { Route as AuthenticatedRealestateRouteRouteImport } from './routes/_authenticated/realestate/route'
 import { Route as IndustriesGroupIndexRouteImport } from './routes/industries.$group.index'
+import { Route as AuthenticatedWorkspaceIndexRouteImport } from './routes/_authenticated/workspace.index'
 import { Route as AuthenticatedRealestateIndexRouteImport } from './routes/_authenticated/realestate/index'
 import { Route as AuthenticatedProductsalesIndexRouteImport } from './routes/_authenticated/productsales.index'
 import { Route as AuthenticatedPacksIndexRouteImport } from './routes/_authenticated/packs.index'
@@ -93,6 +94,7 @@ import { Route as AuthenticatedFintechIndexRouteImport } from './routes/_authent
 import { Route as AuthenticatedBrandIndexRouteImport } from './routes/_authenticated/brand.index'
 import { Route as IndustriesGroupSlugRouteImport } from './routes/industries.$group.$slug'
 import { Route as ApiPublicRolePdfRouteImport } from './routes/api/public/role-pdf'
+import { Route as AuthenticatedWorkspaceSetupRouteImport } from './routes/_authenticated/workspace.setup'
 import { Route as AuthenticatedTicketsIdRouteImport } from './routes/_authenticated/tickets_.$id'
 import { Route as AuthenticatedRealestateVisitsRouteImport } from './routes/_authenticated/realestate/visits'
 import { Route as AuthenticatedRealestatePropertiesRouteImport } from './routes/_authenticated/realestate/properties'
@@ -118,6 +120,8 @@ import { Route as AuthenticatedFintechCommissionsRouteImport } from './routes/_a
 import { Route as AuthenticatedFintechApplicationsRouteImport } from './routes/_authenticated/fintech.applications'
 import { Route as AuthenticatedBrandMarketplaceRouteImport } from './routes/_authenticated/brand.marketplace'
 import { Route as AuthenticatedBrandCampaignsRouteImport } from './routes/_authenticated/brand.campaigns'
+import { Route as AuthenticatedAgencyPortalRouteImport } from './routes/_authenticated/agency.portal'
+import { Route as AuthenticatedAgencyDeskRouteImport } from './routes/_authenticated/agency.desk'
 import { Route as AuthenticatedIndustrySlugIndexRouteImport } from './routes/_authenticated/industry.$slug.index'
 import { Route as PortalApplyGroupSlugRouteImport } from './routes/portal.apply.$group.$slug'
 import { Route as AuthenticatedPacksGroupSlugRouteImport } from './routes/_authenticated/packs.$group.$slug'
@@ -527,6 +531,12 @@ const IndustriesGroupIndexRoute = IndustriesGroupIndexRouteImport.update({
   path: '/',
   getParentRoute: () => IndustriesGroupRoute,
 } as any)
+const AuthenticatedWorkspaceIndexRoute =
+  AuthenticatedWorkspaceIndexRouteImport.update({
+    id: '/workspace/',
+    path: '/workspace/',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedRealestateIndexRoute =
   AuthenticatedRealestateIndexRouteImport.update({
     id: '/',
@@ -570,6 +580,12 @@ const ApiPublicRolePdfRoute = ApiPublicRolePdfRouteImport.update({
   path: '/api/public/role-pdf',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AuthenticatedWorkspaceSetupRoute =
+  AuthenticatedWorkspaceSetupRouteImport.update({
+    id: '/workspace/setup',
+    path: '/workspace/setup',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedTicketsIdRoute = AuthenticatedTicketsIdRouteImport.update({
   id: '/tickets_/$id',
   path: '/tickets/$id',
@@ -716,6 +732,17 @@ const AuthenticatedBrandCampaignsRoute =
     path: '/campaigns',
     getParentRoute: () => AuthenticatedBrandRoute,
   } as any)
+const AuthenticatedAgencyPortalRoute =
+  AuthenticatedAgencyPortalRouteImport.update({
+    id: '/agency/portal',
+    path: '/agency/portal',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedAgencyDeskRoute = AuthenticatedAgencyDeskRouteImport.update({
+  id: '/agency/desk',
+  path: '/agency/desk',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const AuthenticatedIndustrySlugIndexRoute =
   AuthenticatedIndustrySlugIndexRouteImport.update({
     id: '/',
@@ -839,6 +866,8 @@ export interface FileRoutesByFullPath {
   '/blog/': typeof BlogIndexRoute
   '/industries/': typeof IndustriesIndexRoute
   '/products/': typeof ProductsIndexRoute
+  '/agency/desk': typeof AuthenticatedAgencyDeskRoute
+  '/agency/portal': typeof AuthenticatedAgencyPortalRoute
   '/brand/campaigns': typeof AuthenticatedBrandCampaignsRoute
   '/brand/marketplace': typeof AuthenticatedBrandMarketplaceRoute
   '/fintech/applications': typeof AuthenticatedFintechApplicationsRoute
@@ -864,6 +893,7 @@ export interface FileRoutesByFullPath {
   '/realestate/properties': typeof AuthenticatedRealestatePropertiesRoute
   '/realestate/visits': typeof AuthenticatedRealestateVisitsRoute
   '/tickets/$id': typeof AuthenticatedTicketsIdRoute
+  '/workspace/setup': typeof AuthenticatedWorkspaceSetupRoute
   '/api/public/role-pdf': typeof ApiPublicRolePdfRoute
   '/industries/$group/$slug': typeof IndustriesGroupSlugRoute
   '/brand/': typeof AuthenticatedBrandIndexRoute
@@ -872,6 +902,7 @@ export interface FileRoutesByFullPath {
   '/packs/': typeof AuthenticatedPacksIndexRoute
   '/productsales/': typeof AuthenticatedProductsalesIndexRoute
   '/realestate/': typeof AuthenticatedRealestateIndexRoute
+  '/workspace/': typeof AuthenticatedWorkspaceIndexRoute
   '/industries/$group/': typeof IndustriesGroupIndexRoute
   '/affiliates/$id/referrals': typeof AuthenticatedAffiliatesIdReferralsRoute
   '/brand/campaign/$id': typeof AuthenticatedBrandCampaignIdRoute
@@ -949,6 +980,8 @@ export interface FileRoutesByTo {
   '/blog': typeof BlogIndexRoute
   '/industries': typeof IndustriesIndexRoute
   '/products': typeof ProductsIndexRoute
+  '/agency/desk': typeof AuthenticatedAgencyDeskRoute
+  '/agency/portal': typeof AuthenticatedAgencyPortalRoute
   '/brand/campaigns': typeof AuthenticatedBrandCampaignsRoute
   '/brand/marketplace': typeof AuthenticatedBrandMarketplaceRoute
   '/fintech/applications': typeof AuthenticatedFintechApplicationsRoute
@@ -973,6 +1006,7 @@ export interface FileRoutesByTo {
   '/realestate/properties': typeof AuthenticatedRealestatePropertiesRoute
   '/realestate/visits': typeof AuthenticatedRealestateVisitsRoute
   '/tickets/$id': typeof AuthenticatedTicketsIdRoute
+  '/workspace/setup': typeof AuthenticatedWorkspaceSetupRoute
   '/api/public/role-pdf': typeof ApiPublicRolePdfRoute
   '/industries/$group/$slug': typeof IndustriesGroupSlugRoute
   '/brand': typeof AuthenticatedBrandIndexRoute
@@ -981,6 +1015,7 @@ export interface FileRoutesByTo {
   '/packs': typeof AuthenticatedPacksIndexRoute
   '/productsales': typeof AuthenticatedProductsalesIndexRoute
   '/realestate': typeof AuthenticatedRealestateIndexRoute
+  '/workspace': typeof AuthenticatedWorkspaceIndexRoute
   '/industries/$group': typeof IndustriesGroupIndexRoute
   '/affiliates/$id/referrals': typeof AuthenticatedAffiliatesIdReferralsRoute
   '/brand/campaign/$id': typeof AuthenticatedBrandCampaignIdRoute
@@ -1068,6 +1103,8 @@ export interface FileRoutesById {
   '/blog/': typeof BlogIndexRoute
   '/industries/': typeof IndustriesIndexRoute
   '/products/': typeof ProductsIndexRoute
+  '/_authenticated/agency/desk': typeof AuthenticatedAgencyDeskRoute
+  '/_authenticated/agency/portal': typeof AuthenticatedAgencyPortalRoute
   '/_authenticated/brand/campaigns': typeof AuthenticatedBrandCampaignsRoute
   '/_authenticated/brand/marketplace': typeof AuthenticatedBrandMarketplaceRoute
   '/_authenticated/fintech/applications': typeof AuthenticatedFintechApplicationsRoute
@@ -1093,6 +1130,7 @@ export interface FileRoutesById {
   '/_authenticated/realestate/properties': typeof AuthenticatedRealestatePropertiesRoute
   '/_authenticated/realestate/visits': typeof AuthenticatedRealestateVisitsRoute
   '/_authenticated/tickets_/$id': typeof AuthenticatedTicketsIdRoute
+  '/_authenticated/workspace/setup': typeof AuthenticatedWorkspaceSetupRoute
   '/api/public/role-pdf': typeof ApiPublicRolePdfRoute
   '/industries/$group/$slug': typeof IndustriesGroupSlugRoute
   '/_authenticated/brand/': typeof AuthenticatedBrandIndexRoute
@@ -1101,6 +1139,7 @@ export interface FileRoutesById {
   '/_authenticated/packs/': typeof AuthenticatedPacksIndexRoute
   '/_authenticated/productsales/': typeof AuthenticatedProductsalesIndexRoute
   '/_authenticated/realestate/': typeof AuthenticatedRealestateIndexRoute
+  '/_authenticated/workspace/': typeof AuthenticatedWorkspaceIndexRoute
   '/industries/$group/': typeof IndustriesGroupIndexRoute
   '/_authenticated/affiliates_/$id/referrals': typeof AuthenticatedAffiliatesIdReferralsRoute
   '/_authenticated/brand/campaign/$id': typeof AuthenticatedBrandCampaignIdRoute
@@ -1188,6 +1227,8 @@ export interface FileRouteTypes {
     | '/blog/'
     | '/industries/'
     | '/products/'
+    | '/agency/desk'
+    | '/agency/portal'
     | '/brand/campaigns'
     | '/brand/marketplace'
     | '/fintech/applications'
@@ -1213,6 +1254,7 @@ export interface FileRouteTypes {
     | '/realestate/properties'
     | '/realestate/visits'
     | '/tickets/$id'
+    | '/workspace/setup'
     | '/api/public/role-pdf'
     | '/industries/$group/$slug'
     | '/brand/'
@@ -1221,6 +1263,7 @@ export interface FileRouteTypes {
     | '/packs/'
     | '/productsales/'
     | '/realestate/'
+    | '/workspace/'
     | '/industries/$group/'
     | '/affiliates/$id/referrals'
     | '/brand/campaign/$id'
@@ -1298,6 +1341,8 @@ export interface FileRouteTypes {
     | '/blog'
     | '/industries'
     | '/products'
+    | '/agency/desk'
+    | '/agency/portal'
     | '/brand/campaigns'
     | '/brand/marketplace'
     | '/fintech/applications'
@@ -1322,6 +1367,7 @@ export interface FileRouteTypes {
     | '/realestate/properties'
     | '/realestate/visits'
     | '/tickets/$id'
+    | '/workspace/setup'
     | '/api/public/role-pdf'
     | '/industries/$group/$slug'
     | '/brand'
@@ -1330,6 +1376,7 @@ export interface FileRouteTypes {
     | '/packs'
     | '/productsales'
     | '/realestate'
+    | '/workspace'
     | '/industries/$group'
     | '/affiliates/$id/referrals'
     | '/brand/campaign/$id'
@@ -1416,6 +1463,8 @@ export interface FileRouteTypes {
     | '/blog/'
     | '/industries/'
     | '/products/'
+    | '/_authenticated/agency/desk'
+    | '/_authenticated/agency/portal'
     | '/_authenticated/brand/campaigns'
     | '/_authenticated/brand/marketplace'
     | '/_authenticated/fintech/applications'
@@ -1441,6 +1490,7 @@ export interface FileRouteTypes {
     | '/_authenticated/realestate/properties'
     | '/_authenticated/realestate/visits'
     | '/_authenticated/tickets_/$id'
+    | '/_authenticated/workspace/setup'
     | '/api/public/role-pdf'
     | '/industries/$group/$slug'
     | '/_authenticated/brand/'
@@ -1449,6 +1499,7 @@ export interface FileRouteTypes {
     | '/_authenticated/packs/'
     | '/_authenticated/productsales/'
     | '/_authenticated/realestate/'
+    | '/_authenticated/workspace/'
     | '/industries/$group/'
     | '/_authenticated/affiliates_/$id/referrals'
     | '/_authenticated/brand/campaign/$id'
@@ -2021,6 +2072,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndustriesGroupIndexRouteImport
       parentRoute: typeof IndustriesGroupRoute
     }
+    '/_authenticated/workspace/': {
+      id: '/_authenticated/workspace/'
+      path: '/workspace'
+      fullPath: '/workspace/'
+      preLoaderRoute: typeof AuthenticatedWorkspaceIndexRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/realestate/': {
       id: '/_authenticated/realestate/'
       path: '/'
@@ -2076,6 +2134,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/api/public/role-pdf'
       preLoaderRoute: typeof ApiPublicRolePdfRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/_authenticated/workspace/setup': {
+      id: '/_authenticated/workspace/setup'
+      path: '/workspace/setup'
+      fullPath: '/workspace/setup'
+      preLoaderRoute: typeof AuthenticatedWorkspaceSetupRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/tickets_/$id': {
       id: '/_authenticated/tickets_/$id'
@@ -2251,6 +2316,20 @@ declare module '@tanstack/react-router' {
       fullPath: '/brand/campaigns'
       preLoaderRoute: typeof AuthenticatedBrandCampaignsRouteImport
       parentRoute: typeof AuthenticatedBrandRoute
+    }
+    '/_authenticated/agency/portal': {
+      id: '/_authenticated/agency/portal'
+      path: '/agency/portal'
+      fullPath: '/agency/portal'
+      preLoaderRoute: typeof AuthenticatedAgencyPortalRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/agency/desk': {
+      id: '/_authenticated/agency/desk'
+      path: '/agency/desk'
+      fullPath: '/agency/desk'
+      preLoaderRoute: typeof AuthenticatedAgencyDeskRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/industry/$slug/': {
       id: '/_authenticated/industry/$slug/'
@@ -2494,9 +2573,13 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedTicketsRoute: typeof AuthenticatedTicketsRoute
   AuthenticatedWebhookDeadLetterRoute: typeof AuthenticatedWebhookDeadLetterRoute
   AuthenticatedWebhookSettingsRoute: typeof AuthenticatedWebhookSettingsRoute
+  AuthenticatedAgencyDeskRoute: typeof AuthenticatedAgencyDeskRoute
+  AuthenticatedAgencyPortalRoute: typeof AuthenticatedAgencyPortalRoute
   AuthenticatedIndustrySlugRoute: typeof AuthenticatedIndustrySlugRouteWithChildren
   AuthenticatedTicketsIdRoute: typeof AuthenticatedTicketsIdRoute
+  AuthenticatedWorkspaceSetupRoute: typeof AuthenticatedWorkspaceSetupRoute
   AuthenticatedPacksIndexRoute: typeof AuthenticatedPacksIndexRoute
+  AuthenticatedWorkspaceIndexRoute: typeof AuthenticatedWorkspaceIndexRoute
   AuthenticatedAffiliatesIdReferralsRoute: typeof AuthenticatedAffiliatesIdReferralsRoute
   AuthenticatedPacksGroupSlugRoute: typeof AuthenticatedPacksGroupSlugRoute
 }
@@ -2554,9 +2637,13 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedTicketsRoute: AuthenticatedTicketsRoute,
   AuthenticatedWebhookDeadLetterRoute: AuthenticatedWebhookDeadLetterRoute,
   AuthenticatedWebhookSettingsRoute: AuthenticatedWebhookSettingsRoute,
+  AuthenticatedAgencyDeskRoute: AuthenticatedAgencyDeskRoute,
+  AuthenticatedAgencyPortalRoute: AuthenticatedAgencyPortalRoute,
   AuthenticatedIndustrySlugRoute: AuthenticatedIndustrySlugRouteWithChildren,
   AuthenticatedTicketsIdRoute: AuthenticatedTicketsIdRoute,
+  AuthenticatedWorkspaceSetupRoute: AuthenticatedWorkspaceSetupRoute,
   AuthenticatedPacksIndexRoute: AuthenticatedPacksIndexRoute,
+  AuthenticatedWorkspaceIndexRoute: AuthenticatedWorkspaceIndexRoute,
   AuthenticatedAffiliatesIdReferralsRoute:
     AuthenticatedAffiliatesIdReferralsRoute,
   AuthenticatedPacksGroupSlugRoute: AuthenticatedPacksGroupSlugRoute,
