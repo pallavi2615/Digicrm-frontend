@@ -55,8 +55,8 @@ const industries: NavItem[] = [
   { title: "Product Sales", url: "/productsales", icon: Package },
   { title: "Creator CRM", url: "/creator", icon: Sparkles },
   { title: "Distribution OS", url: "/distribution", icon: Store },
-  { title: "Restaurant OS", url: "/restaurant", icon: Store },
-  { title: "Coaching CRM", url: "/coaching", icon: GraduationCap },
+  { title: "Restaurant OS", url: "/restaurant", icon: Store, industries: ["restaurant"] },
+  { title: "Coaching CRM", url: "/coaching", icon: GraduationCap, industries: ["coaching"] },
   { title: "Education", url: "/industry/education", icon: GraduationCap },
   { title: "Healthcare", url: "/industry/healthcare-clinics", icon: Stethoscope },
   { title: "Insurance", url: "/industry/insurance", icon: ShieldCheck },
@@ -73,13 +73,13 @@ const SHARED_ROUTES = new Set<string>(["/packs", "/digiverify", "/m"]);
 const industrySubNav: Record<string, NavItem[]> = {
   // Key = route prefix (jo industry array mein url hai)
   "/it": [
-    { title: "Dashboard", url: "/it", icon: LayoutDashboard },
+    { title: "IT Dashboard", url: "/it", icon: LayoutDashboard },
     { title: "Projects", url: "/it/projects", icon: KanbanSquare },
     { title: "Tickets & Tasks", url: "/it/tickets", icon: CheckSquare },
     { title: "Pipeline", url: "/it/pipeline", icon: TrendingUp },
   ],
   "/realestate": [
-    { title: "Dashboard", url: "/realestate", icon: LayoutDashboard },
+    { title: "Real Estate Dashboard", url: "/realestate", icon: LayoutDashboard },
     { title: "Lead360", url: "/realestate/leads", icon: Users },
     { title: "Projects & Inventory", url: "/realestate/projects", icon: Building2 },
     { title: "MatchAI", url: "/realestate/match", icon: Target },
@@ -110,11 +110,13 @@ const system: NavItem[] = [
   { title: "Payments & Ledger", url: "/payments", icon: CreditCard, managerUp: true },
   { title: "Payout Accounts", url: "/payout-accounts", icon: HandCoins, managerUp: true },
   { title: "Partner Payouts", url: "/partner", icon: HandCoins },
-  { title: "Education AI", url: "/education-setup", icon: GraduationCap },
-  { title: "DigiPortal", url: "/portal", icon: Layers },
+  { title: "Education AI", url: "/education-setup", icon: GraduationCap, industries: ["education", "coaching"] },
+  { title: "DigiPortal", url: "/portal", icon: Layers, industries: ["education", "coaching", "creator"] },
   { title: "Buyer Portal", url: "/buyer", icon: ShoppingBag,industries: ["property"] },
   { title: "Student Portal", url: "/student-portal", icon: Home, industries: ["education", "coaching"] },
   { title: "Brand Portal", url: "/brand", icon: Palette, industries: ["creator"] },
+  { title: "Agency Desk", url: "/agency/desk", icon: LifeBuoy, superAdminOnly: true },
+  { title: "Agency Portal", url: "/agency/portal", icon: FileText, superAdminOnly: true },
   { title: "Notifications", url: "/notifications", icon: Bell },
   { title: "Feature Matrix", url: "/feature-matrix", icon: ShieldCheck, adminOnly: true },
   { title: "Settings", url: "/settings", icon: Settings },
@@ -128,13 +130,14 @@ const adminOnly: NavItem[] = [
   { title: "Conversions", url: "/landing-conversions", icon: TrendingUp },
   { title: "Affiliates", url: "/affiliates", icon: Users },
   { title: "Payout History", url: "/payout-history", icon: Wallet },
-  { title: "Tenants", url: "/settings-tenants", icon: Layers },
   { title: "Pack Settings", url: "/settings-pack", icon: Settings },
+
   { title: "New Workspace", url: "/onboarding", icon: Layers },
 ];
 
 const superAdminOnly: NavItem[] = [
   { title: "Super Admin", url: "/admin", icon: Crown },
+  { title: "Tenants", url: "/settings-tenants", icon: Layers },
   { title: "Industry Pack CMS", url: "/admin-packs", icon: Layers },
   { title: "Template Builder", url: "/admin-templates", icon: Layers },
   { title: "Plans & Features", url: "/settings-plans", icon: Crown },

@@ -239,6 +239,10 @@ interface StoredUser {
   full_name?: string | null;
   role?: AppRole;
   roles?: AppRole[];
+  tenant_id?: number | null;      // ⭐ ADDED
+  manager_id?: number | null;     // ⭐ ADDED
+  tenant_name?: string | null;    // ⭐ ADDED
+  avatar_url?: string | null;     // ⭐ ADDED
 }
 
 export interface AuthState {
@@ -249,7 +253,6 @@ export interface AuthState {
 
 const AUTH_EVENT = "auth-changed";
 
-// 👇 SAARI keys jो clear karni hain (screenshot wali bhi add ki)
 const AUTH_KEYS = [
   "access_token",
   "refresh_token",
@@ -257,9 +260,9 @@ const AUTH_KEYS = [
   "tenant",
   "permissions",
   "role",
-  "active_crm_group",        // 👈 ADDED
-  "digicrm.active_tenant",   // 👈 ADDED
-  "active_industry",         // 👈 ADDED (safety)
+  "active_crm_group",
+  "digicrm.active_tenant",
+  "active_industry",
 ];
 
 export function notifyAuthChanged() {
@@ -291,10 +294,16 @@ export function useAuth(): AuthState & {
   isAdmin: boolean;
   isManager: boolean;
   isExecutive: boolean;
+  isAdminOrAbove: boolean;      // ⭐ ADDED
+  canAssignManager: boolean;    // ⭐ ADDED
   hasRole: (r: AppRole) => boolean;
   logout: () => Promise<void>;
 } {
-  const [state, setState] = useState<AuthState>({ user: null, roles: [], loading: true });
+  const [state, setState] = useState<AuthState>({
+    user: null,
+    roles: [],
+    loading: true,
+  });
 
   useEffect(() => {
     const sync = () => setState({ ...readAuthFromStorage(), loading: false });
@@ -319,6 +328,10 @@ export function useAuth(): AuthState & {
   const isManager = isAdmin || state.roles.includes("sales_manager");
   const isExecutive = state.roles.includes("sales_executive");
 
+  // ⭐ NEW aliases (used by Team page)
+  const isAdminOrAbove = isSuperAdmin || state.roles.includes("admin");
+  const canAssignManager = isAdminOrAbove;
+
   const logout = useCallback(async () => {
     try {
       const token = localStorage.getItem("access_token");
@@ -332,15 +345,12 @@ export function useAuth(): AuthState & {
       // ignore
     }
 
-    // 1. Storage clear
     clearAuthStorage();
-    localStorage.clear();       // 👈 EXTRA SAFETY — sab kuch saaf
-    sessionStorage.clear();     // 👈 EXTRA SAFETY
+    localStorage.clear();
+    sessionStorage.clear();
 
-    // 2. State clear
     setState({ user: null, roles: [], loading: false });
 
-    // 3. HARD REDIRECT — ye sabse important hai! 🎯
     window.location.href = "/auth";
   }, []);
 
@@ -350,6 +360,8 @@ export function useAuth(): AuthState & {
     isAdmin,
     isManager,
     isExecutive,
+    isAdminOrAbove,      // ⭐
+    canAssignManager,    // ⭐
     hasRole: (r) => state.roles.includes(r),
     logout,
   };
