@@ -406,7 +406,7 @@ function SettingsPage() {
                     <SelectContent>
                       {options.map((r) => (
                         <SelectItem
-                          key={r}
+                          key={r}  
                           value={r}
                           className="capitalize"
                           disabled={r === "super_admin" || ROLE_RANK[r] > myRank}
