@@ -33,3 +33,4 @@ dist-ssr
 .env
 backend_old/
 backend_old/
+src_old/

@@ -104,6 +104,7 @@ const insights: NavItem[] = [
 const system: NavItem[] = [
   { title: "Industry Workspace", url: "/workspace", icon: Layers },
   { title: "My Workspace", url: "/tenant-dashboard", icon: Layers },
+  { title: "Wallet", url: "/wallet", icon: Wallet },  
   { title: "Portal Desk", url: "/tenant-portal", icon: Layers },
   { title: "Billing", url: "/tenant-billing", icon: Wallet, managerUp: true },
   { title: "Cash Flow Tracker", url: "/cashflow", icon: IndianRupee, managerUp: true },
@@ -113,7 +114,7 @@ const system: NavItem[] = [
   { title: "Education AI", url: "/education-setup", icon: GraduationCap, industries: ["education", "coaching"] },
   { title: "DigiPortal", url: "/portal", icon: Layers, industries: ["education", "coaching", "creator"] },
   { title: "Buyer Portal", url: "/buyer", icon: ShoppingBag,industries: ["property"] },
-  { title: "Student Portal", url: "/student-portal", icon: Home, industries: ["education", "coaching"] },
+  // { title: "Student Portal", url: "/student-portal", icon: Home, industries: ["education", "coaching"] },
   { title: "Brand Portal", url: "/brand", icon: Palette, industries: ["creator"] },
   { title: "Agency Desk", url: "/agency/desk", icon: LifeBuoy, superAdminOnly: true },
   { title: "Agency Portal", url: "/agency/portal", icon: FileText, superAdminOnly: true },

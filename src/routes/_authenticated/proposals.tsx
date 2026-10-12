@@ -29,6 +29,7 @@ import {
 } from "@/components/proposal-timeline";
 import { convertProposalToDeal, proposalStageToDealStage, canConvert } from "@/lib/proposal-deal";
 import type { ApprovalStatus, LeadStatus } from "@/lib/proposal-deal";
+import { useActiveIndustry } from "@/lib/active-industry";
 import { toast } from "sonner";
 import { DatePicker } from "@/components/ui/datetime-picker";
 
@@ -84,6 +85,7 @@ interface Proposal {
   pipeline_stage: string | null;
   lead_name: string | null;
   template_id: number | null;
+  industry: string | null; 
   sent_at: string | null;
   viewed_at: string | null;
   accepted_at: string | null;
@@ -176,6 +178,7 @@ function ProposalsPage() {
   const perms = usePermissions();
   const qc = useQueryClient();
 
+  const { activeGroup } = useActiveIndustry();
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [editing, setEditing] = useState<Proposal | null>(null);
@@ -299,9 +302,19 @@ function ProposalsPage() {
     [leads, form.lead_id],
   );
 
+  // const { data: proposals, isLoading, isError, refetch } = useQuery({
+  //   queryKey: ["proposals"],
+  //   queryFn: () => apiFetch<Proposal[]>("/api/v1/proposals"),
+  // });
+
   const { data: proposals, isLoading, isError, refetch } = useQuery({
-    queryKey: ["proposals"],
-    queryFn: () => apiFetch<Proposal[]>("/api/v1/proposals"),
+    queryKey: ["proposals", activeGroup],   // ⭐ cache per industry
+    queryFn: () => {
+      const params = new URLSearchParams();
+      if (activeGroup) params.set("industry", activeGroup);
+      const qs = params.toString();
+      return apiFetch<Proposal[]>(`/api/v1/proposals${qs ? `?${qs}` : ""}`);
+    },
   });
 
   const rows = useMemo(() => {
@@ -368,6 +381,7 @@ function ProposalsPage() {
         pipeline_stage: editing?.pipeline_stage || "in_pipeline",
         lead_name: selectedLead ? leadLabel(selectedLead) : null,
         template_id: form.template_id === "none" ? null : Number(form.template_id),
+        industry: activeGroup || null,
       };
 
       if (editing) {
@@ -449,6 +463,7 @@ function ProposalsPage() {
           pipeline_stage: p.pipeline_stage,
           lead_name: p.lead_name,
           template_id: p.template_id,
+          industry: p.industry,
         }),
       });
     },

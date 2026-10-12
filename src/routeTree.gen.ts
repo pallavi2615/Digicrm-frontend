@@ -35,6 +35,7 @@ import { Route as CampaignSlugRouteImport } from './routes/campaign.$slug'
 import { Route as BlogSlugRouteImport } from './routes/blog.$slug'
 import { Route as AuthenticatedWebhookSettingsRouteImport } from './routes/_authenticated/webhook-settings'
 import { Route as AuthenticatedWebhookDeadLetterRouteImport } from './routes/_authenticated/webhook-dead-letter'
+import { Route as AuthenticatedWalletRouteImport } from './routes/_authenticated/wallet'
 import { Route as AuthenticatedTicketsRouteImport } from './routes/_authenticated/tickets'
 import { Route as AuthenticatedTenantPortalRouteImport } from './routes/_authenticated/tenant-portal'
 import { Route as AuthenticatedTenantDashboardRouteImport } from './routes/_authenticated/tenant-dashboard'
@@ -262,6 +263,11 @@ const AuthenticatedWebhookDeadLetterRoute =
     path: '/webhook-dead-letter',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
+const AuthenticatedWalletRoute = AuthenticatedWalletRouteImport.update({
+  id: '/wallet',
+  path: '/wallet',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const AuthenticatedTicketsRoute = AuthenticatedTicketsRouteImport.update({
   id: '/tickets',
   path: '/tickets',
@@ -854,6 +860,7 @@ export interface FileRoutesByFullPath {
   '/tenant-dashboard': typeof AuthenticatedTenantDashboardRoute
   '/tenant-portal': typeof AuthenticatedTenantPortalRoute
   '/tickets': typeof AuthenticatedTicketsRoute
+  '/wallet': typeof AuthenticatedWalletRoute
   '/webhook-dead-letter': typeof AuthenticatedWebhookDeadLetterRoute
   '/webhook-settings': typeof AuthenticatedWebhookSettingsRoute
   '/blog/$slug': typeof BlogSlugRoute
@@ -969,6 +976,7 @@ export interface FileRoutesByTo {
   '/tenant-dashboard': typeof AuthenticatedTenantDashboardRoute
   '/tenant-portal': typeof AuthenticatedTenantPortalRoute
   '/tickets': typeof AuthenticatedTicketsRoute
+  '/wallet': typeof AuthenticatedWalletRoute
   '/webhook-dead-letter': typeof AuthenticatedWebhookDeadLetterRoute
   '/webhook-settings': typeof AuthenticatedWebhookSettingsRoute
   '/blog/$slug': typeof BlogSlugRoute
@@ -1091,6 +1099,7 @@ export interface FileRoutesById {
   '/_authenticated/tenant-dashboard': typeof AuthenticatedTenantDashboardRoute
   '/_authenticated/tenant-portal': typeof AuthenticatedTenantPortalRoute
   '/_authenticated/tickets': typeof AuthenticatedTicketsRoute
+  '/_authenticated/wallet': typeof AuthenticatedWalletRoute
   '/_authenticated/webhook-dead-letter': typeof AuthenticatedWebhookDeadLetterRoute
   '/_authenticated/webhook-settings': typeof AuthenticatedWebhookSettingsRoute
   '/blog/$slug': typeof BlogSlugRoute
@@ -1215,6 +1224,7 @@ export interface FileRouteTypes {
     | '/tenant-dashboard'
     | '/tenant-portal'
     | '/tickets'
+    | '/wallet'
     | '/webhook-dead-letter'
     | '/webhook-settings'
     | '/blog/$slug'
@@ -1330,6 +1340,7 @@ export interface FileRouteTypes {
     | '/tenant-dashboard'
     | '/tenant-portal'
     | '/tickets'
+    | '/wallet'
     | '/webhook-dead-letter'
     | '/webhook-settings'
     | '/blog/$slug'
@@ -1451,6 +1462,7 @@ export interface FileRouteTypes {
     | '/_authenticated/tenant-dashboard'
     | '/_authenticated/tenant-portal'
     | '/_authenticated/tickets'
+    | '/_authenticated/wallet'
     | '/_authenticated/webhook-dead-letter'
     | '/_authenticated/webhook-settings'
     | '/blog/$slug'
@@ -1720,6 +1732,13 @@ declare module '@tanstack/react-router' {
       path: '/webhook-dead-letter'
       fullPath: '/webhook-dead-letter'
       preLoaderRoute: typeof AuthenticatedWebhookDeadLetterRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/wallet': {
+      id: '/_authenticated/wallet'
+      path: '/wallet'
+      fullPath: '/wallet'
+      preLoaderRoute: typeof AuthenticatedWalletRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/tickets': {
@@ -2571,6 +2590,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedTenantDashboardRoute: typeof AuthenticatedTenantDashboardRoute
   AuthenticatedTenantPortalRoute: typeof AuthenticatedTenantPortalRoute
   AuthenticatedTicketsRoute: typeof AuthenticatedTicketsRoute
+  AuthenticatedWalletRoute: typeof AuthenticatedWalletRoute
   AuthenticatedWebhookDeadLetterRoute: typeof AuthenticatedWebhookDeadLetterRoute
   AuthenticatedWebhookSettingsRoute: typeof AuthenticatedWebhookSettingsRoute
   AuthenticatedAgencyDeskRoute: typeof AuthenticatedAgencyDeskRoute
@@ -2635,6 +2655,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedTenantDashboardRoute: AuthenticatedTenantDashboardRoute,
   AuthenticatedTenantPortalRoute: AuthenticatedTenantPortalRoute,
   AuthenticatedTicketsRoute: AuthenticatedTicketsRoute,
+  AuthenticatedWalletRoute: AuthenticatedWalletRoute,
   AuthenticatedWebhookDeadLetterRoute: AuthenticatedWebhookDeadLetterRoute,
   AuthenticatedWebhookSettingsRoute: AuthenticatedWebhookSettingsRoute,
   AuthenticatedAgencyDeskRoute: AuthenticatedAgencyDeskRoute,
