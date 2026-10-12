@@ -405,7 +405,7 @@ function SettingsPage() {
                     </SelectTrigger>
                     <SelectContent>
                       {options.map((r) => (
-                        <SelectItem
+                        <SelectItem   
                           key={r}  
                           value={r}
                           className="capitalize"
