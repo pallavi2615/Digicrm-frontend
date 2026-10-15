@@ -1,5 +1,5 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
-import { useQuery } from "@tanstack/react-query";
+import { defineRoute, Link } from "@/lib/router-compat";
+import { useQuery } from "@/lib/react-data-client";
 import { useState } from "react";
 import { Loader2 } from "lucide-react";
 import { brandApi } from "@/lib/brand.api";
@@ -12,7 +12,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { PLATFORMS, inr } from "@/lib/creator";
 import { toast } from "sonner";
 
-export const Route = createFileRoute("/_authenticated/brand/campaigns")({
+export const Route = defineRoute("/_authenticated/brand/campaigns")({
   head: () => ({ meta: [{ title: "Post a Campaign | Brand Portal" }, { name: "description", content: "Post an open campaign and review creator applications." }] }),
   component: BrandCampaigns,
 });

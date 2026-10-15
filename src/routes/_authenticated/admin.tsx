@@ -1,7 +1,6 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { defineRoute, Link } from "@/lib/router-compat";
 import { useState } from "react";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useServerFn } from "@tanstack/react-start";
+import { useQuery, useQueryClient } from "@/lib/react-data-client";
 import { toast } from "sonner";
 import {
   Users, Layers, ShieldCheck, FileText, Settings2, Loader2, Building2, BookOpen,
@@ -26,7 +25,7 @@ import { changeUserRole } from "@/lib/rbac.functions";
 import { useAuth, type AppRole } from "@/hooks/use-auth";
 import { INDUSTRY_GROUPS } from "@/lib/industry-taxonomy";
 
-export const Route = createFileRoute("/_authenticated/admin")({
+export const Route = defineRoute("/_authenticated/admin")({
   component: () => (
     <RoleGuard allow={["super_admin", "admin"]} module="settings" label="Super Admin">
       <AdminHub />
@@ -102,7 +101,7 @@ function UsersAdmin() {
   const qc = useQueryClient();
   const { user, hasRole } = useAuth();
   const canChange = hasRole("super_admin");
-  const doChange = useServerFn(changeUserRole);
+  const doChange = changeUserRole;
   const [q, setQ] = useState("");
   const [pending, setPending] = useState<{ person: Person; role: AppRole } | null>(null);
   const [saving, setSaving] = useState(false);

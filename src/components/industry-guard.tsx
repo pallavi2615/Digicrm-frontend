@@ -1,5 +1,5 @@
 import { useEffect, type ReactNode } from "react";
-import { Link } from "@tanstack/react-router";
+import { Link } from "@/lib/router-compat";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Loader2, Lock } from "lucide-react";

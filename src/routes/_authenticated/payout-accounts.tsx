@@ -1,6 +1,6 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { defineRoute } from "@/lib/router-compat";
 import { useState } from "react";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@/lib/react-data-client";
 import { apiFetch } from "@/lib/api";
 import { useAuth } from "@/hooks/use-auth";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 
-export const Route = createFileRoute("/_authenticated/payout-accounts")({
+export const Route = defineRoute("/_authenticated/payout-accounts")({
   head: () => ({
     meta: [
       { title: "Payout Accounts | DigiCRM AI" },

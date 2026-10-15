@@ -1,4 +1,4 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { defineRoute, Link } from "@/lib/router-compat";
 import { SiteShell } from "@/components/site-shell";
 import infoStack from "@/assets/infographic-stack.jpg";
 import infoWorkflow from "@/assets/infographic-workflow.jpg";
@@ -12,7 +12,7 @@ import {
 
 import { buildRouteMeta } from "@/lib/seo";
 
-export const Route = createFileRoute("/features")({
+export const Route = defineRoute("/features")({
   head: () => buildRouteMeta({
     path: "/features",
     title: "Features — DigiCRM AI",

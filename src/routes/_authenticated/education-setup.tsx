@@ -1,6 +1,6 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { defineRoute, useNavigate } from "@/lib/router-compat";
 import { useState } from "react";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@/lib/react-data-client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -13,7 +13,7 @@ import { toast } from "sonner";
 import { getTemplate } from "@/lib/workspace-templates";
 import { educationApi, type EducationPlan, type Kind } from "@/lib/education.api";
 
-export const Route = createFileRoute("/_authenticated/education-setup")({
+export const Route = defineRoute("/_authenticated/education-setup")({
   head: () => ({
     meta: [
       { title: "Education AI Setup | DigiCRM AI" },

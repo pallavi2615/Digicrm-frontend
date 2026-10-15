@@ -1,5 +1,5 @@
-import { createFileRoute } from "@tanstack/react-router";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { defineRoute } from "@/lib/router-compat";
+import { useMutation, useQuery, useQueryClient } from "@/lib/react-data-client";
 import { useEffect, useState } from "react";
 import { useAuth } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
@@ -14,7 +14,7 @@ import { Plus, Pencil, Trash2, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { apiFetch } from "@/lib/api";
 
-export const Route = createFileRoute("/_authenticated/it/projects")({
+export const Route = defineRoute("/_authenticated/it/projects")({
   component: ITProjectsPage,
 });
 

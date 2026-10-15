@@ -1,4 +1,4 @@
-import { createFileRoute, Link, notFound, redirect } from "@tanstack/react-router";
+import { defineRoute, Link, notFound, redirect } from "@/lib/router-compat";
 import { SiteShell } from "@/components/site-shell";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -7,7 +7,7 @@ import * as LucideIcons from "lucide-react";
 import { getGroup, resolveLegacySlug, INDUSTRY_GROUPS } from "@/lib/industry-taxonomy";
 import { buildRouteMeta, breadcrumbJsonLd } from "@/lib/seo";
 
-export const Route = createFileRoute("/industries/$group/")({
+export const Route = defineRoute("/industries/$group/")({
   loader: ({ params }) => {
     const group = getGroup(params.group);
     if (!group) {

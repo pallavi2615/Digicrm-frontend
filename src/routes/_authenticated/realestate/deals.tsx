@@ -3,9 +3,9 @@
  * schedule, home loan and commission overview.
  */
 
-import { createFileRoute } from "@tanstack/react-router";
+import { defineRoute } from "@/lib/router-compat";
 import { useMemo, useState } from "react";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@/lib/react-data-client";
 import {
   Card, CardContent, CardHeader, CardTitle, CardDescription,
 } from "@/components/ui/card";
@@ -32,7 +32,7 @@ import {
 } from "@/lib/realestate.functions";
 import { inr, cr, waLink, today } from "@/lib/re-data";
 
-export const Route = createFileRoute("/_authenticated/realestate/deals")({
+export const Route = defineRoute("/_authenticated/realestate/deals")({
   head: () => ({ meta: [{ title: "DealFlow & Collections | Real Estate CRM" }] }),
   component: DealsPage,
 });

@@ -1,5 +1,5 @@
-import { createFileRoute } from "@tanstack/react-router";
-import { useQuery } from "@tanstack/react-query";
+import { defineRoute } from "@/lib/router-compat";
+import { useQuery } from "@/lib/react-data-client";
 import { apiFetch } from "@/lib/api";
 
 import {
@@ -71,10 +71,10 @@ import {
 import { CSS } from "@dnd-kit/utilities";
 
 import { GlobalSearch } from "@/components/global-search";
-import { Link } from "@tanstack/react-router";
+import { Link } from "@/lib/router-compat";
 import { toast } from "sonner";
 
-export const Route = createFileRoute("/_authenticated/dashboard")({
+export const Route = defineRoute("/_authenticated/dashboard")({
   head: () => ({
     meta: [{ title: "Dashboard — DigiCRM AI" }],
   }),

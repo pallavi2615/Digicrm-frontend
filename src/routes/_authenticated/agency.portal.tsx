@@ -1,11 +1,11 @@
-import { createFileRoute } from "@tanstack/react-router";
-import { useQuery } from "@tanstack/react-query";
+import { defineRoute } from "@/lib/router-compat";
+import { useQuery } from "@/lib/react-data-client";
 import { apiFetch } from "@/lib/api";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Loader2, FileText, ExternalLink } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 
-export const Route = createFileRoute("/_authenticated/agency/portal")({
+export const Route = defineRoute("/_authenticated/agency/portal")({
   head: () => ({ meta: [{ title: "Agency Client Portal — DigiCRM AI" }] }),
   component: AgencyPortalPage,
 });

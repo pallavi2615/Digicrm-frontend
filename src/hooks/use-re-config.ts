@@ -4,7 +4,7 @@
  * data is only fetched once.
  */
 
-import { useQuery } from "@tanstack/react-query";
+import { useQuery } from "@/lib/react-data-client";
 import { apiFetch } from "@/lib/api";
 import type { ReConfig } from "@/lib/re-data";
 

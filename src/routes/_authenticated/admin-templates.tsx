@@ -1,6 +1,6 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { defineRoute } from "@/lib/router-compat";
 import { useState } from "react";
-import { useQueryClient } from "@tanstack/react-query";
+import { useQueryClient } from "@/lib/react-data-client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -18,7 +18,7 @@ import { WORKSPACE_TEMPLATES, type WorkspaceTemplate } from "@/lib/workspace-tem
 import { useLibraryRows, normalise, type LibraryRow } from "@/lib/template-library";
 import { TemplatePreview } from "@/components/template-preview";
 
-export const Route = createFileRoute("/_authenticated/admin-templates")({
+export const Route = defineRoute("/_authenticated/admin-templates")({
   head: () => ({
     meta: [
       { title: "Industry Template Builder | DigiCRM AI Admin" },

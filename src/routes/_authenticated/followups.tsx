@@ -1,5 +1,5 @@
-import { createFileRoute } from "@tanstack/react-router";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { defineRoute } from "@/lib/router-compat";
+import { useMutation, useQuery, useQueryClient } from "@/lib/react-data-client";
 import { useMemo, useState } from "react";
 import { apiFetch } from "@/lib/api";
 import { Button } from "@/components/ui/button";
@@ -22,7 +22,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 
-export const Route = createFileRoute("/_authenticated/followups")({
+export const Route = defineRoute("/_authenticated/followups")({
   head: () => ({ meta: [{ title: "Follow-ups — DigiCRM AI" }] }),
   component: FollowupsPage,
 });

@@ -1,7 +1,8 @@
 // notifications-button.tsx
 import { useState } from "react";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Bell } from "lucide-react";
+import { useQuery, useQueryClient } from "@/lib/react-data-client";
+import { Bell, CalendarClock } from "lucide-react";
+import { useNavigate } from "@/lib/router-compat";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -11,6 +12,11 @@ import {
 } from "@/components/ui/dropdown-menu";
 
 import { apiFetch } from "@/lib/api";
+import {
+  formatStart,
+  scheduleLabel,
+  useScheduleReminders,
+} from "@/hooks/use-schedule-reminders";
 
 /* =========================================================
    TYPES
@@ -70,6 +76,14 @@ async function markAllRead() {
 export function NotificationsButton() {
   const [open, setOpen] = useState(false);
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
+
+  // Lead-schedule reminders (due at scheduled time − reminder minutes)
+  const {
+    reminders,
+    unreadReminders,
+    markAllRead: markAllRemindersRead,
+  } = useScheduleReminders();
 
   const { data: notifications = [] } = useQuery({
     queryKey: ["notifications"],
@@ -79,9 +93,15 @@ export function NotificationsButton() {
 
   const isUnread = (n: NotificationItem) => !(n.read ?? n.is_read ?? false);
   const unreadCount = notifications.filter(isUnread).length;
+  const totalUnread = unreadCount + unreadReminders.length;
+  const shownReminders = reminders.slice(0, 5);
 
   const handleOpenChange = async (next: boolean) => {
     setOpen(next);
+
+    if (next && unreadReminders.length > 0) {
+      markAllRemindersRead();
+    }
 
     if (next && unreadCount > 0) {
       // Optimistically mark everything read as soon as the panel opens.
@@ -99,7 +119,7 @@ export function NotificationsButton() {
         <Button variant="ghost" size="icon" className="relative">
           <Bell className="h-4 w-4" />
 
-          {unreadCount > 0 && (
+          {totalUnread > 0 && (
             <span className="absolute top-1.5 right-1.5 h-2 w-2 rounded-full bg-destructive ring-2 ring-background" />
           )}
         </Button>
@@ -109,18 +129,51 @@ export function NotificationsButton() {
         <div className="flex items-center justify-between px-3 py-2 border-b">
           <span className="text-sm font-medium">Notifications</span>
 
-          {unreadCount > 0 && (
+          {totalUnread > 0 && (
             <span className="text-xs text-muted-foreground">
-              {unreadCount} new
+              {totalUnread} new
             </span>
           )}
         </div>
 
         <div className="max-h-80 overflow-y-auto">
-          {notifications.length === 0 ? (
-            <div className="px-3 py-8 text-center text-sm text-muted-foreground">
-              No notifications yet.
+          {shownReminders.map((r) => (
+            <div
+              key={r.key}
+              role="button"
+              tabIndex={0}
+              onClick={() => {
+                setOpen(false);
+                navigate({ to: "/calendar" });
+              }}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  setOpen(false);
+                  navigate({ to: "/calendar" });
+                }
+              }}
+              className="flex cursor-pointer items-start gap-2.5 px-3 py-2.5 border-b text-sm hover:bg-muted/50 transition-colors"
+            >
+              <div className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary/15 text-primary">
+                <CalendarClock className="h-3.5 w-3.5" />
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="font-medium leading-snug truncate">Reminder: {r.schedule.title}</p>
+                <p className="text-muted-foreground text-xs truncate">
+                  {[scheduleLabel(r.schedule), r.schedule.lead_name, formatStart(r.startsAt)]
+                    .filter(Boolean)
+                    .join(" · ")}
+                </p>
+              </div>
             </div>
+          ))}
+
+          {notifications.length === 0 ? (
+            shownReminders.length === 0 ? (
+              <div className="px-3 py-8 text-center text-sm text-muted-foreground">
+                No notifications yet.
+              </div>
+            ) : null
           ) : (
             notifications.map((n) => (
               <div

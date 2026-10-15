@@ -1,6 +1,6 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { defineRoute, Link } from "@/lib/router-compat";
 import { useMemo, useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery } from "@/lib/react-data-client";
 import { supabase } from "@/integrations/supabase/client";
 import { useActiveTenant } from "@/lib/queries/tenants";
 import { useAllPacks, useTenantPackKey } from "@/lib/pack-config";
@@ -13,7 +13,7 @@ import {
 } from "recharts";
 import { Building2, Loader2, Settings, Sparkles, Target, TrendingUp, Wallet } from "lucide-react";
 
-export const Route = createFileRoute("/_authenticated/tenant-dashboard")({
+export const Route = defineRoute("/_authenticated/tenant-dashboard")({
   head: () => ({
     meta: [
       { title: "Workspace Dashboard | DigiCRM AI" },

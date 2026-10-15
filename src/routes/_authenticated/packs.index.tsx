@@ -1,5 +1,5 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
-import { useQuery } from "@tanstack/react-query";
+import { defineRoute, Link } from "@/lib/router-compat";
+import { useQuery } from "@/lib/react-data-client";
 import { apiFetch } from "@/lib/api";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -8,7 +8,7 @@ import { INDUSTRY_GROUPS } from "@/lib/industry-taxonomy";
 import { useAllPacks } from "@/lib/pack-config";
 import { ArrowRight, Layers } from "lucide-react";
 
-export const Route = createFileRoute("/_authenticated/packs/")({
+export const Route = defineRoute("/_authenticated/packs/")({
   component: PacksIndex,
   head: () => ({
     meta: [

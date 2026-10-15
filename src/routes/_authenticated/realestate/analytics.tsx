@@ -2,8 +2,8 @@
  * Analytics360 — funnel, source, team and lost-reason analytics.
  */
 
-import { createFileRoute } from "@tanstack/react-router";
-import { useQuery } from "@tanstack/react-query";
+import { defineRoute } from "@/lib/router-compat";
+import { useQuery } from "@/lib/react-data-client";
 import {
   Card, CardContent, CardHeader, CardTitle, CardDescription,
 } from "@/components/ui/card";
@@ -19,7 +19,7 @@ import {
 import { getAnalytics } from "@/lib/realestate.functions";
 import { cr } from "@/lib/re-data";
 
-export const Route = createFileRoute("/_authenticated/realestate/analytics")({
+export const Route = defineRoute("/_authenticated/realestate/analytics")({
   head: () => ({ meta: [{ title: "Analytics360 | Real Estate CRM" }] }),
   component: AnalyticsPage,
 });

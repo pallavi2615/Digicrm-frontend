@@ -1,6 +1,6 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { defineRoute } from "@/lib/router-compat";
 import { useMemo } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery } from "@/lib/react-data-client";
 import { apiFetch } from "@/lib/api";
 import { useActiveTenant } from "@/lib/queries/tenants";
 import { useAllPacks } from "@/lib/pack-config";
@@ -10,7 +10,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { Building2, Handshake, Loader2, Receipt, TrendingUp, Wallet } from "lucide-react";
 
-export const Route = createFileRoute("/_authenticated/tenant-billing")({
+export const Route = defineRoute("/_authenticated/tenant-billing")({
   head: () => ({
     meta: [
       { title: "Workspace Billing | DigiCRM AI" },

@@ -1,5 +1,5 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { defineRoute, Link } from "@/lib/router-compat";
+import { useQuery, useQueryClient } from "@/lib/react-data-client";
 import { useState } from "react";
 import { ArrowLeft, Loader2 } from "lucide-react";
 import { brandApi, type CampaignComment } from "@/lib/brand.api";
@@ -10,7 +10,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { inr, invoiceTotal } from "@/lib/creator";
 import { toast } from "sonner";
 
-export const Route = createFileRoute("/_authenticated/brand/campaign/$id")({
+export const Route = defineRoute("/_authenticated/brand/campaign/$id")({
   head: () => ({ meta: [{ title: "Campaign | Brand Portal" }, { name: "description", content: "Review deliverables, approve content and comment." }] }),
   component: Campaign,
 });

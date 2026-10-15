@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { defineRoute } from "@/lib/router-compat";
 import { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -7,7 +7,7 @@ import { Webhook, Copy, Loader2, Radio } from "lucide-react";
 import { toast } from "sonner";
 import { apiFetch } from "@/lib/api";
 
-export const Route = createFileRoute("/_authenticated/inbound")({
+export const Route = defineRoute("/_authenticated/inbound")({
   head: () => ({
     meta: [
       { title: "Inbound Leads — DigiCRM AI" },

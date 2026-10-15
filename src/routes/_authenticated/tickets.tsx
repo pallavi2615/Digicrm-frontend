@@ -1,5 +1,5 @@
-import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { defineRoute, Link, useNavigate } from "@/lib/router-compat";
+import { useMutation, useQuery, useQueryClient } from "@/lib/react-data-client";
 import { apiFetch } from "@/lib/api";
 import { useMemo, useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
@@ -14,7 +14,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Ticket as TicketIcon, Plus, Search, AlertTriangle, Loader2, Clock } from "lucide-react";
 import { toast } from "sonner";
 
-export const Route = createFileRoute("/_authenticated/tickets")({
+export const Route = defineRoute("/_authenticated/tickets")({
   head: () => ({ meta: [{ title: "Tickets — DigiCRM AI" }, { name: "robots", content: "noindex" }] }),
   component: TicketsPage,
 });

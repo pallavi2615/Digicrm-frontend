@@ -1,11 +1,11 @@
-import { createFileRoute } from "@tanstack/react-router";
-import { useQuery } from "@tanstack/react-query";
+import { defineRoute } from "@/lib/router-compat";
+import { useQuery } from "@/lib/react-data-client";
 import { apiFetch } from "@/lib/api";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Briefcase, Ticket, IndianRupee, CheckCircle2, Loader2 } from "lucide-react";
 import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer, Tooltip, PieChart, Pie, Cell } from "recharts";
 
-export const Route = createFileRoute("/_authenticated/it/")({
+export const Route = defineRoute("/_authenticated/it/")({
   component: ITDashboard,
 });
 

@@ -1,5 +1,5 @@
-import { createFileRoute } from "@tanstack/react-router";
-import { useQuery, keepPreviousData } from "@tanstack/react-query";
+import { defineRoute } from "@/lib/router-compat";
+import { useQuery, keepPreviousData } from "@/lib/react-data-client";
 import { useActiveIndustry } from "@/lib/active-industry";
 import { apiFetch } from "@/lib/api"; // <-- adjust path if your api file lives elsewhere
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -8,7 +8,7 @@ import {
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, RadialBarChart, RadialBar,
 } from "recharts";
 
-export const Route = createFileRoute("/_authenticated/reports")({
+export const Route = defineRoute("/_authenticated/reports")({
   head: () => ({ meta: [{ title: "Reports — DigiCRM AI" }] }),
   component: ReportsPage,
 });

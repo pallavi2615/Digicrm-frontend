@@ -1,5 +1,5 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
-import { useQuery } from "@tanstack/react-query";
+import { defineRoute, Link } from "@/lib/router-compat";
+import { useQuery } from "@/lib/react-data-client";
 import { supabase } from "@/integrations/supabase/client";
 import { useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -9,7 +9,7 @@ import { Loader2, ArrowLeft, Users, DollarSign, TrendingUp, ShieldAlert } from "
 import { useAuth } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
 
-export const Route = createFileRoute("/_authenticated/affiliates_/$id/referrals")({
+export const Route = defineRoute("/_authenticated/affiliates_/$id/referrals")({
   head: () => ({ meta: [{ title: "Affiliate Referrals — DigiCRM AI" }, { name: "robots", content: "noindex" }] }),
   component: AffiliateReferrals,
 });

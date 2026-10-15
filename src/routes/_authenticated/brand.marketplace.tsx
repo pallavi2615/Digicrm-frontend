@@ -1,5 +1,5 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useQuery } from "@tanstack/react-query";
+import { defineRoute, useNavigate } from "@/lib/router-compat";
+import { useQuery } from "@/lib/react-data-client";
 import { useState } from "react";
 import { Loader2, Users, TrendingUp, MapPin } from "lucide-react";
 import { brandApi, type MarketplaceCreator } from "@/lib/brand.api";
@@ -14,7 +14,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { PLATFORMS } from "@/lib/creator";
 import { toast } from "sonner";
 
-export const Route = createFileRoute("/_authenticated/brand/marketplace")({
+export const Route = defineRoute("/_authenticated/brand/marketplace")({
   head: () => ({ meta: [{ title: "Creator Marketplace | Brand Portal" }, { name: "description", content: "Search creators by followers, engagement and category, then send a brief." }] }),
   component: Marketplace,
 });

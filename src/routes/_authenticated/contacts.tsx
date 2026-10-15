@@ -1,7 +1,7 @@
 import { usePermissions } from "@/hooks/use-permissions";
 import { notifyPermissionDenied } from "@/components/permission-denied";
-import { createFileRoute } from "@tanstack/react-router";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { defineRoute } from "@/lib/router-compat";
+import { useMutation, useQuery, useQueryClient } from "@/lib/react-data-client";
 import { apiFetch, apiUpload, apiDownload } from "@/lib/api";
 import { useAuth } from "@/hooks/use-auth";
 import { useMemo, useRef, useState } from "react";
@@ -27,12 +27,15 @@ import {
 import { Plus, Search, MoreVertical, Trash2, Pencil, Loader2, UserCircle, Mail, Phone, Upload, Download, Eye } from "lucide-react";
 import { toast } from "sonner";
 
-export const Route = createFileRoute("/_authenticated/contacts")({
+export const Route = defineRoute("/_authenticated/contacts")({
   head: () => ({ meta: [{ title: "Contacts — DigiCRM AI" }] }),
   component: ContactsPage,
 });
 
 const BASE = "/api/v1/contacts";
+
+// Tag set by the Leads page "OnPriority" bulk action
+const PRIORITY_TAG = "priority";
 
 interface Contact {
   id: number;
@@ -68,6 +71,8 @@ const empty = { first_name: "", last_name: "", email: "", phone: "", designation
 const nullIfEmpty = (v: string) => (v.trim() === "" ? null : v.trim());
 
 const contactName = (c: Contact) => `${c.first_name} ${c.last_name ?? ""}`.trim();
+
+const isPriorityContact = (c: Contact) => !!c.tags?.includes(PRIORITY_TAG);
 
 function ContactsPage() {
   const perms = usePermissions();
@@ -105,10 +110,16 @@ function ContactsPage() {
 
   // Search and company filter run client-side; move them to query params
   // if the API supports them and the list gets large.
+  // Priority contacts (tagged from the Leads page) are pinned to the top, then newest first.
   const contacts = useMemo(() => {
     const q = search.trim().toLowerCase();
     return [...(allContacts ?? [])]
-      .sort((a, b) => (b.created_at ?? "").localeCompare(a.created_at ?? ""))
+      .sort((a, b) => {
+        const pa = isPriorityContact(a) ? 1 : 0;
+        const pb = isPriorityContact(b) ? 1 : 0;
+        if (pa !== pb) return pb - pa;
+        return (b.created_at ?? "").localeCompare(a.created_at ?? "");
+      })
       .filter((c) => companyFilter === "all" || String(c.company_id) === companyFilter)
       .filter((c) =>
         !q || [c.first_name, c.last_name, c.email].some((v) => v?.toLowerCase().includes(q)),
@@ -267,8 +278,19 @@ function ContactsPage() {
                 {contacts.slice((page - 1) * pageSize, page * pageSize).map(c => {
                   const name = contactName(c);
                   const initials = ((c.first_name?.[0] ?? "") + (c.last_name?.[0] ?? "")).toUpperCase();
+                  const priority = isPriorityContact(c);
                   return (
-                    <TableRow key={c.id} data-testid="contact-row" data-contact-id={c.id} className="cursor-pointer" onClick={() => setViewing(c)}>
+                    <TableRow
+                      key={c.id}
+                      data-testid="contact-row"
+                      data-contact-id={c.id}
+                      className={`cursor-pointer ${
+                        priority
+                          ? "bg-amber-50 hover:bg-amber-100 border-l-4 border-l-amber-400 dark:bg-amber-500/15 dark:hover:bg-amber-500/25 dark:border-l-amber-500"
+                          : ""
+                      }`}
+                      onClick={() => setViewing(c)}
+                    >
                       <TableCell>
                         <div className="flex items-center gap-3">
                           <Avatar className="h-9 w-9"><AvatarFallback className="bg-primary/10 text-primary text-xs">{initials}</AvatarFallback></Avatar>

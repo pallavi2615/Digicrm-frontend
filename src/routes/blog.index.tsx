@@ -1,13 +1,12 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
-import { useQuery } from "@tanstack/react-query";
-import { useServerFn } from "@tanstack/react-start";
+import { defineRoute, Link } from "@/lib/router-compat";
+import { useQuery } from "@/lib/react-data-client";
 import { SiteShell } from "@/components/site-shell";
 import { Badge } from "@/components/ui/badge";
 import { Loader2, ArrowRight, Clock } from "lucide-react";
 import { listPublishedPosts } from "@/lib/cms.functions";
 import { absoluteUrl, breadcrumbJsonLd, buildRouteMeta } from "@/lib/seo";
 
-export const Route = createFileRoute("/blog/")({
+export const Route = defineRoute("/blog/")({
   // Server-rendered so search engines see the full post list on first paint.
   loader: async () => ({ posts: await listPublishedPosts() }),
   head: ({ loaderData }) => {
@@ -49,7 +48,7 @@ export const Route = createFileRoute("/blog/")({
 
 function BlogIndex() {
   const { posts: initialPosts } = Route.useLoaderData();
-  const fetchPosts = useServerFn(listPublishedPosts);
+  const fetchPosts = listPublishedPosts;
   const { data: posts = initialPosts, isLoading } = useQuery({
     queryKey: ["blog-posts"],
     queryFn: () => fetchPosts(),

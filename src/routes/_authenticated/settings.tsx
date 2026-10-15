@@ -1,7 +1,7 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { defineRoute } from "@/lib/router-compat";
 import { diffRolePermissions } from "@/lib/permissions";
 import { useAuth } from "@/hooks/use-auth";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@/lib/react-data-client";
 import { useMemo, useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -24,7 +24,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { useAutoFollowupSettings, useUpdateAutoFollowupSettings } from "@/lib/queries/tenants";
 import { apiFetch } from "@/lib/api";
 
-export const Route = createFileRoute("/_authenticated/settings")({
+export const Route = defineRoute("/_authenticated/settings")({
   head: () => ({ meta: [{ title: "Settings — DigiCRM AI" }] }),
   component: SettingsPage,
 });
@@ -405,8 +405,8 @@ function SettingsPage() {
                     </SelectTrigger>
                     <SelectContent>
                       {options.map((r) => (
-                        <SelectItem   
-                          key={r}  
+                        <SelectItem
+                          key={r}
                           value={r}
                           className="capitalize"
                           disabled={r === "super_admin" || ROLE_RANK[r] > myRank}

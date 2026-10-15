@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery } from "@/lib/react-data-client";
 import { INDUSTRY_GROUPS } from "@/lib/industry-taxonomy";
 import { useAuth } from "@/hooks/use-auth";
 import { apiFetch } from "@/lib/api";

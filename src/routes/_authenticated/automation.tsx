@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { defineRoute } from "@/lib/router-compat";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
@@ -13,7 +13,7 @@ import {
   Clock,
   Building2,
 } from "lucide-react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@/lib/react-data-client";
 import { toast } from "sonner";
 import { apiFetch } from "@/lib/api";
 import {
@@ -23,7 +23,7 @@ import {
   TabsTrigger,
 } from "@/components/ui/tabs";
 
-export const Route = createFileRoute("/_authenticated/automation")({
+export const Route = defineRoute("/_authenticated/automation")({
   head: () => ({ meta: [{ title: "Automation — DigiCRM AI" }] }),
   component: AutomationPage,
 });

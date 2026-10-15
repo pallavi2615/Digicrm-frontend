@@ -1,9 +1,9 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { defineRoute, Link } from "@/lib/router-compat";
 import { useMemo, useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery } from "@/lib/react-data-client";
 import { apiFetch, apiUpload } from "@/lib/api";
 import { useAuth } from "@/hooks/use-auth";
-import { useQueryClient } from "@tanstack/react-query";
+import { useQueryClient } from "@/lib/react-data-client";
 import { toast } from "sonner";
 import { useAllPacks } from "@/lib/pack-config";
 import { VERIFICATION_LABELS } from "@/lib/industry-packs";
@@ -21,7 +21,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { FileText, IndianRupee, Loader2, Plus, ReceiptText, Search, ShieldCheck, Upload } from "lucide-react";
 
-export const Route = createFileRoute("/_authenticated/portal")({
+export const Route = defineRoute("/_authenticated/portal")({
   head: () => ({
     meta: [
       { title: "DigiPortal — Client & Partner Portal | DigiCRM AI" },

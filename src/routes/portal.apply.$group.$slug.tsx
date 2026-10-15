@@ -1,6 +1,6 @@
-import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { defineRoute, Link, useNavigate } from "@/lib/router-compat";
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery } from "@/lib/react-data-client";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
@@ -17,7 +17,7 @@ import { SiteHeader } from "@/components/site-header";
 import { SiteFooter } from "@/components/site-footer";
 import { CheckCircle2, Loader2, LogIn } from "lucide-react";
 
-export const Route = createFileRoute("/portal/apply/$group/$slug")({
+export const Route = defineRoute("/portal/apply/$group/$slug")({
   head: ({ params }) => {
     const name = params.slug.replace(/-/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
     return {

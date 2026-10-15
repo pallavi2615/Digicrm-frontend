@@ -1,7 +1,6 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { defineRoute, Link } from "@/lib/router-compat";
 import { useEffect, useState } from "react";
-import { useQuery } from "@tanstack/react-query";
-import { useServerFn } from "@tanstack/react-start";
+import { useQuery } from "@/lib/react-data-client";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -17,7 +16,7 @@ import infoFunnel from "@/assets/infographic-funnel.jpg";
 import infoWorkflow from "@/assets/infographic-workflow.jpg";
 import infoStack from "@/assets/infographic-stack.jpg";
 
-export const Route = createFileRoute("/")({
+export const Route = defineRoute("/")({
   head: () => buildRouteMeta({
     path: "/",
     title: "DigiCRM AI — The AI-native CRM for modern sales teams",
@@ -34,8 +33,8 @@ export const Route = createFileRoute("/")({
 
 function LandingPage() {
   const [signedIn, setSignedIn] = useState(false);
-  const fetchSlides = useServerFn(listHomeSlides);
-  const fetchPosts = useServerFn(listPublishedPosts);
+  const fetchSlides = listHomeSlides;
+  const fetchPosts = listPublishedPosts;
   const { data: slides = [] } = useQuery({ queryKey: ["cms-home-slides"], queryFn: () => fetchSlides() });
   const { data: posts = [] } = useQuery({ queryKey: ["blog-posts"], queryFn: () => fetchPosts() });
   const [idx, setIdx] = useState(0);

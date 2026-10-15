@@ -1,5 +1,5 @@
-import { createFileRoute } from "@tanstack/react-router";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { defineRoute } from "@/lib/router-compat";
+import { useQuery, useQueryClient } from "@/lib/react-data-client";
 import { useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -7,7 +7,7 @@ import { Loader2, IndianRupee } from "lucide-react";
 import { toast } from "sonner";
 import { apiFetch } from "@/lib/api";
 
-export const Route = createFileRoute("/_authenticated/it/pipeline")({
+export const Route = defineRoute("/_authenticated/it/pipeline")({
   component: ITPipeline,
 });
 

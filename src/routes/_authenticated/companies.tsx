@@ -1,7 +1,7 @@
 import { usePermissions } from "@/hooks/use-permissions";
 import { notifyPermissionDenied } from "@/components/permission-denied";
-import { createFileRoute } from "@tanstack/react-router";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { defineRoute } from "@/lib/router-compat";
+import { useMutation, useQuery, useQueryClient } from "@/lib/react-data-client";
 import { apiFetch, apiUpload, apiDownload } from "@/lib/api";
 import { useAuth } from "@/hooks/use-auth";
 import { useMemo, useRef, useState } from "react";
@@ -25,7 +25,7 @@ import {
 import { Plus, Search, MoreVertical, Trash2, Pencil, Loader2, Building2, Globe, Upload, Download, Eye } from "lucide-react";
 import { toast } from "sonner";
 
-export const Route = createFileRoute("/_authenticated/companies")({
+export const Route = defineRoute("/_authenticated/companies")({
   head: () => ({ meta: [{ title: "Companies — DigiCRM AI" }] }),
   component: CompaniesPage,
 });

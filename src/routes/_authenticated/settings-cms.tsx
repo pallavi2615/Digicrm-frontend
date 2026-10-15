@@ -1,7 +1,7 @@
 import { RoleGuard, SUPER_ONLY } from "@/components/role-guard";
-import { createFileRoute } from "@tanstack/react-router";
+import { defineRoute } from "@/lib/router-compat";
 import { useState } from "react";
-import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
+import { useQuery, useQueryClient, useMutation } from "@/lib/react-data-client";
 import { apiFetch } from "@/lib/api";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -17,7 +17,7 @@ import { ImageUploadField } from "@/components/cms/ImageUploadField";
 import { PagesAdmin } from "@/components/cms/PagesAdmin";
 import { usePermissions } from "@/contexts/PermissionsContext";
 
-export const Route = createFileRoute("/_authenticated/settings-cms")({
+export const Route = defineRoute("/_authenticated/settings-cms")({
   head: () => ({ meta: [{ title: "Content Management — DigiCRM AI" }] }),
   component: () => (
     <RoleGuard allow={SUPER_ONLY} module="settings-cms" label="CMS">

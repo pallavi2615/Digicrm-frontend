@@ -1,5 +1,5 @@
 // import { useEffect, useState } from "react";
-// import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+// import { useMutation, useQuery, useQueryClient } from "@/lib/react-data-client";
 // import { toast } from "sonner";
 // import { supabase } from "@/integrations/supabase/client";
 // import { useAuth } from "@/hooks/use-auth";
@@ -93,7 +93,7 @@
 
 
 import { useEffect, useState } from "react";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@/lib/react-data-client";
 import { toast } from "sonner";
 import { apiFetch } from "@/lib/api";
 import { useAuth } from "@/hooks/use-auth";

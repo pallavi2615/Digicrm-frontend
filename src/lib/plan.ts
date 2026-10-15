@@ -1,4 +1,4 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery } from "@/lib/react-data-client";
 import { supabase } from "@/integrations/supabase/client";
 
 export type Plan = "lite" | "prime";

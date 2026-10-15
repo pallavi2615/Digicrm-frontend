@@ -1,6 +1,6 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { defineRoute } from "@/lib/router-compat";
 import { useMemo, useState } from "react";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@/lib/react-data-client";
 import { toast } from "sonner";
 import { apiFetch } from "@/lib/api";
 import { useAuth } from "@/hooks/use-auth";
@@ -18,7 +18,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Plus, Radio, TrendingUp, IndianRupee, Target } from "lucide-react";
 
-export const Route = createFileRoute("/_authenticated/lead-sources")({
+export const Route = defineRoute("/_authenticated/lead-sources")({
   head: () => ({
     meta: [
       { title: "Lead Sources, Channels & Campaigns | DigiCRM AI" },

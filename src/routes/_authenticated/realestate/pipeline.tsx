@@ -2,9 +2,9 @@
  * Pipeline — Kanban board of deals across the 14 pipeline stages.
  */
 
-import { createFileRoute } from "@tanstack/react-router";
+import { defineRoute } from "@/lib/router-compat";
 import { useState } from "react";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@/lib/react-data-client";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -28,7 +28,7 @@ import {
 import { useReConfig } from "@/hooks/use-re-config";
 import { cr } from "@/lib/re-data";
 
-export const Route = createFileRoute("/_authenticated/realestate/pipeline")({
+export const Route = defineRoute("/_authenticated/realestate/pipeline")({
   head: () => ({ meta: [{ title: "Pipeline | Real Estate CRM" }] }),
   component: PipelinePage,
 });

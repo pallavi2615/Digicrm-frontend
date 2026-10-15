@@ -1,6 +1,5 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useServerFn } from "@tanstack/react-start";
+import { defineRoute, Link } from "@/lib/router-compat";
+import { useQuery, useQueryClient } from "@/lib/react-data-client";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -24,7 +23,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
 import { Plus, Sparkles, ShieldCheck, Trash2, Loader2, TrendingUp, IndianRupee, Target, Gauge } from "lucide-react";
 
-export const Route = createFileRoute("/_authenticated/packs/$group/$slug")({
+export const Route = defineRoute("/_authenticated/packs/$group/$slug")({
   loader: ({ params }) => ({ pack: getPack(params.group, params.slug) ?? null }),
   head: ({ loaderData }) => ({
     meta: [
@@ -368,7 +367,7 @@ function RecordDialog({ pack, userId, onSaved }: { pack: IndustryPack; userId: s
 }
 
 function AgentPanel({ pack, records }: { pack: IndustryPack; records: PackRecord[] }) {
-  const run = useServerFn(runPackAgent);
+  const run = runPackAgent;
   const [agentKey, setAgentKey] = useState(pack.agents[0]?.key ?? "");
   const [recordId, setRecordId] = useState<string>("all");
   const [question, setQuestion] = useState("");
@@ -429,7 +428,7 @@ function AgentPanel({ pack, records }: { pack: IndustryPack; records: PackRecord
 }
 
 function VerifyPanel({ pack, records }: { pack: IndustryPack; records: PackRecord[] }) {
-  const verify = useServerFn(runVerification);
+  const verify = runVerification;
   const qc = useQueryClient();
   const [kind, setKind] = useState(pack.verifications[0] ?? "pan");
   const [value, setValue] = useState("");

@@ -1,6 +1,6 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { defineRoute } from "@/lib/router-compat";
 import { useMemo, useState } from "react";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@/lib/react-data-client";
 import { toast } from "sonner";
 import { apiFetch } from "@/lib/api";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -14,7 +14,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { HandCoins, IndianRupee, Loader2, Users, Wallet } from "lucide-react";
 
-export const Route = createFileRoute("/_authenticated/partner")({
+export const Route = defineRoute("/_authenticated/partner")({
   head: () => ({
     meta: [
       { title: "Partner Payouts | DigiCRM AI" },

@@ -1,5 +1,5 @@
-import { createFileRoute } from "@tanstack/react-router";
-import { useQuery } from "@tanstack/react-query";
+import { defineRoute } from "@/lib/router-compat";
+import { useQuery } from "@/lib/react-data-client";
 import {
   Card, CardContent, CardHeader, CardTitle,
 } from "@/components/ui/card";
@@ -10,7 +10,7 @@ import {
 import { apiFetch } from "@/lib/api";
 import { usePermissions } from "@/contexts/PermissionsContext";
 
-export const Route = createFileRoute("/_authenticated/cashflow")({
+export const Route = defineRoute("/_authenticated/cashflow")({
   component: CashflowPage,
 });
 

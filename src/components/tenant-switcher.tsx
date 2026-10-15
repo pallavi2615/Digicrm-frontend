@@ -8,7 +8,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { useActiveTenant } from "@/lib/queries/tenants";
 import { useState } from "react";
-import { Link } from "@tanstack/react-router";
+import { Link } from "@/lib/router-compat";
 
 export function TenantSwitcher() {
   const { active, tenants, setActive, loading } = useActiveTenant();

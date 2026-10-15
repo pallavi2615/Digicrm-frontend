@@ -1,5 +1,5 @@
-import { createFileRoute } from "@tanstack/react-router";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { defineRoute } from "@/lib/router-compat";
+import { useQuery, useQueryClient } from "@/lib/react-data-client";
 import { supabase } from "@/integrations/supabase/client";
 import { useState } from "react";
 import { useAuth } from "@/hooks/use-auth";
@@ -15,7 +15,7 @@ import { toast } from "sonner";
 import { StaffGuard } from "@/components/staff-guard";
 import { escapePostgrestFilterValue } from "@/lib/utils";
 
-export const Route = createFileRoute("/_authenticated/productsales/products")({
+export const Route = defineRoute("/_authenticated/productsales/products")({
   component: () => (
     <StaffGuard module="ps_products">
       <ProductsPage />

@@ -5,9 +5,9 @@
  * creating/editing leads and scheduling follow-ups.
  */
 
-import { createFileRoute } from "@tanstack/react-router";
+import { defineRoute } from "@/lib/router-compat";
 import { useMemo, useState } from "react";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@/lib/react-data-client";
 import {
   Card, CardContent, CardHeader, CardTitle,
 } from "@/components/ui/card";
@@ -37,7 +37,7 @@ import {
 import { useReConfig } from "@/hooks/use-re-config";
 import { cr, waLink, TEMP_TONE } from "@/lib/re-data";
 
-export const Route = createFileRoute("/_authenticated/realestate/leads")({
+export const Route = defineRoute("/_authenticated/realestate/leads")({
   head: () => ({ meta: [{ title: "Lead360 | Real Estate CRM" }] }),
   component: LeadsPage,
 });

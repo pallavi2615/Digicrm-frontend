@@ -1,4 +1,4 @@
-import { createFileRoute, Link, notFound, Outlet } from "@tanstack/react-router";
+import { defineRoute, Link, notFound, Outlet } from "@/lib/router-compat";
 import { getIndustry } from "@/lib/industries";
 import { IndustryGuard } from "@/components/industry-guard";
 import { IndustryTabs } from "@/components/industry-tabs";
@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ArrowRight, Plus } from "lucide-react";
 
-export const Route = createFileRoute("/_authenticated/industry/$slug")({
+export const Route = defineRoute("/_authenticated/industry/$slug")({
   loader: ({ params }) => {
     const preset = getIndustry(params.slug);
     if (!preset) throw notFound();

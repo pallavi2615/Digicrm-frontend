@@ -1,6 +1,5 @@
-import { createFileRoute, notFound, Link } from "@tanstack/react-router";
+import { defineRoute, notFound, Link } from "@/lib/router-compat";
 import { useState } from "react";
-import { useServerFn } from "@tanstack/react-start";
 import { SiteShell } from "@/components/site-shell";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -11,7 +10,7 @@ import { Check, Sparkles, Star, Zap, Shield, Rocket, Quote } from "lucide-react"
 import { getCampaignBySlug, submitContact } from "@/lib/cms.functions";
 import { buildRouteMeta } from "@/lib/seo";
 
-export const Route = createFileRoute("/campaign/$slug")({
+export const Route = defineRoute("/campaign/$slug")({
   loader: async ({ params }) => {
     const campaign = await getCampaignBySlug({ data: { slug: params.slug } });
     if (!campaign) throw notFound();
@@ -41,7 +40,7 @@ export const Route = createFileRoute("/campaign/$slug")({
 
 function CampaignLP() {
   const { campaign } = Route.useLoaderData();
-  const send = useServerFn(submitContact);
+  const send = submitContact;
   const [loading, setLoading] = useState(false);
   const [done, setDone] = useState(false);
 

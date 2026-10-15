@@ -1,7 +1,5 @@
-import { Link } from "@tanstack/react-router";
-import { useQuery } from "@tanstack/react-query";
-import { useServerFn } from "@tanstack/react-start";
-
+import { Link } from "@/lib/router-compat";
+import { useQuery } from "@/lib/react-data-client";
 import { listMenuItems } from "@/lib/cms.functions";
 
 type Item = { id: string; label: string; url: string; group_label: string | null };
@@ -22,7 +20,7 @@ function FooterLink({ url, label }: { url: string; label: string }) {
 }
 
 export function SiteFooter() {
-  const fetchMenu = useServerFn(listMenuItems);
+  const fetchMenu = listMenuItems;
   const { data: menu = [] } = useQuery({ queryKey: ["cms-menu"], queryFn: () => fetchMenu() });
   const footer = menu.filter((m) => m.location === "footer") as Item[];
 

@@ -1,6 +1,6 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { defineRoute, useNavigate } from "@/lib/router-compat";
 import { useState } from "react";
-import { useQuery, useMutation } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@/lib/react-data-client";
 import { apiFetch } from "@/lib/api";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Sparkles, Loader2, Check } from "lucide-react";
 
-export const Route = createFileRoute("/_authenticated/workspace/setup")({
+export const Route = defineRoute("/_authenticated/workspace/setup")({
   head: () => ({ meta: [{ title: "Workspace Setup — DigiCRM AI" }] }),
   component: WorkspaceSetupWizard,
 });

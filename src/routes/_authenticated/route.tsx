@@ -1,9 +1,9 @@
-import { createFileRoute, Outlet, redirect } from "@tanstack/react-router";
+import { defineRoute, Outlet, redirect } from "@/lib/router-compat";
 import { AppSidebar } from "@/components/app-sidebar";
 import { AppTopbar } from "@/components/app-topbar";
 import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar";
 
-export const Route = createFileRoute("/_authenticated")({
+export const Route = defineRoute("/_authenticated")({
   ssr: false,
   beforeLoad: async () => {
     const token = localStorage.getItem("access_token");

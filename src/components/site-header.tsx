@@ -1,7 +1,6 @@
-import { Link } from "@tanstack/react-router";
+import { Link } from "@/lib/router-compat";
 import { useEffect, useState } from "react";
-import { useQuery } from "@tanstack/react-query";
-import { useServerFn } from "@tanstack/react-start";
+import { useQuery } from "@/lib/react-data-client";
 import { Menu, X, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
@@ -24,7 +23,7 @@ function MegaMenu({ label, children }: { label: string; children: React.ReactNod
 export function SiteHeader() {
   const [signedIn, setSignedIn] = useState(false);
   const [open, setOpen] = useState(false);
-  const fetchMenu = useServerFn(listMenuItems);
+  const fetchMenu = listMenuItems;
   const { data: menu = [] } = useQuery({ queryKey: ["cms-menu"], queryFn: () => fetchMenu() });
 
   useEffect(() => {

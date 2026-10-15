@@ -1,9 +1,6 @@
-import { createFileRoute, notFound } from "@tanstack/react-router";
-import { createServerFn } from "@tanstack/react-start";
-import { createClient } from "@supabase/supabase-js";
-import type { Database } from "@/integrations/supabase/types";
+import { defineRoute, notFound } from "@/lib/router-compat";
 import { useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import { supabaseRestGet, supabaseRestInsert } from "@/lib/supabase-rest";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -13,28 +10,25 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Loader2, LifeBuoy, CheckCircle2 } from "lucide-react";
 import { toast } from "sonner";
 
-const getTenant = createServerFn({ method: "GET" })
-  .inputValidator((d: { slug: string }) => d)
-  .handler(async ({ data }) => {
-    const key = process.env.SUPABASE_PUBLISHABLE_KEY!;
-    const client = createClient<Database>(process.env.SUPABASE_URL!, key, {
-      auth: { persistSession: false, autoRefreshToken: false },
-      global: { fetch: (input, init) => {
-        const h = new Headers(init?.headers);
-        if (key.startsWith("sb_") && h.get("Authorization") === `Bearer ${key}`) h.delete("Authorization");
-        h.set("apikey", key);
-        return fetch(input, { ...init, headers: h });
-      } },
-    });
-    const { data: tenant } = await client
-      .from("tenants_public" as never)
-      .select("id, slug, name, logo_url, primary_color, accent_color")
-      .eq("slug", data.slug)
-      .maybeSingle();
-    return tenant as { id: string; slug: string; name: string; logo_url: string | null; primary_color: string | null; accent_color: string | null } | null;
-  });
+type PortalTenant = {
+  id: string;
+  slug: string;
+  name: string;
+  logo_url: string | null;
+  primary_color: string | null;
+  accent_color: string | null;
+};
 
-export const Route = createFileRoute("/portal/$tenantSlug")({
+async function getTenant({ data }: { data: { slug: string } }) {
+  const tenants = await supabaseRestGet<PortalTenant>("tenants_public", {
+    select: "id,slug,name,logo_url,primary_color,accent_color",
+    slug: `eq.${data.slug}`,
+    limit: 1,
+  });
+  return tenants[0] ?? null;
+}
+
+export const Route = defineRoute("/portal/$tenantSlug")({
   loader: async ({ params }) => {
     const tenant = await getTenant({ data: { slug: params.tenantSlug } });
     if (!tenant) throw notFound();
@@ -65,7 +59,7 @@ function Portal() {
     e.preventDefault();
     setLoading(true);
     try {
-      const { data, error } = await supabase.from("support_tickets").insert({
+      const data = await supabaseRestInsert<{ ticket_number: number }>("support_tickets", {
         tenant_id: tenant.id,
         subject: form.subject,
         description: form.description,
@@ -74,8 +68,8 @@ function Portal() {
         priority: form.priority,
         channel: "portal",
         status: "open",
-      }).select("ticket_number").single();
-      if (error) throw error;
+      }, { select: "ticket_number" });
+      if (!data) throw new Error("Ticket could not be created.");
       setTicketNumber(data.ticket_number);
     } catch (err) {
       toast.error((err as Error).message);

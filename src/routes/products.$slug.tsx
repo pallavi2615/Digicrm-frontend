@@ -1,4 +1,4 @@
-import { createFileRoute, Link, notFound } from "@tanstack/react-router";
+import { defineRoute, Link, notFound } from "@/lib/router-compat";
 import { SiteShell } from "@/components/site-shell";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -8,7 +8,7 @@ import { getProduct, PRODUCTS } from "@/lib/products";
 import { INDUSTRY_GROUPS } from "@/lib/industry-taxonomy";
 import { buildRouteMeta, breadcrumbJsonLd } from "@/lib/seo";
 
-export const Route = createFileRoute("/products/$slug")({
+export const Route = defineRoute("/products/$slug")({
   loader: ({ params }) => {
     const product = getProduct(params.slug);
     if (!product) throw notFound();

@@ -1,5 +1,5 @@
-import { createFileRoute } from "@tanstack/react-router";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { defineRoute } from "@/lib/router-compat";
+import { useMutation, useQuery, useQueryClient } from "@/lib/react-data-client";
 import { useState, useEffect } from "react";
 import { apiFetch, apiUpload } from "@/lib/api";
 import { useAuth } from "@/hooks/use-auth";
@@ -24,7 +24,7 @@ import {
 import { toast } from "sonner";
 import { DatePicker } from "@/components/ui/datetime-picker";
 
-export const Route = createFileRoute("/_authenticated/tasks")({
+export const Route = defineRoute("/_authenticated/tasks")({
   validateSearch: (search: Record<string, unknown>) => ({
     filter: (search.filter as string) || "all",
   }),

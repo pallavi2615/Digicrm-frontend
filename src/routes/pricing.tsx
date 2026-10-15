@@ -1,4 +1,4 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { defineRoute, Link } from "@/lib/router-compat";
 import { SiteShell } from "@/components/site-shell";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -7,7 +7,7 @@ import { buildRouteMeta } from "@/lib/seo";
 import { usePlanFeatures } from "@/lib/plan";
 import { useMemo } from "react";
 
-export const Route = createFileRoute("/pricing")({
+export const Route = defineRoute("/pricing")({
   head: () => buildRouteMeta({
     path: "/pricing",
     title: "Pricing — DigiCRM AI Lite & Prime",

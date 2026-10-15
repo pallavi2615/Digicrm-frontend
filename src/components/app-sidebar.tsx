@@ -2,7 +2,7 @@ import { useEffect } from "react";
 import { useAuth } from "@/hooks/use-auth";
 import { useIndustryAccess, groupForRoute, isCrmRoute } from "@/lib/industry-access";
 import { ALL_CRMS, useActiveIndustry } from "@/lib/active-industry";
-import { Link, useRouterState } from "@tanstack/react-router";
+import { Link, useRouterState } from "@/lib/router-compat";
 
 import {
   Sidebar, SidebarContent, SidebarGroup, SidebarGroupContent, SidebarGroupLabel,
@@ -14,6 +14,7 @@ import {
   Landmark, Home, Laptop, Package, Stethoscope, GraduationCap, ShieldCheck, Car, Plane, Factory,
   Rocket, LifeBuoy, Radio, Crown, Layers, Inbox, TrendingUp, Activity, Wallet, HandCoins,
   Clock, IndianRupee, CreditCard, BookOpen, Store, Palette, ShoppingBag,Target, MapPin, Network,Handshake,
+  ArrowRight,
   type LucideIcon,
 } from "lucide-react";
 
@@ -43,11 +44,11 @@ const support: NavItem[] = [
   { title: "Tickets", url: "/tickets", icon: LifeBuoy },
   { title: "Inbound Leads", url: "/inbound", icon: Radio, adminOnly: true },
   { title: "Lead Sources", url: "/lead-sources", icon: TrendingUp },
+  { title: "DigiVerify", url: "/digiverify", icon: ShieldCheck },
 ];
 
 const industries: NavItem[] = [
   { title: "Industry Packs", url: "/packs", icon: Layers },
-  { title: "DigiVerify", url: "/digiverify", icon: ShieldCheck },
   { title: "Fintech DSA", url: "/fintech", icon: Landmark },
   { title: "Real Estate", url: "/realestate", icon: Home },
   { title: "Sales App (mobile)", url: "/m", icon: Home },
@@ -132,7 +133,7 @@ const adminOnly: NavItem[] = [
   { title: "Affiliates", url: "/affiliates", icon: Users },
   { title: "Payout History", url: "/payout-history", icon: Wallet },
   { title: "Pack Settings", url: "/settings-pack", icon: Settings },
-
+  { title: "Teams and Invites", url: "/team", icon: Users},
   { title: "New Workspace", url: "/onboarding", icon: Layers },
 ];
 
@@ -232,15 +233,24 @@ export function AppSidebar() {
     if (visibleItems.length === 0) return null;
 
     return (
-      <SidebarGroup>
-        {!collapsed && <SidebarGroupLabel>{label}</SidebarGroupLabel>}
+      <SidebarGroup className="py-1.5">
+        {!collapsed && (
+          <SidebarGroupLabel className="px-3 text-[12px] font-medium tracking-wide text-slate-400">
+            {label}
+          </SidebarGroupLabel>
+        )}
         <SidebarGroupContent>
-          <SidebarMenu>
+          <SidebarMenu className="gap-0.5">
             {visibleItems.map((item) => (
               <SidebarMenuItem key={item.url}>
-                <SidebarMenuButton asChild isActive={isActive(item.url)} tooltip={item.title}>
+                <SidebarMenuButton
+                  asChild
+                  isActive={isActive(item.url)}
+                  tooltip={item.title}
+                  className="h-10 gap-3 rounded-lg px-3 text-[14px] font-normal text-slate-300 transition-colors hover:bg-white/10 hover:text-white data-[active=true]:bg-blue-600 data-[active=true]:font-medium data-[active=true]:text-white data-[active=true]:shadow-md data-[active=true]:shadow-blue-900/40 data-[active=true]:hover:bg-blue-600"
+                >
                   <Link to={item.url}>
-                    <item.icon className="h-4 w-4" />
+                    <item.icon className="h-4.5 w-4.5 shrink-0" />
                     <span>{item.title}</span>
                   </Link>
                 </SidebarMenuButton>
@@ -253,20 +263,25 @@ export function AppSidebar() {
   };
 
   return (
-    <Sidebar collapsible="icon">
-      <SidebarHeader>
-        <div className="flex items-center gap-2 px-2 py-2">
-          <img src="/logo.png" alt="DigiCRM AI" width={32} height={32} className="h-8 w-8 rounded-lg shrink-0 shadow-elegant" />
+    <Sidebar
+      collapsible="icon"
+      className="**:data-[sidebar=sidebar]:bg-[linear-gradient(180deg,#0b1b45_0%,#07112b_100%)] **:data-[sidebar=sidebar]:text-slate-300 **:data-[sidebar=sidebar]:border-white/10"
+    >
+      <SidebarHeader className="border-b border-white/10 px-2 py-3">
+        <div className="flex items-center gap-3 px-1">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white/5 ring-1 ring-white/10">
+            <img src="/logo.png" alt="DigiCRM AI" width={32} height={32} className="h-8 w-8 rounded-lg shrink-0 shadow-elegant" />
+          </div>
           {!collapsed && (
             <div className="flex flex-col leading-tight">
-              <span className="font-bold text-sm" style={{ fontFamily: "var(--font-display)" }}>DigiCRM AI</span>
-              <span className="text-[10px] text-muted-foreground uppercase tracking-wider">Enterprise</span>
+              <span className="text-[17px] font-bold text-white" style={{ fontFamily: "var(--font-display)" }}>DigiCRM AI</span>
+              <span className="text-[11px] uppercase tracking-[0.18em] text-slate-400">Enterprise</span>
             </div>
           )}
         </div>
       </SidebarHeader>
 
-      <SidebarContent>
+      <SidebarContent className="px-2 py-2 [scrollbar-color:rgba(255,255,255,0.18)_transparent] scrollbar-thin">
         {renderGroup("Workspace", primary)}
         {renderGroup("Support", support)}
 
@@ -293,14 +308,17 @@ export function AppSidebar() {
         {!collapsed && isSuperAdmin && (
           <Link
             to="/settings-cms"
-            className="mx-2 mb-2 rounded-lg p-3 text-xs text-white shadow-lg flex items-center gap-2 hover:opacity-90 transition-opacity"
-            style={{ background: "linear-gradient(135deg,#8b5cf6,#ec4899)" }}
+            className="mx-2 mb-3 flex items-center gap-3 rounded-xl p-3 text-white shadow-lg shadow-blue-950/50 ring-1 ring-white/10 transition hover:brightness-110"
+            style={{ background: "linear-gradient(135deg,#2f5bff 0%,#7c3aed 100%)" }}
           >
-            <Rocket className="h-4 w-4 shrink-0" />
-            <div className="flex-1 min-w-0">
-              <div className="font-semibold">Run a campaign</div>
-              <div className="opacity-80 text-[10px]">Create colorful landing pages</div>
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-white/15">
+              <Rocket className="h-4.5 w-4.5" />
             </div>
+            <div className="min-w-0 flex-1">
+              <div className="text-sm font-semibold">Run a campaign</div>
+              <div className="truncate text-[11px] text-white/80">Create colorful landing pages</div>
+            </div>
+            <ArrowRight className="h-4 w-4 shrink-0 text-white/90" />
           </Link>
         )}
       </SidebarFooter>

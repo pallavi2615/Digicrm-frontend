@@ -1,4 +1,4 @@
-import { Link } from "@tanstack/react-router";
+import { Link } from "@/lib/router-compat";
 import { useAuth, type AppRole } from "@/hooks/use-auth";
 import { Loader2, ShieldOff } from "lucide-react";
 import { useEffect, useRef, type ReactNode } from "react";

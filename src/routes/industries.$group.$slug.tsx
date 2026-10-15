@@ -1,4 +1,4 @@
-import { createFileRoute, Link, notFound } from "@tanstack/react-router";
+import { defineRoute, Link, notFound } from "@/lib/router-compat";
 import { SiteShell } from "@/components/site-shell";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -9,7 +9,7 @@ import { PRODUCTS } from "@/lib/products";
 import { INDUSTRY_PACKS } from "@/lib/industry-packs";
 import { buildRouteMeta, breadcrumbJsonLd, absoluteUrl } from "@/lib/seo";
 
-export const Route = createFileRoute("/industries/$group/$slug")({
+export const Route = defineRoute("/industries/$group/$slug")({
   loader: ({ params }) => {
     const found = getSubIndustry(params.group, params.slug);
     if (!found) throw notFound();

@@ -1,6 +1,6 @@
 import { RoleGuard, ADMINS } from "@/components/role-guard";
-import { createFileRoute, Link } from "@tanstack/react-router";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { defineRoute, Link } from "@/lib/router-compat";
+import { useMutation, useQuery, useQueryClient } from "@/lib/react-data-client";
 import { AffiliateSettingsCard } from "@/components/affiliate-settings-card";
 import { AffiliatePayoutQueue } from "@/components/affiliate-payout-queue";
 
@@ -27,7 +27,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { useRealtimeTable } from "@/lib/use-realtime-table";
 import { downloadCsv, objectsToCsv } from "@/lib/csv";
 
-export const Route = createFileRoute("/_authenticated/affiliates")({
+export const Route = defineRoute("/_authenticated/affiliates")({
   head: () => ({ meta: [{ title: "Affiliates — DigiCRM AI" }, { name: "robots", content: "noindex" }] }),
   component: () => (
     <RoleGuard allow={ADMINS} module="affiliates" label="Affiliates">

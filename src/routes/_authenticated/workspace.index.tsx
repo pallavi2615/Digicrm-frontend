@@ -1,11 +1,11 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useQuery } from "@tanstack/react-query";
+import { defineRoute, useNavigate } from "@/lib/router-compat";
+import { useQuery } from "@/lib/react-data-client";
 import { apiFetch } from "@/lib/api";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Sparkles, Loader2 } from "lucide-react";
 
-export const Route = createFileRoute("/_authenticated/workspace/")({
+export const Route = defineRoute("/_authenticated/workspace/")({
   head: () => ({ meta: [{ title: "Industry Workspace — DigiCRM AI" }] }),
   component: WorkspaceLanding,
 });

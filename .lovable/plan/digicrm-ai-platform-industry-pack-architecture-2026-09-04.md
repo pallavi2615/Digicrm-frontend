@@ -56,7 +56,7 @@ Sidebar is regrouped by product (DigiCRM / DigiSales / DigiMarketing / DigiServi
 ## Technical notes
 
 - Registry-first: one typed source of truth in `src/lib/industries.ts` (taxonomy) and `src/lib/packs/` (workspace behaviour) drives menus, routes, landing pages, dashboards and exports.
-- Routes follow TanStack file-based conventions; every linked path gets a route file in the same batch.
+- Routes follow React Router file-based conventions; every linked path gets a route file in the same batch.
 - New tables ship with GRANTs, RLS enabled and role/owner policies in the same migration; demo rows included via literal INSERTs so dashboards render populated.
 - Third-party verification, WhatsApp and voice require user-supplied API keys; until then those adapters run in mock mode with clearly labelled sample results.
 - Existing security posture is preserved: `private.has_role` checks, tenant scoping, audit logging on writes.

@@ -6,9 +6,9 @@
  * the `/realestate/analytics` data, and displays a templated response.
  */
 
-import { createFileRoute } from "@tanstack/react-router";
+import { defineRoute } from "@/lib/router-compat";
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery } from "@/lib/react-data-client";
 import {
   Card, CardContent, CardHeader, CardTitle, CardDescription,
 } from "@/components/ui/card";
@@ -18,7 +18,7 @@ import { Sparkles, Loader2 } from "lucide-react";
 import { getAnalytics } from "@/lib/realestate.functions";
 import { cr } from "@/lib/re-data";
 
-export const Route = createFileRoute("/_authenticated/realestate/copilot")({
+export const Route = defineRoute("/_authenticated/realestate/copilot")({
   head: () => ({ meta: [{ title: "AI Sales Copilot | Real Estate CRM" }] }),
   component: CopilotPage,
 });

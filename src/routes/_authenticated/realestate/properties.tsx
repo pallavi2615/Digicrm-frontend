@@ -2,9 +2,9 @@
  * Listings — simplified CRUD for properties (staff view).
  */
 
-import { createFileRoute } from "@tanstack/react-router";
+import { defineRoute } from "@/lib/router-compat";
 import { useState } from "react";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@/lib/react-data-client";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -29,7 +29,7 @@ import {
 } from "@/lib/realestate.functions";
 import { cr } from "@/lib/re-data";
 
-export const Route = createFileRoute("/_authenticated/realestate/properties")({
+export const Route = defineRoute("/_authenticated/realestate/properties")({
   component: PropertiesPage,
 });
 

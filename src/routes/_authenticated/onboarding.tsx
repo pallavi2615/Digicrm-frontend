@@ -1,6 +1,6 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { defineRoute, useNavigate } from "@/lib/router-compat";
 import { useState } from "react";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@/lib/react-data-client";
 import { supabase } from "@/integrations/supabase/client";
 import { useAllPacks } from "@/lib/pack-config";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -15,7 +15,7 @@ import type { IndustryPack } from "@/lib/industry-packs";
 import { claimIndustry } from "@/lib/industry-access";
 import { setActiveIndustry } from "@/lib/active-industry";
 
-export const Route = createFileRoute("/_authenticated/onboarding")({
+export const Route = defineRoute("/_authenticated/onboarding")({
   head: () => ({
     meta: [
       { title: "Set up your workspace | DigiCRM AI" },

@@ -1,4 +1,4 @@
-import { Link, useRouterState } from "@tanstack/react-router";
+import { Link, useRouterState } from "@/lib/router-compat";
 import { cn } from "@/lib/utils";
 
 /** The sections every industry workspace has, each with its own page. */

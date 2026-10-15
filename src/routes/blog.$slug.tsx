@@ -1,4 +1,4 @@
-import { createFileRoute, Link, notFound } from "@tanstack/react-router";
+import { defineRoute, Link, notFound } from "@/lib/router-compat";
 import { SiteShell } from "@/components/site-shell";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -6,7 +6,7 @@ import { ArrowLeft, Clock } from "lucide-react";
 import { getPostBySlug } from "@/lib/cms.functions";
 import { buildRouteMeta, articleJsonLd, absoluteUrl, breadcrumbJsonLd } from "@/lib/seo";
 
-export const Route = createFileRoute("/blog/$slug")({
+export const Route = defineRoute("/blog/$slug")({
   loader: async ({ params }) => {
     const post = await getPostBySlug({ data: { slug: params.slug } });
     if (!post) throw notFound();

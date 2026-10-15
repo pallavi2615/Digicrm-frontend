@@ -1,5 +1,5 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
-import { useQuery } from "@tanstack/react-query";
+import { defineRoute, Link } from "@/lib/router-compat";
+import { useQuery } from "@/lib/react-data-client";
 import { supabase } from "@/integrations/supabase/client";
 import { getIndustry, CORE_FEATURES } from "@/lib/industries";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -10,7 +10,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Progress } from "@/components/ui/progress";
 import { Inbox, Users, TrendingUp, Target, IndianRupee, Handshake, FileText } from "lucide-react";
 
-export const Route = createFileRoute("/_authenticated/industry/$slug/")({
+export const Route = defineRoute("/_authenticated/industry/$slug/")({
   head: ({ params }) => {
     const preset = getIndustry(params.slug);
     return {

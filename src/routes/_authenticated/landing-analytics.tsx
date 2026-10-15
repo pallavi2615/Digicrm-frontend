@@ -1,6 +1,6 @@
 import { RoleGuard, ADMINS } from "@/components/role-guard";
-import { createFileRoute, Link } from "@tanstack/react-router";
-import { keepPreviousData, useQuery } from "@tanstack/react-query";
+import { defineRoute, Link } from "@/lib/router-compat";
+import { keepPreviousData, useQuery } from "@/lib/react-data-client";
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -8,7 +8,7 @@ import { Loader2, TrendingUp, MousePointerClick, LogOut, Activity, ShieldAlert }
 import { useAuth } from "@/hooks/use-auth";
 import { apiFetch } from "@/lib/api"; // <-- adjust path if your api file lives elsewhere
 
-export const Route = createFileRoute("/_authenticated/landing-analytics")({
+export const Route = defineRoute("/_authenticated/landing-analytics")({
   head: () => ({ meta: [{ title: "Landing Analytics — DigiCRM AI" }, { name: "robots", content: "noindex" }] }),
   component: () => (
     <RoleGuard allow={ADMINS} module="landing-analytics" label="Landing Analytics">

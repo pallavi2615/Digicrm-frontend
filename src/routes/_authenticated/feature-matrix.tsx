@@ -1,4 +1,4 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { defineRoute, Link } from "@/lib/router-compat";
 import { useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -11,7 +11,7 @@ import type { AppRole } from "@/hooks/use-auth";
 import { downloadCsv, objectsToCsv } from "@/lib/csv";
 import { toast } from "sonner";
 
-export const Route = createFileRoute("/_authenticated/feature-matrix")({
+export const Route = defineRoute("/_authenticated/feature-matrix")({
   head: () => ({
     meta: [
       { title: "Feature & Permission Matrix — DigiCRM AI" },
