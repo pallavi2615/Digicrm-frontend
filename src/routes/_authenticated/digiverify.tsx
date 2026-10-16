@@ -127,6 +127,7 @@ function DigiVerifyPage() {
   const [subject, setSubject] = useState("");
   const [accountNumber, setAccountNumber] = useState("");
   const [last, setLast] = useState<CheckResult | null>(null);
+  const [consent, setConsent] = useState(false);
 
   const active = KINDS.find((k) => k.kind === kind)!;
 
@@ -388,10 +389,24 @@ function DigiVerifyPage() {
                     placeholder="9876543210"
                     maxLength={10}
                   />
-                  <p className="text-[11px] text-muted-foreground">
-                    Name and mobile are required for a live bureau pull with the
-                    applicant&apos;s consent.
-                  </p>
+                </div>
+
+                {/* ⭐ NEW — Consent Checkbox */}
+                <div className="flex items-start gap-2 rounded-md border bg-muted/30 p-3">
+                  <input
+                    type="checkbox"
+                    id="consent"
+                    checked={consent}
+                    onChange={(e) => setConsent(e.target.checked)}
+                    className="mt-0.5 h-4 w-4 cursor-pointer"
+                  />
+                  <label
+                    htmlFor="consent"
+                    className="text-xs text-muted-foreground leading-relaxed cursor-pointer"
+                  >
+                    I confirm that I have the applicant&apos;s consent to pull their
+                    credit bureau report. Required as per RBI guidelines.
+                  </label>
                 </div>
               </>
             )}

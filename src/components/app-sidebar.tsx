@@ -43,11 +43,11 @@ const support: NavItem[] = [
   { title: "Tickets", url: "/tickets", icon: LifeBuoy },
   { title: "Inbound Leads", url: "/inbound", icon: Radio, adminOnly: true },
   { title: "Lead Sources", url: "/lead-sources", icon: TrendingUp },
+  { title: "DigiVerify", url: "/digiverify", icon: ShieldCheck },
 ];
 
 const industries: NavItem[] = [
   { title: "Industry Packs", url: "/packs", icon: Layers },
-  { title: "DigiVerify", url: "/digiverify", icon: ShieldCheck },
   { title: "Fintech DSA", url: "/fintech", icon: Landmark },
   { title: "Real Estate", url: "/realestate", icon: Home },
   { title: "Sales App (mobile)", url: "/m", icon: Home },
@@ -73,13 +73,13 @@ const SHARED_ROUTES = new Set<string>(["/packs", "/digiverify", "/m"]);
 const industrySubNav: Record<string, NavItem[]> = {
   // Key = route prefix (jo industry array mein url hai)
   "/it": [
-    { title: "IT Dashboard", url: "/it", icon: LayoutDashboard },
+    // { title: "IT Dashboard", url: "/it", icon: LayoutDashboard },
     { title: "Projects", url: "/it/projects", icon: KanbanSquare },
     { title: "Tickets & Tasks", url: "/it/tickets", icon: CheckSquare },
     { title: "Pipeline", url: "/it/pipeline", icon: TrendingUp },
   ],
   "/realestate": [
-    { title: "Real Estate Dashboard", url: "/realestate", icon: LayoutDashboard },
+    // { title: "Real Estate Dashboard", url: "/realestate", icon: LayoutDashboard },
     { title: "Lead360", url: "/realestate/leads", icon: Users },
     { title: "Projects & Inventory", url: "/realestate/projects", icon: Building2 },
     { title: "MatchAI", url: "/realestate/match", icon: Target },
