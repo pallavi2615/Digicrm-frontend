@@ -11,7 +11,10 @@ import { Textarea } from "@/components/ui/textarea";
 import {
   Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
 } from "@/components/ui/dialog";
-import { ChevronLeft, ChevronRight, Video, CheckSquare, CalendarClock, Plus, Loader2 } from "lucide-react";
+import {
+  ChevronLeft, ChevronRight, Video, CheckSquare, CalendarClock, Plus, Loader2,
+  PhoneCall, Mail, User, FileText, Activity, MessageSquare, MapPin,
+} from "lucide-react";
 import { toast } from "sonner";
 import { usePermissions } from "@/hooks/use-permissions";
 import { notifyPermissionDenied } from "@/components/permission-denied";
@@ -83,9 +86,10 @@ interface Ev {
   date: string;
   type: "meeting" | "task" | "schedule";
   origin: "calendar" | "meeting" | "task" | "schedule";
-  label?: string | null; // e.g. "Call", "Demo"
-  sub?: string | null;   // e.g. lead name
+  label?: string | null;      // e.g. "Call", "Demo"
+  sub?: string | null;        // e.g. lead name
   done?: boolean;
+  activityType?: string | null; // raw activity_type for icon/colour lookup
 }
 
 // The API can return datetimes without a timezone (naive UTC). Treat those as UTC
@@ -95,6 +99,87 @@ function normalizeIso(s: string): string {
   return /([zZ]|[+-]\d{2}:?\d{2})$/.test(s) ? s : `${s}Z`;
 }
 
+// ════════════════════════════════════════════════════════════
+// Activity-type metadata — icons + colors for lead schedules
+// ════════════════════════════════════════════════════════════
+type IconType = React.ComponentType<{ className?: string }>;
+
+const ACTIVITY_META: Record<string, { label: string; icon: IconType; chip: string; dot: string }> = {
+  call: {
+    label: "Call", icon: PhoneCall,
+    chip: "bg-blue-100 text-blue-700 dark:bg-blue-500/20 dark:text-blue-300",
+    dot: "text-blue-500",
+  },
+  email: {
+    label: "Mail", icon: Mail,
+    chip: "bg-indigo-100 text-indigo-700 dark:bg-indigo-500/20 dark:text-indigo-300",
+    dot: "text-indigo-500",
+  },
+  meeting: {
+    label: "Meeting", icon: User,
+    chip: "bg-purple-100 text-purple-700 dark:bg-purple-500/20 dark:text-purple-300",
+    dot: "text-purple-500",
+  },
+  proposal: {
+    label: "Proposal", icon: FileText,
+    chip: "bg-amber-100 text-amber-800 dark:bg-amber-500/20 dark:text-amber-300",
+    dot: "text-amber-500",
+  },
+  demo: {
+    label: "Demo", icon: Activity,
+    chip: "bg-cyan-100 text-cyan-700 dark:bg-cyan-500/20 dark:text-cyan-300",
+    dot: "text-cyan-500",
+  },
+  follow_up: {
+    label: "Follow-up", icon: CalendarClock,
+    chip: "bg-teal-100 text-teal-700 dark:bg-teal-500/20 dark:text-teal-300",
+    dot: "text-teal-500",
+  },
+  followup: {
+    label: "Follow-up", icon: CalendarClock,
+    chip: "bg-teal-100 text-teal-700 dark:bg-teal-500/20 dark:text-teal-300",
+    dot: "text-teal-500",
+  },
+  whatsapp: {
+    label: "WhatsApp", icon: MessageSquare,
+    chip: "bg-green-100 text-green-700 dark:bg-green-500/20 dark:text-green-300",
+    dot: "text-green-500",
+  },
+  site_visit: {
+    label: "Site Visit", icon: MapPin,
+    chip: "bg-orange-100 text-orange-700 dark:bg-orange-500/20 dark:text-orange-300",
+    dot: "text-orange-500",
+  },
+  contract: {
+    label: "Contract", icon: FileText,
+    chip: "bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-300",
+    dot: "text-emerald-500",
+  },
+  reminder: {
+    label: "Reminder", icon: CalendarClock,
+    chip: "bg-pink-100 text-pink-700 dark:bg-pink-500/20 dark:text-pink-300",
+    dot: "text-pink-500",
+  },
+  other: {
+    label: "Other", icon: CalendarClock,
+    chip: "bg-slate-100 text-slate-700 dark:bg-slate-500/20 dark:text-slate-300",
+    dot: "text-slate-500",
+  },
+};
+
+const getActivityMeta = (value?: string | null) => {
+  if (!value) return ACTIVITY_META.other;
+  return (
+    ACTIVITY_META[value] ?? {
+      label: value.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase()),
+      icon: CalendarClock,
+      chip: "bg-slate-100 text-slate-700 dark:bg-slate-500/20 dark:text-slate-300",
+      dot: "text-slate-500",
+    }
+  );
+};
+
+// Colors for the non-schedule event types (meeting / task)
 const chipClass = (t: Ev["type"]) =>
   t === "meeting"
     ? "bg-info/15 text-info"
@@ -173,6 +258,7 @@ function CalendarPage() {
           label: s.display_type || s.activity_label || s.activity_type || null,
           sub: s.lead_name || null,
           done: String(s.status ?? "").toLowerCase() === "completed",
+          activityType: s.activity_type || null,
         }));
 
       return [...fromCalendar, ...fromMeetings, ...fromTasks, ...fromSchedules];
@@ -303,15 +389,27 @@ function CalendarPage() {
                     >
                       <div className={`text-xs font-medium ${isToday ? "text-primary" : ""}`}>{day}</div>
                       <div className="space-y-0.5 mt-1">
-                        {evs.slice(0, 3).map(e => (
-                          <div
-                            key={`${e.origin}-${e.id}`}
-                            className={`text-[10px] px-1 py-0.5 rounded truncate ${chipClass(e.type)} ${e.done ? "line-through opacity-60" : ""}`}
-                          >
-                            <EvIcon type={e.type} className="inline h-2.5 w-2.5 mr-0.5" />
-                            {e.title}
-                          </div>
-                        ))}
+                        {evs.slice(0, 3).map(e => {
+                          // Use activity-aware chip for schedules, generic chip for others
+                          const isSchedule = e.type === "schedule";
+                          const meta = isSchedule ? getActivityMeta(e.activityType) : null;
+                          const ActivityIcon = meta?.icon;
+                          const chipCls = isSchedule && meta ? meta.chip : chipClass(e.type);
+                          return (
+                            <div
+                              key={`${e.origin}-${e.id}`}
+                              className={`text-[10px] px-1 py-0.5 rounded truncate ${chipCls} ${e.done ? "line-through opacity-60" : ""}`}
+                              title={`${e.title}${e.label ? ` · ${e.label}` : ""}${e.sub ? ` · ${e.sub}` : ""}`}
+                            >
+                              {isSchedule && ActivityIcon ? (
+                                <ActivityIcon className="inline h-2.5 w-2.5 mr-0.5" />
+                              ) : (
+                                <EvIcon type={e.type} className="inline h-2.5 w-2.5 mr-0.5" />
+                              )}
+                              {e.title}
+                            </div>
+                          );
+                        })}
                         {evs.length > 3 && <div className="text-[10px] text-muted-foreground">+{evs.length - 3} more</div>}
                       </div>
                     </button>
@@ -336,36 +434,47 @@ function CalendarPage() {
           </DialogHeader>
 
           <div className="space-y-3">
-            <div className="space-y-1.5 max-h-40 overflow-y-auto">
+            <div className="space-y-1.5 max-h-60 overflow-y-auto">
               {selected && evsFor(selected.getDate()).length === 0 && (
                 <p className="text-sm text-muted-foreground">Nothing scheduled yet.</p>
               )}
-              {selected && evsFor(selected.getDate()).map((e) => (
-                <div key={`${e.origin}-${e.id}`} className="flex items-center gap-2 rounded border p-2 text-sm">
-                  <EvIcon
-                    type={e.type}
-                    className={`h-3.5 w-3.5 shrink-0 ${e.type === "meeting" ? "text-info" : e.type === "task" ? "text-warning" : "text-primary"}`}
-                  />
-                  <div className="flex-1 min-w-0">
-                    <div className={`truncate ${e.done ? "line-through opacity-60" : ""}`}>{e.title}</div>
-                    {(e.label || e.sub) && (
-                      <div className="text-xs text-muted-foreground truncate">
-                        {[e.label, e.sub].filter(Boolean).join(" · ")}
-                      </div>
+              {selected && evsFor(selected.getDate()).map((e) => {
+                const isSchedule = e.type === "schedule";
+                const meta = isSchedule ? getActivityMeta(e.activityType) : null;
+                const ActivityIcon = meta?.icon;
+                return (
+                  <div key={`${e.origin}-${e.id}`} className="flex items-center gap-2 rounded border p-2 text-sm">
+                    {isSchedule && ActivityIcon ? (
+                      <ActivityIcon className={`h-3.5 w-3.5 shrink-0 ${meta?.dot ?? "text-primary"}`} />
+                    ) : (
+                      <EvIcon
+                        type={e.type}
+                        className={`h-3.5 w-3.5 shrink-0 ${e.type === "meeting" ? "text-info" : e.type === "task" ? "text-warning" : "text-primary"}`}
+                      />
                     )}
+                    <div className="flex-1 min-w-0">
+                      <div className={`truncate ${e.done ? "line-through opacity-60" : ""}`}>{e.title}</div>
+                      {(e.label || e.sub) && (
+                        <div className="text-xs text-muted-foreground truncate">
+                          {[e.label, e.sub].filter(Boolean).join(" · ")}
+                        </div>
+                      )}
+                    </div>
+                    <span className="text-xs text-muted-foreground">
+                      {new Date(e.date).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                    </span>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-6 px-2 text-xs text-destructive hover:text-destructive"
+                      onClick={() => removeEntry.mutate(e)}
+                      disabled={removeEntry.isPending}
+                    >
+                      Remove
+                    </Button>
                   </div>
-                  <span className="text-xs text-muted-foreground">{new Date(e.date).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</span>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="h-6 px-2 text-xs text-destructive hover:text-destructive"
-                    onClick={() => removeEntry.mutate(e)}
-                    disabled={removeEntry.isPending}
-                  >
-                    Remove
-                  </Button>
-                </div>
-              ))}
+                );
+              })}
             </div>
 
             {(perms.canCreate("meetings") || perms.canCreate("tasks")) && (

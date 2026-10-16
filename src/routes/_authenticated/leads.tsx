@@ -37,13 +37,15 @@ import {
 import { Badge } from "@/components/ui/badge";
 import {
   Loader2, Users, RefreshCw, Plus, Trash2, Upload, Download,
-  MoreVertical, Pencil, UserPlus, ChevronDown, ListChecks, Star,
+  Pencil, UserPlus, ChevronDown, ListChecks, Star,
   CalendarClock, Filter, X, Search, Building2, Mail, Phone, User,
   ArrowUp, ArrowDown, Minus, Flame, Sparkles, PhoneCall, BadgeCheck,
   FileText, Trophy, XCircle, MessageSquare, ChevronLeft, ChevronRight,
   ChevronsLeft, ChevronsRight, SlidersHorizontal, CalendarDays, Flag, CircleDot,
+  Eye, Check,
 } from "lucide-react";
 import { toast } from "sonner";
+import { Lead360Dialog } from "@/components/leads/Lead360Dialog";
 
 const VALID_STATUSES = ["new", "contacted", "qualified", "proposal_sent", "won", "lost"];
 
@@ -59,7 +61,6 @@ const STATUS_OPTIONS = [
   { value: "lost", label: "Lost" },
 ];
 
-// Schedule activity types (adjust values to match your backend's activity_type values)
 const ACTIVITY_TYPES = [
   { value: "call", label: "Call" },
   { value: "meeting", label: "Meeting" },
@@ -187,7 +188,7 @@ interface ScheduleForm {
   activity_type: string;
   title: string;
   notes: string;
-  scheduled_at: string; // datetime-local value
+  scheduled_at: string;
   duration_minutes: string;
   reminder_minutes_before: string;
   priority: string;
@@ -197,20 +198,47 @@ const PAGE_SIZE = 20;
 const FETCH_BATCH = 100;
 const FETCH_MAX_BATCHES = 50;
 
+// ════════════════════════════════════════════════════════════
+// STATUS COLORS — 6 visibly distinct hues
+// new       → sky blue
+// contacted → amber/orange
+// qualified → fuchsia/magenta
+// proposal  → indigo/violet
+// won       → emerald/green
+// lost      → rose/red
+// ════════════════════════════════════════════════════════════
 const statusColors: Record<string, string> = {
-  new: "bg-blue-100 text-blue-700 dark:bg-blue-500/15 dark:text-blue-300",
-  contacted: "bg-yellow-100 text-yellow-700 dark:bg-orange-500/15 dark:text-orange-300",
-  qualified: "bg-purple-100 text-purple-700 dark:bg-emerald-500/15 dark:text-emerald-300",
-  proposal_sent: "bg-indigo-100 text-indigo-700 dark:bg-violet-500/20 dark:text-violet-300",
-  won: "bg-green-100 text-green-700 dark:bg-green-500/15 dark:text-green-300",
-  lost: "bg-red-100 text-red-700 dark:bg-slate-500/20 dark:text-slate-300",
+  new:
+    "bg-sky-100 text-sky-700 ring-1 ring-sky-200 dark:bg-sky-500/15 dark:text-sky-300 dark:ring-sky-500/30",
+  contacted:
+    "bg-amber-100 text-amber-800 ring-1 ring-amber-200 dark:bg-amber-500/15 dark:text-amber-300 dark:ring-amber-500/30",
+  qualified:
+    "bg-fuchsia-100 text-fuchsia-700 ring-1 ring-fuchsia-200 dark:bg-fuchsia-500/15 dark:text-fuchsia-300 dark:ring-fuchsia-500/30",
+  proposal_sent:
+    "bg-indigo-100 text-indigo-700 ring-1 ring-indigo-200 dark:bg-indigo-500/15 dark:text-indigo-300 dark:ring-indigo-500/30",
+  won:
+    "bg-emerald-100 text-emerald-700 ring-1 ring-emerald-200 dark:bg-emerald-500/15 dark:text-emerald-300 dark:ring-emerald-500/30",
+  lost:
+    "bg-rose-100 text-rose-700 ring-1 ring-rose-200 dark:bg-rose-500/15 dark:text-rose-300 dark:ring-rose-500/30",
 };
 
+// ════════════════════════════════════════════════════════════
+// PRIORITY COLORS — 4 distinctly different from status palette
+// low    → slate/gray
+// medium → teal
+// high   → orange (different from status "contacted" amber by
+//          using solid orange tones + flame icon)
+// urgent → red (distinct from "lost" rose by using solid red)
+// ════════════════════════════════════════════════════════════
 const priorityColors: Record<string, string> = {
-  low: "bg-slate-100 text-slate-700 dark:bg-sky-500/15 dark:text-sky-300",
-  medium: "bg-amber-100 text-amber-700 dark:bg-amber-500/15 dark:text-amber-300",
-  high: "bg-orange-100 text-orange-700 dark:bg-red-500/15 dark:text-red-300",
-  urgent: "bg-red-100 text-red-700 dark:bg-red-600/25 dark:text-red-200",
+  low:
+    "bg-slate-100 text-slate-600 ring-1 ring-slate-200 dark:bg-slate-500/15 dark:text-slate-300 dark:ring-slate-500/30",
+  medium:
+    "bg-teal-100 text-teal-700 ring-1 ring-teal-200 dark:bg-teal-500/15 dark:text-teal-300 dark:ring-teal-500/30",
+  high:
+    "bg-orange-500 text-white ring-1 ring-orange-600 dark:bg-orange-500/90 dark:text-white dark:ring-orange-400/40",
+  urgent:
+    "bg-red-600 text-white ring-1 ring-red-700 dark:bg-red-600 dark:text-white dark:ring-red-400/40",
 };
 
 type IconType = React.ComponentType<{ className?: string }>;
@@ -355,7 +383,6 @@ const currencyFormatter = new Intl.NumberFormat("en-IN", {
   style: "currency", currency: "INR", maximumFractionDigits: 0,
 });
 
-// Helper: user ID → display name
 function getUserDisplayName(
   userId: number | null | undefined,
   users: any[]
@@ -445,7 +472,6 @@ async function findContactForLead(lead: Lead): Promise<ContactFull | null> {
   }
 }
 
-// Marks / unmarks the lead's contact as "priority" (tag) and flags the lead itself.
 async function setLeadPriority(lead: Lead, on: boolean): Promise<void> {
   const full = await fetchLeadDetail(lead);
   let contact = await findContactForLead(full);
@@ -504,7 +530,8 @@ function LeadsPage() {
   const [editForm, setEditForm] = useState<UpdateLeadPayload | null>(null);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
 
-  // Schedule dialog
+  const [view360Id, setView360Id] = useState<number | null>(null);
+
   const [scheduleFor, setScheduleFor] = useState<Lead | null>(null);
   const [scheduleForm, setScheduleForm] = useState<ScheduleForm>(emptyScheduleForm);
   const [scheduleFile, setScheduleFile] = useState<File | null>(null);
@@ -514,8 +541,6 @@ function LeadsPage() {
   const [importResultOpen, setImportResultOpen] = useState(false);
   const [importResult, setImportResult] = useState<ImportLeadsResult | null>(null);
 
-  // Fetch every page from the API (in batches), then paginate on the client so
-  // that priority / date filters and page counts stay consistent.
   const { data: leads, isLoading, isFetching, error } = useQuery({
     queryKey: ["leads", isSuperadmin, search, statusFilter, tenantFilter],
     enabled: !authLoading,
@@ -553,7 +578,6 @@ function LeadsPage() {
     enabled: isSuperadmin,
   });
 
-  // Users list — everyone fetches it (executives need it to show "Assigned To" names)
   const { data: users = [] } = useQuery({
     queryKey: ["users-list"],
     queryFn: async () => {
@@ -562,14 +586,12 @@ function LeadsPage() {
     },
   });
 
-  // -------- Bulk selection / permissions --------
   const isAdminRole = role === "admin";
   const isManagerRole = role === "manager" || role === "sales_manager";
-  const canBulk = !isSuperadmin && (isAdminOrManager || isExecutive);   // super admin = read only
-  const canAssign = !isSuperadmin && (isAdminRole || isManagerRole);    // executives never assign
-  const canQuickAct = !isSuperadmin;                                    // schedule / priority / status
+  const canBulk = !isSuperadmin && (isAdminOrManager || isExecutive);
+  const canAssign = !isSuperadmin && (isAdminRole || isManagerRole);
+  const canQuickAct = !isSuperadmin;
 
-  // admin -> managers + executives, manager -> executives only
   const assignableUsers = useMemo(() => {
     const allowed = isAdminRole
       ? [...MANAGER_ROLES, ...EXECUTIVE_ROLES]
@@ -621,7 +643,6 @@ function LeadsPage() {
       toast.error(err instanceof Error ? err.message : "Bulk action failed"),
   });
 
-  // -------- Quick actions (single lead) --------
   const togglePriority = useMutation({
     mutationFn: ({ lead, on }: { lead: Lead; on: boolean }) => setLeadPriority(lead, on),
     onSuccess: (_d, { on }) => {
@@ -645,7 +666,6 @@ function LeadsPage() {
       toast.error(err instanceof Error ? err.message : "Failed to update status"),
   });
 
-  // -------- Schedule (POST /api/v1/lead-schedules, optional upload first) --------
   const createSchedule = useMutation({
     mutationFn: async ({ lead, form, file }: { lead: Lead; form: ScheduleForm; file: File | null }) => {
       let attachment_url: string | undefined;
@@ -692,10 +712,7 @@ function LeadsPage() {
 
   const openScheduleDialog = (lead: Lead) => {
     setScheduleFor(lead);
-    setScheduleForm({
-      ...emptyScheduleForm,
-      title: "",
-    });
+    setScheduleForm({ ...emptyScheduleForm, title: "" });
     setScheduleFile(null);
   };
 
@@ -720,7 +737,6 @@ function LeadsPage() {
     createSchedule.mutate({ lead: scheduleFor, form: scheduleForm, file: scheduleFile });
   };
 
-  // -------- Create Lead --------
   const createLead = useMutation({
     mutationFn: async (payload: CreateLeadPayload) => {
       const numericValue = toNumber(payload.value);
@@ -782,7 +798,6 @@ function LeadsPage() {
     createLead.mutate(form);
   };
 
-  // -------- Update Lead --------
   const updateLead = useMutation({
     mutationFn: async ({ id, payload, customFields }: {
       id: number;
@@ -854,7 +869,6 @@ function LeadsPage() {
     },
   });
 
-  // -------- Delete Lead --------
   const deleteLead = useMutation({
     mutationFn: (id: number) =>
       apiFetch<{ message: string }>(`/api/v1/leads/${id}`, { method: "DELETE" }),
@@ -872,7 +886,6 @@ function LeadsPage() {
     },
   });
 
-  // Assign Lead (only updates assigned_to, does not touch status)
   const assignLead = useMutation({
     mutationFn: ({ id, assigned_to }: { id: number; assigned_to: number | null }) =>
       apiFetch(`/api/v1/leads/${id}`, {
@@ -887,7 +900,6 @@ function LeadsPage() {
       toast.error(err instanceof Error ? err.message : "Failed to assign lead"),
   });
 
-  // -------- Import Leads --------
   const importLeads = useMutation({
     mutationFn: (file: File) => {
       const formData = new FormData();
@@ -905,7 +917,6 @@ function LeadsPage() {
     },
   });
 
-  // -------- Export Leads --------
   const exportLeads = useMutation({
     mutationFn: () => {
       const params = new URLSearchParams();
@@ -967,7 +978,6 @@ function LeadsPage() {
     e.target.value = "";
   };
 
-  // -------- Filtering --------
   const items = leads ?? [];
 
   const scopedItems = useMemo(() => {
@@ -1005,7 +1015,6 @@ function LeadsPage() {
     setPage(0);
   };
 
-  // -------- Pagination --------
   const totalFiltered = filteredItems.length;
   const totalPages = Math.max(1, Math.ceil(totalFiltered / PAGE_SIZE));
   const safePage = Math.min(page, totalPages - 1);
@@ -1026,7 +1035,6 @@ function LeadsPage() {
     return nums;
   }, [safePage, totalPages]);
 
-  // Reset to first page / clear selection whenever filters change
   useEffect(() => {
     setPage(0);
   }, [search, statusFilter, priorityFilter, tenantFilter, dateFrom, dateTo]);
@@ -1035,7 +1043,6 @@ function LeadsPage() {
     setSelectedIds(new Set());
   }, [search, statusFilter, priorityFilter, tenantFilter, dateFrom, dateTo, page]);
 
-  // ---- Bulk selection derived state (current page) ----
   const selectedLeads = pagedItems.filter((l) => selectedIds.has(l.id));
   const allSelected =
     pagedItems.length > 0 && selectedLeads.length === pagedItems.length;
@@ -1055,7 +1062,6 @@ function LeadsPage() {
     setSelectedIds(allSelected ? new Set() : new Set(pagedItems.map((l) => l.id)));
 
   const total = isSuperadmin ? items.length : stats?.total ?? items.length;
-  // Name, Contact, Status, Priority, Value, Source, [Assigned To], [Tenant], Action
   const colCount = (isSuperadmin ? 9 : isExecutive ? 7 : 8) + (canBulk ? 1 : 0);
   const showLoading = isLoading || authLoading;
 
@@ -1090,7 +1096,7 @@ function LeadsPage() {
               )}
             </div>
             <p className="text-muted-foreground text-sm mt-0.5">
-              {total} leads · Track and convert your pipeline.
+              Track and convert your pipeline.
             </p>
           </div>
         </div>
@@ -1275,7 +1281,6 @@ function LeadsPage() {
               />
             </div>
 
-            {/* Bulk actions dropdown */}
             {canBulk && (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
@@ -1288,7 +1293,6 @@ function LeadsPage() {
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="start" className="w-52">
-                  {/* Status Change */}
                   <DropdownMenuSub>
                     <DropdownMenuSubTrigger>
                       <RefreshCw className="mr-2 h-4 w-4" /> Status Change
@@ -1307,7 +1311,6 @@ function LeadsPage() {
                     </DropdownMenuSubContent>
                   </DropdownMenuSub>
 
-                  {/* Assign To (admin / manager only) */}
                   {canAssign && (
                     <DropdownMenuSub>
                       <DropdownMenuSubTrigger>
@@ -1341,7 +1344,6 @@ function LeadsPage() {
                     </DropdownMenuSub>
                   )}
 
-                  {/* OnPriority */}
                   <DropdownMenuItem
                     onClick={() =>
                       bulkAction.mutate({ kind: "priority", leads: selectedLeads, value: !allPrioritized })
@@ -1371,7 +1373,6 @@ function LeadsPage() {
               </Select>
             )}
 
-            {/* Filter toggle button */}
             <Button
               className="relative h-9 rounded-lg bg-blue-600 px-4 text-white shadow-sm hover:bg-blue-700 dark:border dark:border-violet-500 dark:bg-slate-900/80 dark:shadow-[0_0_0_3px_rgba(139,92,246,0.22)] dark:hover:bg-slate-800"
               onClick={() => setFiltersOpen((o) => !o)}
@@ -1387,7 +1388,6 @@ function LeadsPage() {
             </Button>
           </div>
 
-          {/* Filter panel */}
           {filtersOpen && (
             <div className="mb-4 overflow-hidden rounded-2xl border border-slate-200 bg-linear-to-br from-slate-50 to-white shadow-sm dark:border-slate-800 dark:from-slate-900/80 dark:to-slate-950/80">
               <div className="flex items-center justify-between gap-3 border-b border-slate-200/70 px-5 py-3.5 dark:border-slate-800">
@@ -1504,7 +1504,7 @@ function LeadsPage() {
                   <TableHead className="text-left font-medium text-slate-500 dark:text-slate-300">Source</TableHead>
                   {!isExecutive && <TableHead className="text-left font-medium text-slate-500 dark:text-slate-300">Assigned To</TableHead>}
                   {isSuperadmin && <TableHead className="text-left font-medium text-slate-500 dark:text-slate-300">Tenant</TableHead>}
-                  {canWrite && <TableHead className="w-36 text-left font-medium text-slate-500 dark:text-slate-300">Actions</TableHead>}
+                  {canWrite && <TableHead className="w-32 text-left font-medium text-slate-500 dark:text-slate-300">Actions</TableHead>}
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -1544,7 +1544,7 @@ function LeadsPage() {
                     <TableRow
                       key={lead.id}
                       className={`cursor-pointer border-slate-100 transition-colors hover:bg-blue-50/40 dark:border-slate-800/80 dark:hover:bg-slate-800/40 ${selectedIds.has(lead.id) ? "bg-blue-50/60 dark:bg-blue-500/10" : ""}`}
-                      onClick={() => openViewDialog(lead)}
+                      onClick={() => setView360Id(lead.id)}
                     >
                       {canBulk && (
                         <TableCell className="text-left" onClick={(e) => e.stopPropagation()}>
@@ -1584,9 +1584,48 @@ function LeadsPage() {
                           </div>
                         )}
                       </TableCell>
-                      <TableCell className="text-left">
-                        <StatusBadge status={lead.status} />
+
+                      {/* ⭐ STATUS — clickable dropdown */}
+                      <TableCell className="text-left" onClick={(e) => e.stopPropagation()}>
+                        {canQuickAct ? (
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <button
+                                type="button"
+                                className="cursor-pointer rounded-full outline-none focus-visible:ring-2 focus-visible:ring-primary"
+                                title="Change status"
+                              >
+                                <StatusBadge status={lead.status} />
+                              </button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="start" className="w-52">
+                              {STATUS_OPTIONS.map((s) => {
+                                const Icon = statusIcons[s.value];
+                                const active = lead.status === s.value;
+                                return (
+                                  <DropdownMenuItem
+                                    key={s.value}
+                                    disabled={active}
+                                    onClick={() =>
+                                      changeStatus.mutate({ id: lead.id, status: s.value })
+                                    }
+                                    className="flex items-center justify-between"
+                                  >
+                                    <span className="flex items-center gap-2">
+                                      {Icon && <Icon className="h-3.5 w-3.5" />}
+                                      {s.label}
+                                    </span>
+                                    {active && <Check className="h-3.5 w-3.5 text-primary" />}
+                                  </DropdownMenuItem>
+                                );
+                              })}
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        ) : (
+                          <StatusBadge status={lead.status} />
+                        )}
                       </TableCell>
+
                       <TableCell className="text-left">
                         <PriorityBadge priority={lead.priority} />
                       </TableCell>
@@ -1603,10 +1642,75 @@ function LeadsPage() {
                         </span>
                       </TableCell>
 
-                      {/* Assigned To — show name */}
+                      {/* ⭐ ASSIGNED TO — clickable dropdown */}
                       {!isExecutive && (
-                        <TableCell className="text-left text-sm">
-                          {assigneeName || lead.assigned_to ? (
+                        <TableCell className="text-left text-sm" onClick={(e) => e.stopPropagation()}>
+                          {canAssign ? (
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <button
+                                  type="button"
+                                  className="cursor-pointer rounded-md px-2 py-1 text-left outline-none transition-colors hover:bg-slate-100 focus-visible:ring-2 focus-visible:ring-primary dark:hover:bg-slate-800"
+                                  title="Change assignee"
+                                >
+                                  {assigneeName || lead.assigned_to ? (
+                                    <span className="flex items-center gap-1.5 text-slate-700 dark:text-slate-200">
+                                      <User className="h-3.5 w-3.5 text-slate-500" />
+                                      {assigneeName ?? `User #${lead.assigned_to}`}
+                                    </span>
+                                  ) : (
+                                    <span className="flex items-center gap-1.5 text-muted-foreground">
+                                      <UserPlus className="h-3.5 w-3.5" />
+                                      Assign
+                                    </span>
+                                  )}
+                                </button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="start" className="max-h-64 w-60 overflow-y-auto">
+                                {assignableUsers.length === 0 && (
+                                  <DropdownMenuItem disabled>No users</DropdownMenuItem>
+                                )}
+                                {assignableUsers.map((u: any) => {
+                                  const active = String(lead.assigned_to) === String(u.id);
+                                  return (
+                                    <DropdownMenuItem
+                                      key={u.id}
+                                      onClick={() =>
+                                        assignLead.mutate({ id: lead.id, assigned_to: u.id })
+                                      }
+                                      className="flex items-center justify-between"
+                                    >
+                                      <span className="flex items-center gap-2">
+                                        <User className="h-3.5 w-3.5 text-slate-500" />
+                                        <span>
+                                          {u.full_name || u.email}
+                                          {u.role && (
+                                            <span className="ml-2 text-xs text-muted-foreground">
+                                              {u.role}
+                                            </span>
+                                          )}
+                                        </span>
+                                      </span>
+                                      {active && <Check className="h-3.5 w-3.5 text-primary" />}
+                                    </DropdownMenuItem>
+                                  );
+                                })}
+                                {lead.assigned_to && (
+                                  <>
+                                    <DropdownMenuSeparator />
+                                    <DropdownMenuItem
+                                      onClick={() =>
+                                        assignLead.mutate({ id: lead.id, assigned_to: null })
+                                      }
+                                      className="text-destructive"
+                                    >
+                                      Unassign
+                                    </DropdownMenuItem>
+                                  </>
+                                )}
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          ) : assigneeName || lead.assigned_to ? (
                             <div className="flex items-center justify-start gap-1.5 text-slate-700 dark:text-slate-200">
                               <User className="h-3.5 w-3.5 text-slate-500" />
                               {assigneeName ?? `User #${lead.assigned_to}`}
@@ -1628,22 +1732,49 @@ function LeadsPage() {
                         </TableCell>
                       )}
 
-                      {/* Action column */}
+                      {/* ⭐ ACTIONS — only direct buttons, no dropdown */}
                       {canWrite && (
                         <TableCell className="text-left" onClick={(e) => e.stopPropagation()}>
                           <div className="flex items-center justify-start gap-1.5">
+                            {/* View 360° — now a direct button */}
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-7 w-7 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 hover:text-blue-700 dark:bg-blue-500/20 dark:text-blue-300 dark:hover:bg-blue-500/30 dark:hover:text-blue-200"
+                              title="View 360°"
+                              aria-label="View 360°"
+                              onClick={() => setView360Id(lead.id)}
+                            >
+                              <Eye className="h-3.5 w-3.5" />
+                            </Button>
+
+                            {/* Edit — now a direct button */}
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-7 w-7 rounded-lg bg-slate-50 text-slate-600 hover:bg-slate-100 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700"
+                              title="Edit lead"
+                              aria-label="Edit lead"
+                              onClick={() => openEditFromRow(lead)}
+                            >
+                              <Pencil className="h-3.5 w-3.5" />
+                            </Button>
+
                             {canQuickAct && (
                               <>
+                                {/* Schedule */}
                                 <Button
                                   variant="ghost"
                                   size="icon"
-                                  className="h-7 w-7 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 hover:text-blue-700 dark:bg-blue-500/20 dark:text-blue-300 dark:hover:bg-blue-500/30 dark:hover:text-blue-200"
+                                  className="h-7 w-7 rounded-lg bg-indigo-50 text-indigo-600 hover:bg-indigo-100 hover:text-indigo-700 dark:bg-indigo-500/20 dark:text-indigo-300 dark:hover:bg-indigo-500/30 dark:hover:text-indigo-200"
                                   title="Schedule activity"
                                   aria-label="Schedule activity"
                                   onClick={() => openScheduleDialog(lead)}
                                 >
                                   <CalendarClock className="h-3.5 w-3.5" />
                                 </Button>
+
+                                {/* Priority toggle */}
                                 <Button
                                   variant="ghost"
                                   size="icon"
@@ -1671,85 +1802,6 @@ function LeadsPage() {
                                 </Button>
                               </>
                             )}
-
-                            <DropdownMenu>
-                              <DropdownMenuTrigger asChild>
-                                <Button variant="ghost" size="icon" className="h-7 w-7 rounded-lg bg-slate-50 text-slate-600 hover:bg-slate-100 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700">
-                                  <MoreVertical className="h-3.5 w-3.5" />
-                                </Button>
-                              </DropdownMenuTrigger>
-                              <DropdownMenuContent align="end">
-                                <DropdownMenuItem onClick={() => openEditFromRow(lead)}>
-                                  <Pencil className="mr-2 h-4 w-4" /> Edit
-                                </DropdownMenuItem>
-
-                                {/* Status Change submenu */}
-                                {canQuickAct && (
-                                  <DropdownMenuSub>
-                                    <DropdownMenuSubTrigger>
-                                      <RefreshCw className="mr-2 h-4 w-4" /> Status Change
-                                    </DropdownMenuSubTrigger>
-                                    <DropdownMenuSubContent>
-                                      {STATUS_OPTIONS.map((s) => (
-                                        <DropdownMenuItem
-                                          key={s.value}
-                                          disabled={lead.status === s.value}
-                                          onClick={() => changeStatus.mutate({ id: lead.id, status: s.value })}
-                                          className="flex items-center justify-between"
-                                        >
-                                          <span>{s.label}</span>
-                                          {lead.status === s.value && (
-                                            <span className="text-primary font-bold">✓</span>
-                                          )}
-                                        </DropdownMenuItem>
-                                      ))}
-                                    </DropdownMenuSubContent>
-                                  </DropdownMenuSub>
-                                )}
-
-                                {/* Assign To submenu — only admin/manager, limited to their subordinates */}
-                                {canAssign && (
-                                  <DropdownMenuSub>
-                                    <DropdownMenuSubTrigger>
-                                      <UserPlus className="mr-2 h-4 w-4" /> Assign To
-                                    </DropdownMenuSubTrigger>
-                                    <DropdownMenuSubContent className="max-h-64 overflow-y-auto">
-                                      {assignableUsers.length === 0 && (
-                                        <DropdownMenuItem disabled>No users</DropdownMenuItem>
-                                      )}
-                                      {assignableUsers.map((u: any) => (
-                                        <DropdownMenuItem
-                                          key={u.id}
-                                          onClick={() => assignLead.mutate({ id: lead.id, assigned_to: u.id })}
-                                          className="flex items-center justify-between"
-                                        >
-                                          <span>
-                                            {u.full_name || u.email}
-                                            {u.role && (
-                                              <span className="text-xs text-muted-foreground ml-2">{u.role}</span>
-                                            )}
-                                          </span>
-                                          {String(lead.assigned_to) === String(u.id) && (
-                                            <span className="text-primary font-bold">✓</span>
-                                          )}
-                                        </DropdownMenuItem>
-                                      ))}
-                                      {lead.assigned_to && (
-                                        <>
-                                          <DropdownMenuSeparator />
-                                          <DropdownMenuItem
-                                            onClick={() => assignLead.mutate({ id: lead.id, assigned_to: null })}
-                                            className="text-destructive"
-                                          >
-                                            Unassign
-                                          </DropdownMenuItem>
-                                        </>
-                                      )}
-                                    </DropdownMenuSubContent>
-                                  </DropdownMenuSub>
-                                )}
-                              </DropdownMenuContent>
-                            </DropdownMenu>
                           </div>
                         </TableCell>
                       )}
@@ -1760,7 +1812,6 @@ function LeadsPage() {
             </Table>
           </div>
 
-          {/* Pagination */}
           {totalFiltered > 0 && (
             <div className="flex items-center justify-between flex-wrap gap-3 mt-4 text-sm">
               <span className="text-muted-foreground">
@@ -2193,6 +2244,25 @@ function LeadsPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* ⭐ 360° Lead View */}
+      <Lead360Dialog
+        leadId={view360Id}
+        open={!!view360Id}
+        onOpenChange={(v) => { if (!v) setView360Id(null); }}
+        onEdit={async (profile) => {
+          const found = items.find((l) => l.id === profile.id);
+          if (found) {
+            await openEditFromRow(found);
+          }
+        }}
+        onSchedule={(profile) => {
+          const found = items.find((l) => l.id === profile.id);
+          if (found) {
+            openScheduleDialog(found);
+          }
+        }}
+      />
     </div>
   );
 }

@@ -71,7 +71,7 @@ function ITLayout() {
                 className="text-lg font-bold"
                 style={{ fontFamily: "var(--font-display)" }}
               >
-                IT Company CRM
+                Service Company CRM
               </h1>
               <p className="text-xs text-muted-foreground">
                 Projects · Tickets · Engagement Pipeline
