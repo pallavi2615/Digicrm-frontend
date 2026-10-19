@@ -37,7 +37,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import {
   Loader2, Users, RefreshCw, Plus, Trash2, Upload, Download,
-  Pencil, UserPlus, ChevronDown, ListChecks, Star,
+  Pencil, UserPlus, ChevronDown, Star,
   CalendarClock, Filter, X, Search, Building2, Mail, Phone, User,
   ArrowUp, ArrowDown, Minus, Flame, Sparkles, PhoneCall, BadgeCheck,
   FileText, Trophy, XCircle, MessageSquare, ChevronLeft, ChevronRight,
@@ -59,6 +59,31 @@ const STATUS_OPTIONS = [
   { value: "proposal_sent", label: "Proposal Sent" },
   { value: "won", label: "Won" },
   { value: "lost", label: "Lost" },
+];
+
+const PRIORITY_OPTIONS = [
+  { value: "low", label: "Low" },
+  { value: "medium", label: "Medium" },
+  { value: "high", label: "High" },
+  { value: "urgent", label: "Urgent" },
+];
+
+// Clickable cell triggers: NO background change on hover — only the border lights up.
+const CELL_TRIGGER =
+  "cursor-pointer border border-transparent bg-transparent outline-none transition-[border-color,box-shadow] " +
+  "hover:border-blue-500 hover:ring-2 hover:ring-blue-500/20 " +
+  "focus-visible:border-blue-500 focus-visible:ring-2 focus-visible:ring-blue-500/30 " +
+  "data-[state=open]:border-blue-500 data-[state=open]:ring-2 data-[state=open]:ring-blue-500/20";
+
+// Status / priority popover (pill list with a check on the active row)
+const PILL_MENU =
+  "w-48 rounded-xl border border-slate-200 bg-white p-2 shadow-xl dark:border-slate-700 dark:bg-slate-900";
+const PILL_ITEM =
+  "flex cursor-pointer items-center justify-between rounded-lg px-2 py-1.5 focus:bg-slate-50 dark:focus:bg-slate-800";
+
+const ASSIGNEE_AVATAR_COLORS = [
+  "bg-violet-500", "bg-pink-500", "bg-indigo-500", "bg-rose-500",
+  "bg-emerald-500", "bg-orange-500", "bg-teal-500", "bg-sky-500",
 ];
 
 const ACTIVITY_TYPES = [
@@ -330,13 +355,13 @@ async function fetchLeadDetail(lead: Lead): Promise<Lead> {
   try {
     const detail = await apiFetch<Lead>(`/api/v1/leads/${lead.id}`);
     full = { ...lead, ...detail };
-  } catch {}
+  } catch { }
   full = resolveLead(full);
   if (!full.designation && full.contact_id) {
     try {
       const c = await apiFetch<ContactLite>(`/api/v1/contacts/${full.contact_id}`);
       if (c?.designation) full = { ...full, designation: c.designation };
-    } catch {}
+    } catch { }
   }
   return full;
 }
@@ -457,7 +482,7 @@ async function findContactForLead(lead: Lead): Promise<ContactFull | null> {
   if (lead.contact_id) {
     try {
       return await apiFetch<ContactFull>(`/api/v1/contacts/${lead.contact_id}`);
-    } catch {}
+    } catch { }
   }
   const email = lead.email?.trim();
   if (!email) return null;
@@ -477,7 +502,7 @@ async function setLeadPriority(lead: Lead, on: boolean): Promise<void> {
   let contact = await findContactForLead(full);
   if (!contact && on) {
     let companyId: number | null = null;
-    try { companyId = await mirrorLeadToCompany(full); } catch {}
+    try { companyId = await mirrorLeadToCompany(full); } catch { }
     await mirrorLeadToContact(full, companyId);
     contact = await findContactForLead({ ...full, contact_id: null });
   }
@@ -586,6 +611,29 @@ function LeadsPage() {
     },
   });
 
+  // /users/assignees may not include phone numbers — try the full users list and merge by id.
+  const { data: usersFull = [] } = useQuery({
+    queryKey: ["users-full-directory"],
+    queryFn: async () => {
+      try {
+        const res = await apiFetch<any>("/api/v1/users");
+        return Array.isArray(res) ? res : res?.data ?? res?.items ?? res?.users ?? [];
+      } catch {
+        return [];
+      }
+    },
+    retry: false,
+  });
+
+  const userDirectory = useMemo(() => {
+    const byId = new Map<string, any>();
+    for (const u of usersFull as any[]) byId.set(String(u.id), u);
+    return (users as any[]).map((u) => ({
+      ...(byId.get(String(u.id)) ?? {}), ...u,
+      phone: pickPhone(u) ?? pickPhone(byId.get(String(u.id)))
+    }));
+  }, [users, usersFull]);
+
   const isAdminRole = role === "admin";
   const isManagerRole = role === "manager" || role === "sales_manager";
   const canBulk = !isSuperadmin && (isAdminOrManager || isExecutive);
@@ -596,10 +644,19 @@ function LeadsPage() {
     const allowed = isAdminRole
       ? [...MANAGER_ROLES, ...EXECUTIVE_ROLES]
       : isManagerRole
-      ? EXECUTIVE_ROLES
-      : [];
+        ? EXECUTIVE_ROLES
+        : [];
     return (users as any[]).filter((u) => allowed.includes(String(u.role)));
   }, [users, isAdminRole, isManagerRole]);
+
+  const assigneeOptions = useMemo(() => {
+    const list = [...assignableUsers];
+    if (currentUserId && !list.some((u: any) => Number(u.id) === currentUserId)) {
+      const me = (users as any[]).find((u) => Number(u.id) === currentUserId);
+      if (me) list.unshift(me);
+    }
+    return list;
+  }, [assignableUsers, users, currentUserId]);
 
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
 
@@ -666,6 +723,19 @@ function LeadsPage() {
       toast.error(err instanceof Error ? err.message : "Failed to update status"),
   });
 
+  const changePriority = useMutation({
+    mutationFn: ({ id, priority }: { id: number; priority: string }) =>
+      apiFetch(`/api/v1/leads/${id}`, {
+        method: "PUT", body: JSON.stringify({ priority }),
+      }),
+    onSuccess: () => {
+      toast.success("Priority updated");
+      invalidateLeadRelated();
+    },
+    onError: (err) =>
+      toast.error(err instanceof Error ? err.message : "Failed to update priority"),
+  });
+
   const createSchedule = useMutation({
     mutationFn: async ({ lead, form, file }: { lead: Lead; form: ScheduleForm; file: File | null }) => {
       let attachment_url: string | undefined;
@@ -702,6 +772,7 @@ function LeadsPage() {
       toast.success("Activity scheduled");
       closeScheduleDialog();
       qc.invalidateQueries({ queryKey: ["lead-schedules"] });
+      qc.invalidateQueries({ queryKey: ["lead-360"] });
       qc.invalidateQueries({ queryKey: ["calendar"] });
       qc.invalidateQueries({ queryKey: ["notifications"] });
       qc.invalidateQueries({ queryKey: ["notifications-unread-count"] });
@@ -711,8 +782,16 @@ function LeadsPage() {
   });
 
   const openScheduleDialog = (lead: Lead) => {
+    const now = new Date();
+    now.setSeconds(0, 0);
+    now.setMinutes(Math.ceil(now.getMinutes() / 5) * 5);
+    const pad = (n: number) => String(n).padStart(2, "0");
+    const localNow =
+      `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}` +
+      `T${pad(now.getHours())}:${pad(now.getMinutes())}`;
+
     setScheduleFor(lead);
-    setScheduleForm({ ...emptyScheduleForm, title: "" });
+    setScheduleForm({ ...emptyScheduleForm, title: "", scheduled_at: localNow });
     setScheduleFile(null);
   };
 
@@ -862,6 +941,7 @@ function LeadsPage() {
       setEditingLead(null);
       setEditForm(null);
       invalidateLeadRelated();
+      qc.invalidateQueries({ queryKey: ["lead-360"] });
       qc.invalidateQueries({ queryKey: ["companies-lite"] });
     },
     onError: (err) => {
@@ -1075,16 +1155,16 @@ function LeadsPage() {
     togglePriority.isPending ? togglePriority.variables?.lead.id : null;
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-4 sm:space-y-5">
       {/* Header */}
       <div className="flex items-start justify-between flex-wrap gap-3">
-        <div className="flex items-center gap-4">
-          <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-blue-50 text-blue-600 shadow-sm dark:border dark:border-blue-500/20 dark:bg-blue-500/10 dark:text-blue-400">
-            <Users className="h-7 w-7" />
+        <div className="flex items-center gap-3 sm:gap-4">
+          <div className="flex h-11 w-11 sm:h-14 sm:w-14 shrink-0 items-center justify-center rounded-2xl bg-blue-50 text-blue-600 shadow-sm dark:border dark:border-blue-500/20 dark:bg-blue-500/10 dark:text-blue-400">
+            <Users className="h-6 w-6 sm:h-7 sm:w-7" />
           </div>
           <div>
-            <div className="flex items-center gap-2">
-              <h1 className="text-3xl font-bold text-slate-900 dark:text-white">Leads</h1>
+            <div className="flex flex-wrap items-center gap-2">
+              <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 dark:text-white">Leads</h1>
               {isExecutive ? (
                 <span className="text-xs bg-blue-100 text-blue-700 px-2.5 py-1 rounded-full font-medium dark:bg-blue-500/15 dark:text-blue-300">
                   My Leads
@@ -1101,7 +1181,7 @@ function LeadsPage() {
           </div>
         </div>
 
-        <div className="flex gap-2 flex-wrap">
+        <div className="flex w-full flex-wrap gap-2 sm:w-auto">
           <Button variant="outline" className="h-9 rounded-lg border-slate-200 bg-white shadow-sm dark:border-slate-700 dark:bg-slate-900/60 dark:text-slate-100 dark:hover:bg-slate-800" onClick={handleRefresh}>
             <RefreshCw className={`mr-2 h-4 w-4 ${isFetching ? "animate-spin" : ""}`} />
             Refresh
@@ -1164,7 +1244,7 @@ function LeadsPage() {
                       <Input id="email" type="email" value={form.email} onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))} placeholder="jane@example.com" />
                     </div>
 
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                       <div className="grid gap-2">
                         <Label htmlFor="phone">Phone</Label>
                         <Input id="phone" value={form.phone} onChange={(e) => setForm((f) => ({ ...f, phone: e.target.value }))} placeholder="9876543210" />
@@ -1175,7 +1255,7 @@ function LeadsPage() {
                       </div>
                     </div>
 
-                    <div className="grid grid-cols-3 gap-4">
+                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
                       <div className="grid gap-2">
                         <Label htmlFor="industry">Industry</Label>
                         <Input id="industry" value={form.industry} onChange={(e) => setForm((f) => ({ ...f, industry: e.target.value }))} placeholder="e.g. IT" />
@@ -1200,7 +1280,7 @@ function LeadsPage() {
                       <Textarea id="message" value={form.message} onChange={(e) => setForm((f) => ({ ...f, message: e.target.value }))} placeholder="Interested in..." rows={3} />
                     </div>
 
-                    <div className="grid grid-cols-3 gap-4">
+                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
                       <div className="grid gap-2">
                         <Label htmlFor="source">Source</Label>
                         <Input id="source" value={form.source} onChange={(e) => setForm((f) => ({ ...f, source: e.target.value }))} placeholder="manual" />
@@ -1257,7 +1337,7 @@ function LeadsPage() {
 
       {/* Stats Cards */}
       {stats && !isSuperadmin && (
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
           <StatCard label="Total" value={stats.total} icon={Users} tone="blue" />
           <StatCard label="New" value={stats.new} icon={Plus} tone="teal" />
           <StatCard label="Contacted" value={stats.contacted} icon={MessageSquare} tone="orange" />
@@ -1269,9 +1349,9 @@ function LeadsPage() {
 
       {/* Filters + Table */}
       <Card className="rounded-2xl border-slate-200/70 shadow-sm dark:border-slate-800 dark:bg-[#0b1226]">
-        <CardContent className="p-4">
+        <CardContent className="p-3 sm:p-4">
           <div className="flex gap-3 flex-wrap mb-4">
-            <div className="relative flex-1 min-w-64">
+            <div className="relative w-full min-w-0 sm:min-w-64 sm:flex-1">
               <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
               <Input
                 placeholder="Search name, email, phone..."
@@ -1284,12 +1364,19 @@ function LeadsPage() {
             {canBulk && (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="outline" className="h-9 rounded-lg border-slate-200 bg-white dark:border-slate-700 dark:bg-slate-900/60 dark:text-slate-100 dark:hover:bg-slate-800" disabled={selectedLeads.length === 0 || bulkAction.isPending}>
-                    {bulkAction.isPending
-                      ? <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      : <ListChecks className="mr-2 h-4 w-4" />}
-                    Actions{selectedLeads.length > 0 ? ` (${selectedLeads.length})` : ""}
-                    <ChevronDown className="ml-2 h-4 w-4" />
+                  <Button
+                    variant="outline"
+                    className="h-10 gap-2 rounded-xl border-slate-200 bg-white px-4 font-medium text-slate-800 shadow-sm hover:bg-slate-50 hover:text-slate-900 dark:border-slate-700 dark:bg-slate-900/60 dark:text-slate-100 dark:hover:bg-slate-800"
+                    disabled={selectedLeads.length === 0 || bulkAction.isPending}
+                  >
+                    {bulkAction.isPending && <Loader2 className="h-4 w-4 animate-spin" />}
+                    Actions
+                    {selectedLeads.length > 0 && (
+                      <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-blue-600 px-1.5 text-xs font-semibold text-white">
+                        {selectedLeads.length}
+                      </span>
+                    )}
+                    <ChevronDown className="h-4 w-4" />
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="start" className="w-52">
@@ -1358,7 +1445,7 @@ function LeadsPage() {
 
             {isSuperadmin && (
               <Select value={tenantFilter} onValueChange={(v) => setTenantFilter(v)}>
-                <SelectTrigger className="h-9 w-48 rounded-lg border-slate-200 bg-white dark:border-slate-700 dark:bg-slate-900/60 dark:text-slate-100">
+                <SelectTrigger className="h-9 w-full rounded-lg border-slate-200 bg-white sm:w-48 dark:border-slate-700 dark:bg-slate-900/60 dark:text-slate-100">
                   <span className="flex items-center gap-2">
                     <Building2 className="h-4 w-4 text-slate-500 dark:text-slate-300" />
                     <SelectValue placeholder="Tenant" />
@@ -1390,9 +1477,9 @@ function LeadsPage() {
 
           {filtersOpen && (
             <div className="mb-4 overflow-hidden rounded-2xl border border-slate-200 bg-linear-to-br from-slate-50 to-white shadow-sm dark:border-slate-800 dark:from-slate-900/80 dark:to-slate-950/80">
-              <div className="flex items-center justify-between gap-3 border-b border-slate-200/70 px-5 py-3.5 dark:border-slate-800">
+              <div className="flex items-center justify-between gap-3 border-b border-slate-200/70 px-4 py-3.5 sm:px-5 dark:border-slate-800">
                 <div className="flex items-center gap-3">
-                  <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-blue-100 text-blue-600 dark:bg-blue-500/15 dark:text-blue-300">
+                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-blue-100 text-blue-600 dark:bg-blue-500/15 dark:text-blue-300">
                     <SlidersHorizontal className="h-4 w-4" />
                   </div>
                   <div>
@@ -1405,7 +1492,7 @@ function LeadsPage() {
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="h-7 w-7 rounded-lg text-slate-500 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800"
+                  className="h-7 w-7 shrink-0 rounded-lg text-slate-500 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800"
                   aria-label="Close filters"
                   onClick={() => setFiltersOpen(false)}
                 >
@@ -1413,7 +1500,7 @@ function LeadsPage() {
                 </Button>
               </div>
 
-              <div className="grid gap-4 px-5 py-4 sm:grid-cols-2 lg:grid-cols-4">
+              <div className="grid gap-4 px-4 py-4 sm:grid-cols-2 sm:px-5 lg:grid-cols-4">
                 <FilterField icon={CircleDot} label="Status">
                   <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v)}>
                     <SelectTrigger className="h-9 rounded-lg border-slate-200 bg-white dark:border-slate-700 dark:bg-slate-900/70 dark:text-slate-100"><SelectValue placeholder="Status" /></SelectTrigger>
@@ -1462,7 +1549,7 @@ function LeadsPage() {
                 </FilterField>
               </div>
 
-              <div className="flex items-center justify-between gap-3 border-t border-slate-200/70 bg-slate-50/60 px-5 py-3 dark:border-slate-800 dark:bg-slate-900/40">
+              <div className="flex items-center justify-between gap-3 border-t border-slate-200/70 bg-slate-50/60 px-4 py-3 sm:px-5 dark:border-slate-800 dark:bg-slate-900/40">
                 <span className="text-xs text-muted-foreground">
                   <span className="font-semibold text-slate-700 dark:text-slate-200">{totalFiltered}</span> leads match
                 </span>
@@ -1481,7 +1568,7 @@ function LeadsPage() {
           )}
 
           <div className="rounded-xl border border-slate-200/70 overflow-hidden dark:border-slate-800">
-            <Table>
+            <Table className="min-w-225">
               <TableHeader>
                 <TableRow className="bg-slate-50 hover:bg-slate-50 dark:border-slate-800 dark:bg-slate-900/60 dark:hover:bg-slate-900/60">
                   {canBulk && (
@@ -1539,6 +1626,9 @@ function LeadsPage() {
                 {!showLoading && !error && pagedItems.map((lead) => {
                   const amount = getLeadAmount(lead);
                   const assigneeName = getUserDisplayName(lead.assigned_to, users);
+                  const assigneeUser = lead.assigned_to
+                    ? userDirectory.find((x) => String(x.id) === String(lead.assigned_to)) ?? null
+                    : null;
                   const isPrioritized = Boolean(lead.custom_fields?.on_priority);
                   return (
                     <TableRow
@@ -1590,35 +1680,24 @@ function LeadsPage() {
                         {canQuickAct ? (
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild>
-                              <button
-                                type="button"
-                                className="cursor-pointer rounded-full outline-none focus-visible:ring-2 focus-visible:ring-primary"
-                                title="Change status"
-                              >
+                              <button type="button" className={CELL_TRIGGER + " rounded-full p-0.5"} title="Change status">
                                 <StatusBadge status={lead.status} />
                               </button>
                             </DropdownMenuTrigger>
-                            <DropdownMenuContent align="start" className="w-52">
-                              {STATUS_OPTIONS.map((s) => {
-                                const Icon = statusIcons[s.value];
-                                const active = lead.status === s.value;
-                                return (
-                                  <DropdownMenuItem
-                                    key={s.value}
-                                    disabled={active}
-                                    onClick={() =>
-                                      changeStatus.mutate({ id: lead.id, status: s.value })
-                                    }
-                                    className="flex items-center justify-between"
-                                  >
-                                    <span className="flex items-center gap-2">
-                                      {Icon && <Icon className="h-3.5 w-3.5" />}
-                                      {s.label}
-                                    </span>
-                                    {active && <Check className="h-3.5 w-3.5 text-primary" />}
-                                  </DropdownMenuItem>
-                                );
-                              })}
+                            <DropdownMenuContent align="start" className={PILL_MENU}>
+                              {STATUS_OPTIONS.map((s) => (
+                                <DropdownMenuItem
+                                  key={s.value}
+                                  onClick={() => {
+                                    if (lead.status !== s.value)
+                                      changeStatus.mutate({ id: lead.id, status: s.value });
+                                  }}
+                                  className={PILL_ITEM}
+                                >
+                                  <MenuPill kind="status" value={s.value} label={s.label} />
+                                  {lead.status === s.value && <Check className="h-4 w-4 text-slate-700 dark:text-slate-200" />}
+                                </DropdownMenuItem>
+                              ))}
                             </DropdownMenuContent>
                           </DropdownMenu>
                         ) : (
@@ -1626,94 +1705,66 @@ function LeadsPage() {
                         )}
                       </TableCell>
 
-                      <TableCell className="text-left">
-                        <PriorityBadge priority={lead.priority} />
+                      {/* ⭐ PRIORITY — clickable dropdown */}
+                      <TableCell className="text-left" onClick={(e) => e.stopPropagation()}>
+                        {canQuickAct ? (
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <button type="button" className={CELL_TRIGGER + " rounded-full p-0.5"} title="Change priority">
+                                <PriorityBadge priority={lead.priority} />
+                              </button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="start" className={PILL_MENU}>
+                              {PRIORITY_OPTIONS.map((o) => (
+                                <DropdownMenuItem
+                                  key={o.value}
+                                  onClick={() => {
+                                    if (lead.priority !== o.value)
+                                      changePriority.mutate({ id: lead.id, priority: o.value });
+                                  }}
+                                  className={PILL_ITEM}
+                                >
+                                  <MenuPill kind="priority" value={o.value} label={o.label} />
+                                  {lead.priority === o.value && <Check className="h-4 w-4 text-slate-700 dark:text-slate-200" />}
+                                </DropdownMenuItem>
+                              ))}
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        ) : (
+                          <PriorityBadge priority={lead.priority} />
+                        )}
                       </TableCell>
                       <TableCell className="text-left text-sm font-semibold text-slate-800 dark:text-white">
                         {amount > 0 ? currencyFormatter.format(amount) : "—"}
                       </TableCell>
                       <TableCell className="text-left">
                         <span
-                          className={`inline-block rounded-md px-2.5 py-0.5 text-xs font-medium capitalize ${
-                            sourceColors[(lead.source || "").toLowerCase()] || "bg-slate-100 text-slate-600"
-                          }`}
+                          className={`inline-block rounded-md px-2.5 py-0.5 text-xs font-medium capitalize ${sourceColors[(lead.source || "").toLowerCase()] || "bg-slate-100 text-slate-600"
+                            }`}
                         >
                           {lead.source}
                         </span>
                       </TableCell>
 
-                      {/* ⭐ ASSIGNED TO — clickable dropdown */}
+                      {/* ⭐ ASSIGNED TO — searchable dropdown */}
                       {!isExecutive && (
                         <TableCell className="text-left text-sm" onClick={(e) => e.stopPropagation()}>
                           {canAssign ? (
-                            <DropdownMenu>
-                              <DropdownMenuTrigger asChild>
-                                <button
-                                  type="button"
-                                  className="cursor-pointer rounded-md px-2 py-1 text-left outline-none transition-colors hover:bg-slate-100 focus-visible:ring-2 focus-visible:ring-primary dark:hover:bg-slate-800"
-                                  title="Change assignee"
-                                >
-                                  {assigneeName || lead.assigned_to ? (
-                                    <span className="flex items-center gap-1.5 text-slate-700 dark:text-slate-200">
-                                      <User className="h-3.5 w-3.5 text-slate-500" />
-                                      {assigneeName ?? `User #${lead.assigned_to}`}
-                                    </span>
-                                  ) : (
-                                    <span className="flex items-center gap-1.5 text-muted-foreground">
-                                      <UserPlus className="h-3.5 w-3.5" />
-                                      Assign
-                                    </span>
-                                  )}
-                                </button>
-                              </DropdownMenuTrigger>
-                              <DropdownMenuContent align="start" className="max-h-64 w-60 overflow-y-auto">
-                                {assignableUsers.length === 0 && (
-                                  <DropdownMenuItem disabled>No users</DropdownMenuItem>
-                                )}
-                                {assignableUsers.map((u: any) => {
-                                  const active = String(lead.assigned_to) === String(u.id);
-                                  return (
-                                    <DropdownMenuItem
-                                      key={u.id}
-                                      onClick={() =>
-                                        assignLead.mutate({ id: lead.id, assigned_to: u.id })
-                                      }
-                                      className="flex items-center justify-between"
-                                    >
-                                      <span className="flex items-center gap-2">
-                                        <User className="h-3.5 w-3.5 text-slate-500" />
-                                        <span>
-                                          {u.full_name || u.email}
-                                          {u.role && (
-                                            <span className="ml-2 text-xs text-muted-foreground">
-                                              {u.role}
-                                            </span>
-                                          )}
-                                        </span>
-                                      </span>
-                                      {active && <Check className="h-3.5 w-3.5 text-primary" />}
-                                    </DropdownMenuItem>
-                                  );
-                                })}
-                                {lead.assigned_to && (
-                                  <>
-                                    <DropdownMenuSeparator />
-                                    <DropdownMenuItem
-                                      onClick={() =>
-                                        assignLead.mutate({ id: lead.id, assigned_to: null })
-                                      }
-                                      className="text-destructive"
-                                    >
-                                      Unassign
-                                    </DropdownMenuItem>
-                                  </>
-                                )}
-                              </DropdownMenuContent>
-                            </DropdownMenu>
+                            <AssigneeCell
+                              lead={lead}
+                              options={assigneeOptions}
+                              currentUserId={currentUserId}
+                              assigneeName={assigneeName}
+                              assignee={assigneeUser}
+                              onAssign={(id) => assignLead.mutate({ id: lead.id, assigned_to: id })}
+                            />
                           ) : assigneeName || lead.assigned_to ? (
-                            <div className="flex items-center justify-start gap-1.5 text-slate-700 dark:text-slate-200">
-                              <User className="h-3.5 w-3.5 text-slate-500" />
-                              {assigneeName ?? `User #${lead.assigned_to}`}
+                            <div className="flex items-center justify-start gap-2 text-slate-700 dark:text-slate-200">
+                              <AssigneeAvatar id={lead.assigned_to} name={assigneeName ?? `User #${lead.assigned_to}`} />
+                              <div className="min-w-0">
+                                <div className="font-medium">{assigneeName ?? `User #${lead.assigned_to}`}</div>
+                                <AssigneeContact user={assigneeUser} />
+                              </div>
                             </div>
                           ) : (
                             <span className="text-muted-foreground">—</span>
@@ -1778,11 +1829,10 @@ function LeadsPage() {
                                 <Button
                                   variant="ghost"
                                   size="icon"
-                                  className={`h-7 w-7 rounded-lg ${
-                                    isPrioritized
-                                      ? "bg-amber-50 hover:bg-amber-100 dark:bg-amber-500/20 dark:hover:bg-amber-500/30"
-                                      : "bg-slate-50 hover:bg-amber-50 dark:bg-slate-800 dark:hover:bg-slate-700"
-                                  }`}
+                                  className={`h-7 w-7 rounded-lg ${isPrioritized
+                                    ? "bg-amber-50 hover:bg-amber-100 dark:bg-amber-500/20 dark:hover:bg-amber-500/30"
+                                    : "bg-slate-50 hover:bg-amber-50 dark:bg-slate-800 dark:hover:bg-slate-700"
+                                    }`}
                                   title={isPrioritized ? "Remove priority" : "Mark as priority"}
                                   aria-label={isPrioritized ? "Remove priority" : "Mark as priority"}
                                   disabled={pendingPriorityId === lead.id}
@@ -1792,11 +1842,10 @@ function LeadsPage() {
                                     <Loader2 className="h-3.5 w-3.5 animate-spin" />
                                   ) : (
                                     <Star
-                                      className={`h-3.5 w-3.5 ${
-                                        isPrioritized
-                                          ? "fill-amber-400 text-amber-500"
-                                          : "text-slate-400"
-                                      }`}
+                                      className={`h-3.5 w-3.5 ${isPrioritized
+                                        ? "fill-amber-400 text-amber-500"
+                                        : "text-slate-400"
+                                        }`}
                                     />
                                   )}
                                 </Button>
@@ -1817,7 +1866,7 @@ function LeadsPage() {
               <span className="text-muted-foreground">
                 Showing {rangeStart}–{rangeEnd} of {totalFiltered} leads
               </span>
-              <div className="flex items-center gap-1.5">
+              <div className="flex flex-wrap items-center gap-1.5">
                 <Button
                   variant="outline"
                   size="icon"
@@ -1843,11 +1892,10 @@ function LeadsPage() {
                     key={p}
                     size="icon"
                     variant="outline"
-                    className={`h-7 w-7 rounded-lg ${
-                      p === safePage
-                        ? "border-blue-600 bg-blue-600 text-white hover:bg-blue-700 hover:text-white"
-                        : "border-slate-200 bg-white dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800"
-                    }`}
+                    className={`h-7 w-7 rounded-lg ${p === safePage
+                      ? "border-blue-600 bg-blue-600 text-white hover:bg-blue-700 hover:text-white"
+                      : "border-slate-200 bg-white dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800"
+                      }`}
                     onClick={() => setPage(p)}
                   >
                     {p + 1}
@@ -1971,7 +2019,7 @@ function LeadsPage() {
                   <Label htmlFor="edit-email">Email</Label>
                   <Input id="edit-email" type="email" value={editForm.email} onChange={(e) => setEditForm((f) => f && { ...f, email: e.target.value })} placeholder="jane@example.com" />
                 </div>
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                   <div className="grid gap-2">
                     <Label htmlFor="edit-phone">Phone</Label>
                     <Input id="edit-phone" value={editForm.phone} onChange={(e) => setEditForm((f) => f && { ...f, phone: e.target.value })} placeholder="9876543210" />
@@ -1981,7 +2029,7 @@ function LeadsPage() {
                     <Input id="edit-company" value={editForm.company} onChange={(e) => setEditForm((f) => f && { ...f, company: e.target.value })} placeholder="Acme Inc." />
                   </div>
                 </div>
-                <div className="grid grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
                   <div className="grid gap-2">
                     <Label htmlFor="edit-industry">Industry</Label>
                     <Input id="edit-industry" value={editForm.industry} onChange={(e) => setEditForm((f) => f && { ...f, industry: e.target.value })} placeholder="e.g. IT" />
@@ -2003,7 +2051,7 @@ function LeadsPage() {
                   <Label htmlFor="edit-message">Message</Label>
                   <Textarea id="edit-message" value={editForm.message} onChange={(e) => setEditForm((f) => f && { ...f, message: e.target.value })} rows={3} />
                 </div>
-                <div className="grid grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
                   <div className="grid gap-2">
                     <Label htmlFor="edit-status">Status</Label>
                     <Select value={editForm.status} onValueChange={(v) => setEditForm((f) => f && { ...f, status: v })}>
@@ -2083,7 +2131,7 @@ function LeadsPage() {
             </DialogHeader>
 
             <div className="grid gap-4 py-4">
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <div className="grid gap-2">
                   <Label htmlFor="sch-type">Activity Type</Label>
                   <Select
@@ -2127,15 +2175,19 @@ function LeadsPage() {
 
               <div className="grid gap-2">
                 <Label htmlFor="sch-when">Date & Time</Label>
-                <Input
-                  id="sch-when"
-                  type="datetime-local"
-                  value={scheduleForm.scheduled_at}
-                  onChange={(e) => setScheduleForm((f) => ({ ...f, scheduled_at: e.target.value }))}
-                />
+                <div className="relative">
+                  <Input
+                    id="sch-when"
+                    type="datetime-local"
+                    value={scheduleForm.scheduled_at}
+                    onChange={(e) => setScheduleForm((f) => ({ ...f, scheduled_at: e.target.value }))}
+                    className="h-9 pr-10 [&::-webkit-calendar-picker-indicator]:absolute [&::-webkit-calendar-picker-indicator]:right-0 [&::-webkit-calendar-picker-indicator]:top-0 [&::-webkit-calendar-picker-indicator]:h-full [&::-webkit-calendar-picker-indicator]:w-10 [&::-webkit-calendar-picker-indicator]:cursor-pointer [&::-webkit-calendar-picker-indicator]:opacity-0"
+                  />
+                  <CalendarClock className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <div className="grid gap-2">
                   <Label htmlFor="sch-duration">Duration (minutes)</Label>
                   <Input
@@ -2245,7 +2297,7 @@ function LeadsPage() {
         </DialogContent>
       </Dialog>
 
-      {/* ⭐ 360° Lead View */}
+      {/* ⭐ 360° Lead View — right-side panel (see components/leads/Lead360Dialog.tsx) */}
       <Lead360Dialog
         leadId={view360Id}
         open={!!view360Id}
@@ -2305,35 +2357,197 @@ function StatCard({
 }) {
   const t = statTones[tone];
   return (
-    <div className={`flex items-center gap-4 rounded-2xl border bg-linear-to-br p-4 shadow-sm ${t.card}`}>
-      <div className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-full ${t.icon}`}>
+    <div className={`flex items-center gap-3 sm:gap-4 rounded-2xl border bg-linear-to-br p-3 sm:p-4 shadow-sm ${t.card}`}>
+      <div className={`flex h-10 w-10 sm:h-11 sm:w-11 shrink-0 items-center justify-center rounded-full ${t.icon}`}>
         <Icon className="h-5 w-5" />
       </div>
-      <div>
-        <div className="text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-300">{label}</div>
-        <div className="text-2xl font-bold text-slate-800 dark:text-white">{value}</div>
+      <div className="min-w-0">
+        <div className="truncate text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-300">{label}</div>
+        <div className="text-xl sm:text-2xl font-bold text-slate-800 dark:text-white">{value}</div>
       </div>
     </div>
   );
 }
 
+const PILL_BASE = "inline-flex items-center rounded-full text-xs font-semibold";
+
 function StatusBadge({ status }: { status: string }) {
   const Icon = statusIcons[status];
   return (
-    <Badge className={`${statusColors[status] || "bg-gray-100 text-gray-700"} gap-1 rounded-full border-0 px-2.5 capitalize`}>
+    <span className={`${PILL_BASE} ${statusColors[status] || "bg-gray-100 text-gray-700"} gap-1 px-2.5 py-0.5 capitalize`}>
       {Icon && <Icon className="h-3 w-3" />}
       {status.replace("_", " ")}
-    </Badge>
+    </span>
   );
 }
 
 function PriorityBadge({ priority }: { priority: string }) {
   const Icon = priorityIcons[priority];
   return (
-    <Badge className={`${priorityColors[priority] || "bg-gray-100 text-gray-700"} gap-1 rounded-full border-0 px-2.5 capitalize`}>
+    <span className={`${PILL_BASE} ${priorityColors[priority] || "bg-gray-100 text-gray-700"} gap-1 px-2.5 py-0.5 capitalize`}>
       {Icon && <Icon className="h-3 w-3" />}
       {priority || "—"}
-    </Badge>
+    </span>
+  );
+}
+
+/** Plain pill used inside the status / priority popovers (no icon, like the reference). */
+function MenuPill({ kind, value, label }: { kind: "status" | "priority"; value: string; label: string }) {
+  const cls = kind === "status" ? statusColors[value] : priorityColors[value];
+  return (
+    <span className={`${PILL_BASE} ${cls || "bg-gray-100 text-gray-700"} px-3 py-0.5`}>
+      {label}
+    </span>
+  );
+}
+
+function pickPhone(u: any): string | null {
+  if (!u) return null;
+  const v =
+    u.phone ?? u.mobile ?? u.phone_number ?? u.mobile_number ?? u.contact_number ??
+    u.phoneNumber ?? u.mobileNumber ?? u.contact_phone ??
+    u.profile?.phone ?? u.profile?.mobile ?? null;
+  return v ? String(v) : null;
+}
+
+/** Email + phone of an assignee, shown under the name. Renders nothing if the API sent neither. */
+function AssigneeContact({ user }: { user?: any }) {
+  if (!user) return null;
+  const email = user.email as string | undefined;
+  const phone = pickPhone(user) ?? undefined;
+  if (!email && !phone) return null;
+  return (
+    <span className="mt-0.5 block space-y-0.5 text-xs font-normal text-muted-foreground">
+      {email && (
+        <span className="flex items-center gap-1.5">
+          <Mail className="h-3 w-3 shrink-0 text-slate-400" />
+          <span className="truncate">{email}</span>
+        </span>
+      )}
+      {phone && (
+        <span className="flex items-center gap-1.5">
+          <Phone className="h-3 w-3 shrink-0 text-slate-400" />
+          {phone}
+        </span>
+      )}
+    </span>
+  );
+}
+
+function AssigneeAvatar({ id, name, size = "sm" }: { id: number | string | null | undefined; name: string; size?: "sm" | "md" }) {
+  const color = ASSIGNEE_AVATAR_COLORS[Math.abs(Number(id) || 0) % ASSIGNEE_AVATAR_COLORS.length];
+  const dim = size === "md" ? "h-9 w-9 text-xs" : "h-8 w-8 text-[11px]";
+  return (
+    <span className={`flex ${dim} shrink-0 items-center justify-center rounded-full font-semibold text-white ${color}`}>
+      {getInitials(name)}
+    </span>
+  );
+}
+
+function AssigneeCell({
+  lead, options, currentUserId, assigneeName, assignee, onAssign,
+}: {
+  lead: Lead;
+  options: any[];
+  currentUserId: number | null;
+  assigneeName: string | null;
+  assignee?: any;
+  onAssign: (id: number | null) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const [q, setQ] = useState("");
+
+  const shown = useMemo(() => {
+    const needle = q.trim().toLowerCase();
+    if (!needle) return options;
+    return options.filter((u: any) =>
+      [u.full_name, u.name, u.email, u.role].some((v) => String(v ?? "").toLowerCase().includes(needle))
+    );
+  }, [options, q]);
+
+  const label = assigneeName ?? (lead.assigned_to ? `User #${lead.assigned_to}` : null);
+
+  return (
+    <DropdownMenu open={open} onOpenChange={(o) => { setOpen(o); if (!o) setQ(""); }}>
+      <DropdownMenuTrigger asChild>
+        <button
+          type="button"
+          title="Change assignee"
+          className={CELL_TRIGGER + " flex items-center gap-2 rounded-lg px-1.5 py-1 text-left"}
+        >
+          {label ? (
+            <>
+              <AssigneeAvatar id={lead.assigned_to} name={label} />
+              <span className="min-w-0">
+                <span className="block font-medium text-slate-800 dark:text-slate-100">{label}</span>
+                <AssigneeContact user={assignee} />
+              </span>
+            </>
+          ) : (
+            <span className="flex items-center gap-1.5 text-muted-foreground">
+              <UserPlus className="h-3.5 w-3.5" /> Assign
+            </span>
+          )}
+        </button>
+      </DropdownMenuTrigger>
+
+      <DropdownMenuContent
+        align="start"
+        className="w-72 rounded-xl border border-slate-200 bg-white p-2 shadow-xl dark:border-slate-700 dark:bg-slate-900"
+        onCloseAutoFocus={(e) => e.preventDefault()}
+      >
+        <div className="relative mb-2">
+          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+          <input
+            autoFocus
+            value={q}
+            onChange={(e) => setQ(e.target.value)}
+            onKeyDown={(e) => e.stopPropagation()}
+            placeholder="Search members..."
+            className="h-10 w-full rounded-xl border border-blue-500 bg-white pl-9 pr-3 text-sm text-slate-800 outline-none ring-2 ring-blue-500/15 placeholder:text-slate-400 dark:bg-slate-950 dark:text-slate-100"
+          />
+        </div>
+
+        <div className="max-h-64 space-y-0.5 overflow-y-auto">
+          {shown.length === 0 && (
+            <div className="px-3 py-4 text-center text-sm text-muted-foreground">No members found</div>
+          )}
+          {shown.map((u: any) => {
+            const name = u.full_name || u.name || u.email;
+            const active = String(lead.assigned_to) === String(u.id);
+            const isMe = currentUserId != null && Number(u.id) === currentUserId;
+            return (
+              <DropdownMenuItem
+                key={u.id}
+                onClick={() => { if (!active) onAssign(Number(u.id)); }}
+                className="flex cursor-pointer items-center justify-between gap-3 rounded-lg px-2 py-2 focus:bg-slate-50 dark:focus:bg-slate-800"
+              >
+                <span className="flex min-w-0 items-center gap-3">
+                  <AssigneeAvatar id={u.id} name={name} size="md" />
+                  <span className="min-w-0 truncate text-sm font-medium text-slate-800 dark:text-slate-100">
+                    {name}{isMe ? " (You)" : ""}
+                    {u.role && <span className="ml-2 text-xs font-normal text-muted-foreground">{u.role}</span>}
+                  </span>
+                </span>
+                {active && <Check className="h-4 w-4 shrink-0 text-blue-600" />}
+              </DropdownMenuItem>
+            );
+          })}
+        </div>
+
+        {lead.assigned_to && (
+          <>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem
+              onClick={() => onAssign(null)}
+              className="cursor-pointer rounded-lg text-destructive focus:text-destructive"
+            >
+              Unassign
+            </DropdownMenuItem>
+          </>
+        )}
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 }
 

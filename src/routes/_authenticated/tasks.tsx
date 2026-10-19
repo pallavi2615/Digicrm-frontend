@@ -16,9 +16,16 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 import {
+  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel,
+  DropdownMenuSeparator, DropdownMenuSub, DropdownMenuSubContent,
+  DropdownMenuSubTrigger, DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import {
   Plus, Loader2, CheckSquare, Trash2, Calendar, Pencil, Paperclip, X,
   Upload, FileText, Image as ImageIcon, Download, RefreshCw, Search,
   ClipboardList, Clock, PlayCircle, CheckCircle2, AlertTriangle, Users, User,
+  ChevronDown, Check, Flag, CircleDot, UserPlus,
 } from "lucide-react";
 import { toast } from "sonner";
 import { DatePicker } from "@/components/ui/datetime-picker";
@@ -142,9 +149,15 @@ const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10 MB
 
 // Row grid layouts (full literal strings so Tailwind can see them)
 const GRID_MY =
-  "md:grid-cols-[28px_minmax(0,3fr)_120px_110px_130px_84px]";
+  "md:grid-cols-[28px_minmax(0,3fr)_140px_120px_130px_84px]";
 const GRID_TEAM =
-  "md:grid-cols-[28px_minmax(0,3fr)_120px_110px_130px_150px_84px]";
+  "md:grid-cols-[28px_minmax(0,3fr)_140px_120px_130px_190px_84px]";
+
+type TaskPatch = Partial<{
+  status: TaskStatus;
+  priority: TaskPriority;
+  assigned_to: number;
+}>;
 
 // ============================================================
 // HELPERS
@@ -207,6 +220,184 @@ function StatCard({
   );
 }
 
+// ---------- Inline editable cells ----------
+
+function StatusCell({
+  task, onChange, className = "",
+}: { task: Task; onChange: (s: TaskStatus) => void; className?: string }) {
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <button
+          type="button"
+          className={`inline-flex w-fit items-center gap-1 rounded-full px-2.5 py-1 text-xs font-medium outline-none transition hover:ring-2 hover:ring-blue-300/60 focus-visible:ring-2 focus-visible:ring-blue-400 ${statusStyles[task.status]} ${className}`}
+        >
+          {statusLabel[task.status] ?? task.status}
+        </button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="start" className="w-44">
+        {(Object.keys(statusLabel) as TaskStatus[]).map((s) => (
+          <DropdownMenuItem
+            key={s}
+            onClick={() => s !== task.status && onChange(s)}
+            className="flex items-center justify-between"
+          >
+            <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${statusStyles[s]}`}>
+              {statusLabel[s]}
+            </span>
+            {task.status === s && <Check className="h-3.5 w-3.5" />}
+          </DropdownMenuItem>
+        ))}
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+}
+
+function PriorityCell({
+  task, onChange, className = "",
+}: { task: Task; onChange: (p: TaskPriority) => void; className?: string }) {
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <button
+          type="button"
+          className={`inline-flex w-fit items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold capitalize outline-none transition hover:ring-2 hover:ring-blue-300/60 focus-visible:ring-2 focus-visible:ring-blue-400 ${
+            priorityStyles[task.priority] ?? priorityStyles.low
+          } ${className}`}
+        >
+          {task.priority}
+        </button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="start" className="w-40">
+        {(["low", "medium", "high", "urgent"] as TaskPriority[]).map((p) => (
+          <DropdownMenuItem
+            key={p}
+            onClick={() => p !== task.priority && onChange(p)}
+            className="flex items-center justify-between"
+          >
+            <span className={`rounded-full px-2 py-0.5 text-xs font-semibold capitalize ${priorityStyles[p]}`}>
+              {p}
+            </span>
+            {task.priority === p && <Check className="h-3.5 w-3.5" />}
+          </DropdownMenuItem>
+        ))}
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+}
+
+function MemberAvatar({ id, name, size = "h-7 w-7" }: { id: number | null; name: string; size?: string }) {
+  return (
+    <span
+      className={`flex ${size} shrink-0 items-center justify-center rounded-full text-[10px] font-bold text-white ${
+        avatarColors[(id ?? 0) % avatarColors.length]
+      }`}
+    >
+      {initials(name === "Unassigned" ? "?" : name.replace("#", ""))}
+    </span>
+  );
+}
+
+// Searchable list of assignees (search box appears when there are many members)
+function AssigneeList({
+  members, value, onPick, alwaysSearch = false,
+}: {
+  members: TeamMember[];
+  value: number | null;
+  onPick: (id: number) => void;
+  alwaysSearch?: boolean;
+}) {
+  const [q, setQ] = useState("");
+  const showSearch = alwaysSearch || members.length > 5;
+  // Name-only search: 1 letter -> names/words STARTING with it; 2+ letters -> anywhere in the name
+  const query = q.trim().toLowerCase();
+  const list = members.filter((m) => {
+    if (!query) return true;
+    const name = m.name.replace(/\s*\(You\)$/, "").toLowerCase();
+    if (name.split(/\s+/).some((w) => w.startsWith(query))) return true;
+    return query.length > 1 && name.includes(query);
+  });
+
+  return (
+    <div>
+      {showSearch && (
+        <div className="relative border-b p-2">
+          <Search className="absolute left-4 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            autoFocus
+            value={q}
+            onChange={(e) => setQ(e.target.value)}
+            placeholder="Search members…"
+            className="h-8 rounded-lg pl-8 text-xs"
+          />
+        </div>
+      )}
+      <div className="max-h-60 overflow-y-auto p-1">
+        {list.length === 0 && (
+          <p className="px-3 py-4 text-center text-xs text-muted-foreground">
+            {members.length === 0 ? "No members available." : "No match found."}
+          </p>
+        )}
+        {list.map((m) => (
+          <button
+            key={m.id}
+            type="button"
+            onClick={() => onPick(m.id)}
+            className="flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left text-sm transition-colors hover:bg-muted"
+          >
+            <MemberAvatar id={m.id} name={m.name.replace(/\s*\(You\)$/, "")} />
+            <span className="flex min-w-0 flex-1 items-baseline gap-1.5">
+              <span className="truncate">{m.name}</span>
+              {m.role && (
+                <span className="shrink-0 text-xs text-muted-foreground">
+                  {m.role.replace(/_/g, " ")}
+                </span>
+              )}
+            </span>
+            {value === m.id && <Check className="h-3.5 w-3.5 shrink-0 text-blue-600" />}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function AssigneeCell({
+  task, name, members, onPick, className = "",
+}: {
+  task: Task;
+  name: string;
+  members: TeamMember[];
+  onPick: (id: number) => void;
+  className?: string;
+}) {
+  const [open, setOpen] = useState(false);
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <button
+          type="button"
+          className={`flex min-w-0 max-w-full items-center gap-2 rounded-full py-0.5 pl-0.5 pr-2 text-sm outline-none transition hover:bg-muted focus-visible:ring-2 focus-visible:ring-blue-400 ${className}`}
+        >
+          <MemberAvatar id={task.assigned_to} name={name} />
+          <span className="truncate">{name}</span>
+        </button>
+      </PopoverTrigger>
+      <PopoverContent align="start" className="w-64 p-0">
+        <AssigneeList
+          alwaysSearch
+          members={members}
+          value={task.assigned_to}
+          onPick={(id) => {
+            setOpen(false);
+            if (id !== task.assigned_to) onPick(id);
+          }}
+        />
+      </PopoverContent>
+    </Popover>
+  );
+}
+
 // ============================================================
 // PAGE
 // ============================================================
@@ -231,6 +422,8 @@ function TasksPage() {
   const [filter, setFilter] = useState<string>(filterParam ?? "all");
   const [search, setSearch] = useState("");
   const [memberFilter, setMemberFilter] = useState<string>("all");
+  const [selected, setSelected] = useState<number[]>([]);
+  const [bulkAssignOpen, setBulkAssignOpen] = useState(false);
   const [detailId, setDetailId] = useState<number | null>(null);
   const [pickedFiles, setPickedFiles] = useState<File[]>([]);
 
@@ -301,6 +494,24 @@ function TasksPage() {
 
   const detail = (tasks ?? []).find((t) => t.id === detailId) ?? null;
   const detailAttachments = detail?.attachments ?? [];
+
+  // Only act on rows that are currently visible AND ticked
+  const selectedTasks = visibleTasks.filter((t) => selected.includes(t.id));
+  const allSelected =
+    visibleTasks.length > 0 && visibleTasks.every((t) => selected.includes(t.id));
+  const someSelected = selectedTasks.length > 0 && !allSelected;
+
+  const toggleOne = (id: number) =>
+    setSelected((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
+
+  const toggleAll = (checked: boolean) => {
+    const visibleIds = visibleTasks.map((t) => t.id);
+    setSelected((prev) =>
+      checked
+        ? Array.from(new Set([...prev, ...visibleIds]))
+        : prev.filter((id) => !visibleIds.includes(id))
+    );
+  };
 
   const refreshAll = () => {
     qc.invalidateQueries({ queryKey: ["tasks"] });
@@ -404,16 +615,44 @@ function TasksPage() {
     onError: (e: Error) => toast.error(e.message),
   });
 
-  // -------- Toggle status --------
-  const toggle = useMutation({
-    mutationFn: async (t: Task) => {
-      const newStatus: TaskStatus = t.status === "completed" ? "pending" : "completed";
-      await apiFetch(`/api/v1/tasks/${t.id}`, {
+  // -------- Inline update (single task: status / priority / assignee) --------
+  const updateField = useMutation({
+    mutationFn: ({ id, patch }: { id: number; patch: TaskPatch }) =>
+      apiFetch(`/api/v1/tasks/${id}`, {
         method: "PUT",
-        body: JSON.stringify({ status: newStatus }),
-      });
+        body: JSON.stringify(patch),
+      }),
+    onSuccess: () => {
+      toast.success("Task updated");
+      refreshAll();
     },
-    onSuccess: refreshAll,
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  // -------- Bulk update (selected tasks) --------
+  const bulkUpdate = useMutation({
+    mutationFn: async (patch: TaskPatch) => {
+      const ids = selectedTasks.map((t) => t.id);
+      const results = await Promise.allSettled(
+        ids.map((id) =>
+          apiFetch(`/api/v1/tasks/${id}`, {
+            method: "PUT",
+            body: JSON.stringify(patch),
+          })
+        )
+      );
+      const failed = results.filter((r) => r.status === "rejected").length;
+      return { total: ids.length, failed };
+    },
+    onSuccess: ({ total, failed }) => {
+      if (failed) {
+        toast.error(`${failed} of ${total} tasks could not be updated`);
+      } else {
+        toast.success(`${total} task${total > 1 ? "s" : ""} updated`);
+        setSelected([]);
+      }
+      refreshAll();
+    },
     onError: (e: Error) => toast.error(e.message),
   });
 
@@ -464,7 +703,9 @@ function TasksPage() {
     }
   };
 
-  const showAssignee = effectiveScope === "team";
+  const isTeamView = effectiveScope === "team";
+  // Admin/manager can see + change the assignee in BOTH My Tasks and My Team Tasks
+  const showAssignee = canViewTeam;
   const gridCols = showAssignee ? GRID_TEAM : GRID_MY;
   const todayStr = localToday();
 
@@ -525,6 +766,7 @@ function TasksPage() {
                 onClick={() => {
                   setScope(key);
                   setMemberFilter("all");
+                  setSelected([]);
                 }}
                 className={`flex items-center gap-2 rounded-xl px-5 py-2.5 text-sm font-medium transition-all ${
                   active
@@ -591,7 +833,78 @@ function TasksPage() {
               className="h-11 rounded-xl pl-10"
             />
           </div>
-          {showAssignee && (
+          {/* Bulk actions */}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                variant="outline"
+                className="h-11 rounded-xl px-4 shadow-sm"
+                disabled={selectedTasks.length === 0 || bulkUpdate.isPending}
+              >
+                {bulkUpdate.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                Actions
+                {selectedTasks.length > 0 && (
+                  <span className="ml-2 rounded-full bg-blue-600 px-2 py-0.5 text-xs font-semibold text-white">
+                    {selectedTasks.length}
+                  </span>
+                )}
+                <ChevronDown className="ml-2 h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-56">
+              <DropdownMenuLabel className="text-xs text-muted-foreground">
+                {selectedTasks.length} task{selectedTasks.length === 1 ? "" : "s"} selected
+              </DropdownMenuLabel>
+              <DropdownMenuSeparator />
+
+              <DropdownMenuSub>
+                <DropdownMenuSubTrigger>
+                  <CircleDot className="mr-2 h-4 w-4" />
+                  Change Status
+                </DropdownMenuSubTrigger>
+                <DropdownMenuSubContent className="w-44">
+                  {(Object.keys(statusLabel) as TaskStatus[]).map((st) => (
+                    <DropdownMenuItem key={st} onClick={() => bulkUpdate.mutate({ status: st })}>
+                      <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${statusStyles[st]}`}>
+                        {statusLabel[st]}
+                      </span>
+                    </DropdownMenuItem>
+                  ))}
+                </DropdownMenuSubContent>
+              </DropdownMenuSub>
+
+              <DropdownMenuSub>
+                <DropdownMenuSubTrigger>
+                  <Flag className="mr-2 h-4 w-4" />
+                  Change Priority
+                </DropdownMenuSubTrigger>
+                <DropdownMenuSubContent className="w-40">
+                  {(["low", "medium", "high", "urgent"] as TaskPriority[]).map((pr) => (
+                    <DropdownMenuItem key={pr} onClick={() => bulkUpdate.mutate({ priority: pr })}>
+                      <span className={`rounded-full px-2 py-0.5 text-xs font-semibold capitalize ${priorityStyles[pr]}`}>
+                        {pr}
+                      </span>
+                    </DropdownMenuItem>
+                  ))}
+                </DropdownMenuSubContent>
+              </DropdownMenuSub>
+
+              {canViewTeam && (
+                <DropdownMenuItem onClick={() => setBulkAssignOpen(true)}>
+                  <UserPlus className="mr-2 h-4 w-4" />
+                  Assign To…
+                </DropdownMenuItem>
+              )}
+
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={() => setSelected([])}>
+                <X className="mr-2 h-4 w-4" />
+                Clear selection
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+
+          {isTeamView && (
             <Select value={memberFilter} onValueChange={setMemberFilter}>
               <SelectTrigger className="h-11 w-48 rounded-xl">
                 <SelectValue placeholder="All members" />
@@ -624,7 +937,11 @@ function TasksPage() {
           <div
             className={`hidden items-center gap-3 border-b bg-muted/30 px-4 py-3 text-sm font-medium text-muted-foreground md:grid ${gridCols}`}
           >
-            <span />
+            <Checkbox
+              checked={allSelected ? true : someSelected ? "indeterminate" : false}
+              onCheckedChange={(c) => toggleAll(c === true)}
+              aria-label="Select all"
+            />
             <span>Task</span>
             <span>Status</span>
             <span>Priority</span>
@@ -645,7 +962,7 @@ function TasksPage() {
               <p className="text-sm text-muted-foreground">
                 {filter === "today"
                   ? "No tasks due today."
-                  : showAssignee
+                  : isTeamView
                   ? "No tasks assigned to your team members yet."
                   : "No tasks. Create your first one."}
               </p>
@@ -664,9 +981,13 @@ function TasksPage() {
                 key={t.id}
                 className={`grid grid-cols-[28px_1fr_auto] items-center gap-3 border-b px-4 py-3.5 transition-colors last:border-b-0 hover:bg-muted/30 ${gridCols} ${
                   done ? "opacity-60" : ""
-                }`}
+                } ${selected.includes(t.id) ? "bg-blue-50/70 dark:bg-blue-950/30" : ""}`}
               >
-                <Checkbox checked={done} onCheckedChange={() => toggle.mutate(t)} />
+                <Checkbox
+                  checked={selected.includes(t.id)}
+                  onCheckedChange={() => toggleOne(t.id)}
+                  aria-label="Select task"
+                />
 
                 <button
                   type="button"
@@ -709,19 +1030,17 @@ function TasksPage() {
                   </Button>
                 </div>
 
-                <span
-                  className={`col-start-2 w-fit rounded-full px-2.5 py-1 text-xs font-medium md:col-auto ${statusStyles[t.status]}`}
-                >
-                  {statusLabel[t.status] ?? t.status}
-                </span>
+                <StatusCell
+                  task={t}
+                  className="col-start-2 md:col-auto"
+                  onChange={(status) => updateField.mutate({ id: t.id, patch: { status } })}
+                />
 
-                <span
-                  className={`col-start-2 w-fit rounded-full px-2.5 py-1 text-xs font-semibold capitalize md:col-auto ${
-                    priorityStyles[t.priority] ?? priorityStyles.low
-                  }`}
-                >
-                  {t.priority}
-                </span>
+                <PriorityCell
+                  task={t}
+                  className="col-start-2 md:col-auto"
+                  onChange={(priority) => updateField.mutate({ id: t.id, patch: { priority } })}
+                />
 
                 <span
                   className={`col-start-2 flex items-center gap-1.5 text-sm md:col-auto ${
@@ -733,22 +1052,44 @@ function TasksPage() {
                 </span>
 
                 {showAssignee && (
-                  <span className="col-start-2 flex min-w-0 items-center gap-2 text-sm md:col-auto">
-                    <span
-                      className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-[10px] font-bold text-white ${
-                        avatarColors[(t.assigned_to ?? 0) % avatarColors.length]
-                      }`}
-                    >
-                      {initials(assigneeName === "Unassigned" ? "?" : assigneeName.replace("#", ""))}
-                    </span>
-                    <span className="truncate">{assigneeName}</span>
-                  </span>
+                  <AssigneeCell
+                    task={t}
+                    name={assigneeName}
+                    members={members ?? []}
+                    className="col-start-2 md:col-auto"
+                    onPick={(assigned_to) =>
+                      updateField.mutate({ id: t.id, patch: { assigned_to } })
+                    }
+                  />
                 )}
               </div>
             );
           })}
         </div>
       </div>
+
+      {/* ---------- Bulk assign dialog ---------- */}
+      <Dialog open={bulkAssignOpen} onOpenChange={setBulkAssignOpen}>
+        <DialogContent className="max-w-sm gap-0 rounded-2xl p-0">
+          <DialogHeader className="p-4 pb-3">
+            <DialogTitle>
+              Assign {selectedTasks.length} task{selectedTasks.length === 1 ? "" : "s"}
+            </DialogTitle>
+            <DialogDescription>Choose who these tasks should be assigned to.</DialogDescription>
+          </DialogHeader>
+          <div className="border-t">
+            <AssigneeList
+              alwaysSearch
+              members={members ?? []}
+              value={null}
+              onPick={(id) => {
+                setBulkAssignOpen(false);
+                bulkUpdate.mutate({ assigned_to: id });
+              }}
+            />
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* ---------- Create / Edit dialog ---------- */}
       <Dialog open={open} onOpenChange={setOpen}>
