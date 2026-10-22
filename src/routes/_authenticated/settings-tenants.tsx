@@ -1,6 +1,6 @@
 import { RoleGuard, ADMINS } from "@/components/role-guard";
-import { createFileRoute } from "@tanstack/react-router";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { defineRoute } from "@/lib/router-compat";
+import { useMutation, useQuery, useQueryClient } from "@/lib/react-data-client";
 import { useState } from "react";
 import { apiFetch } from "@/lib/api";
 import { Card, CardContent } from "@/components/ui/card";
@@ -138,7 +138,7 @@ function slugify(v: string) {
 // ROUTE
 // ============================================================
 
-export const Route = createFileRoute("/_authenticated/settings-tenants")({
+export const Route = defineRoute("/_authenticated/settings-tenants")({
   head: () => ({
     meta: [
       { title: "Tenants — DigiCRM AI" },

@@ -2,9 +2,9 @@
  * Projects & Inventory — projects list, tower builder, unit cards.
  */
 
-import { createFileRoute } from "@tanstack/react-router";
+import { defineRoute } from "@/lib/router-compat";
 import { useState } from "react";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@/lib/react-data-client";
 import {
   Card, CardContent, CardHeader, CardTitle, CardDescription,
 } from "@/components/ui/card";
@@ -30,7 +30,7 @@ import {
 import { useReConfig } from "@/hooks/use-re-config";
 import { cr, INV_TONE } from "@/lib/re-data";
 
-export const Route = createFileRoute("/_authenticated/realestate/projects")({
+export const Route = defineRoute("/_authenticated/realestate/projects")({
   head: () => ({ meta: [{ title: "Projects & Inventory | Real Estate CRM" }] }),
   component: ProjectsPage,
 });

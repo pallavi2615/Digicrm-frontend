@@ -5,8 +5,8 @@
  * mix by type.
  */
 
-import { createFileRoute } from "@tanstack/react-router";
-import { useQuery } from "@tanstack/react-query";
+import { defineRoute } from "@/lib/router-compat";
+import { useQuery } from "@/lib/react-data-client";
 import {
   Card, CardContent, CardHeader, CardTitle,
 } from "@/components/ui/card";
@@ -22,7 +22,7 @@ import {
 import { getDashboard } from "@/lib/realestate.functions";
 import { cr } from "@/lib/re-data";
 
-export const Route = createFileRoute("/_authenticated/realestate/")({
+export const Route = defineRoute("/_authenticated/realestate/")({
   component: RealEstateDashboard,
 });
 

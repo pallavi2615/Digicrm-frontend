@@ -2,9 +2,9 @@
  * VisitFlow — schedule site visits, check in/out, capture feedback.
  */
 
-import { createFileRoute } from "@tanstack/react-router";
+import { defineRoute } from "@/lib/router-compat";
 import { useState } from "react";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@/lib/react-data-client";
 import {
   Card, CardContent, CardHeader, CardTitle,
 } from "@/components/ui/card";
@@ -30,7 +30,7 @@ import {
 import { useReConfig } from "@/hooks/use-re-config";
 import { waLink } from "@/lib/re-data";
 
-export const Route = createFileRoute("/_authenticated/realestate/visits")({
+export const Route = defineRoute("/_authenticated/realestate/visits")({
   head: () => ({ meta: [{ title: "VisitFlow | Real Estate CRM" }] }),
   component: VisitsPage,
 });

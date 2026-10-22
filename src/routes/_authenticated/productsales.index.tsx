@@ -1,10 +1,10 @@
-import { createFileRoute } from "@tanstack/react-router";
-import { useQuery } from "@tanstack/react-query";
+import { defineRoute } from "@/lib/router-compat";
+import { useQuery } from "@/lib/react-data-client";
 import { supabase } from "@/integrations/supabase/client";
 import { Card } from "@/components/ui/card";
 import { Package, FileText, CheckCircle2, Coins, Loader2 } from "lucide-react";
 
-export const Route = createFileRoute("/_authenticated/productsales/")({
+export const Route = defineRoute("/_authenticated/productsales/")({
   component: ProductSalesDashboard,
 });
 

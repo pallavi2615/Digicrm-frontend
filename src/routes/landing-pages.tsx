@@ -1,4 +1,4 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { defineRoute, Link } from "@/lib/router-compat";
 import { SiteShell } from "@/components/site-shell";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -7,7 +7,7 @@ import { buildRouteMeta } from "@/lib/seo";
 import { INDUSTRY_TEMPLATES } from "@/lib/industry-templates";
 import { Sparkles, Palette, Globe, Webhook, CheckCircle2 } from "lucide-react";
 
-export const Route = createFileRoute("/landing-pages")({
+export const Route = defineRoute("/landing-pages")({
   head: () => buildRouteMeta({
     path: "/landing-pages",
     title: "White-label landing pages — DigiCRM AI",

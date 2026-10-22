@@ -1,6 +1,5 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { defineRoute } from "@/lib/router-compat";
 import { useState } from "react";
-import { useServerFn } from "@tanstack/react-start";
 import { SiteShell } from "@/components/site-shell";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -13,7 +12,7 @@ import { submitContact } from "@/lib/cms.functions";
 import { getReferral } from "@/lib/referral";
 import { buildRouteMeta } from "@/lib/seo";
 
-export const Route = createFileRoute("/contact")({
+export const Route = defineRoute("/contact")({
   head: () => buildRouteMeta({
     path: "/contact",
     title: "Contact — DigiCRM AI",
@@ -23,7 +22,7 @@ export const Route = createFileRoute("/contact")({
 });
 
 function ContactPage() {
-  const send = useServerFn(submitContact);
+  const send = submitContact;
   const [loading, setLoading] = useState(false);
   const [done, setDone] = useState(false);
 

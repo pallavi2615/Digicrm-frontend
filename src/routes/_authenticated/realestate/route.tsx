@@ -6,8 +6,8 @@
  */
 
 import {
-  createFileRoute, Link, Outlet, useRouterState,
-} from "@tanstack/react-router";
+  defineRoute, Link, Outlet, useRouterState,
+} from "@/lib/router-compat";
 import {
   LayoutDashboard, UserCircle, Home as HomeIcon, KanbanSquare,
   Users, Building2, Target, MapPin, Handshake, Network,
@@ -15,7 +15,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-export const Route = createFileRoute("/_authenticated/realestate")({
+export const Route = defineRoute("/_authenticated/realestate")({
   head: () => ({ meta: [{ title: "Real Estate CRM — DigiCRM AI" }] }),
   component: RealEstateLayout,
 });

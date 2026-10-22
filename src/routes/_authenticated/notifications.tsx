@@ -1,12 +1,18 @@
-import { createFileRoute } from "@tanstack/react-router";
-import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { defineRoute, Link } from "@/lib/router-compat";
+import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@/lib/react-data-client";
 import { useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Bell, Check, ChevronLeft, ChevronRight, Loader2, Trash2 } from "lucide-react";
+import { Bell, CalendarClock, Check, ChevronLeft, ChevronRight, Loader2, Trash2 } from "lucide-react";
 import { apiFetch } from "@/lib/api"; // <-- adjust path if your api file lives elsewhere
+import {
+  formatStart,
+  normalizeIso,
+  scheduleLabel,
+  useScheduleReminders,
+} from "@/hooks/use-schedule-reminders";
 
-export const Route = createFileRoute("/_authenticated/notifications")({
+export const Route = defineRoute("/_authenticated/notifications")({
   head: () => ({ meta: [{ title: "Notifications — DigiCRM AI" }] }),
   component: NotificationsPage,
 });
@@ -40,10 +46,38 @@ const POLL_MS = 30_000; // replaces Supabase realtime
 
 type Tab = "all" | "unread";
 
+function relativeText(startsAt: number, now: number): string {
+  const diffMin = Math.round((startsAt - now) / 60000);
+  if (diffMin > 0) {
+    if (diffMin < 60) return `Starts in ${diffMin} min`;
+    const h = Math.floor(diffMin / 60);
+    const m = diffMin % 60;
+    return m ? `Starts in ${h}h ${m}m` : `Starts in ${h}h`;
+  }
+  const ago = Math.abs(diffMin);
+  if (ago < 1) return "Starting now";
+  if (ago < 60) return `Started ${ago} min ago`;
+  const h = Math.floor(ago / 60);
+  return h < 24 ? `Started ${h}h ago` : `Overdue by ${Math.floor(h / 24)}d`;
+}
+
 function NotificationsPage() {
   const qc = useQueryClient();
   const [tab, setTab] = useState<Tab>("all");
   const [page, setPage] = useState(0);
+
+  // Schedule reminders (shared with the topbar bell badge)
+  const {
+    now,
+    reminders,
+    unreadReminders,
+    markRead: markReminderRead,
+    markUnread: markReminderUnread,
+    dismiss: dismissReminder,
+    markAllRead: markAllRemindersRead,
+    dismissRead: dismissReadReminders,
+    readReminders,
+  } = useScheduleReminders();
 
   const changeTab = (t: Tab) => {
     setTab(t);
@@ -62,10 +96,13 @@ function NotificationsPage() {
     },
   });
 
+  // Reminders appear on the first page (and only unread ones on the "Unread" tab)
+  const shownReminders = page === 0 ? (tab === "unread" ? unreadReminders : reminders) : [];
+
   const items = data?.data ?? [];
-  const total = data?.total ?? 0;
-  const unread = data?.unread ?? 0;
-  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+  const total = (data?.total ?? 0) + reminders.length;
+  const unread = (data?.unread ?? 0) + unreadReminders.length;
+  const totalPages = Math.max(1, Math.ceil((data?.total ?? 0) / PAGE_SIZE));
 
   // Refresh list + any badge that uses the unread-count endpoint
   const refresh = () => {
@@ -85,7 +122,10 @@ function NotificationsPage() {
 
   const markAll = useMutation({
     mutationFn: () => apiFetch("/api/v1/notifications/read-all", { method: "POST" }),
-    onSuccess: refresh,
+    onSuccess: () => {
+      markAllRemindersRead();
+      refresh();
+    },
   });
 
   const remove = useMutation({
@@ -95,11 +135,16 @@ function NotificationsPage() {
 
   const removeAllRead = useMutation({
     mutationFn: () => apiFetch("/api/v1/notifications/read/all", { method: "DELETE" }),
-    onSuccess: refresh,
+    onSuccess: () => {
+      dismissReadReminders();
+      refresh();
+    },
   });
 
   const mutationError =
     (markRead.error || markUnread.error || markAll.error || remove.error || removeAllRead.error) as Error | null;
+
+  const nothingToShow = !isLoading && !error && items.length === 0 && shownReminders.length === 0;
 
   return (
     <div className="space-y-5 max-w-3xl">
@@ -157,7 +202,7 @@ function NotificationsPage() {
         </p>
       )}
 
-      {!isLoading && !error && items.length === 0 && (
+      {nothingToShow && (
         <Card className="shadow-card">
           <CardContent className="text-center py-16">
             <Bell className="h-10 w-10 mx-auto text-muted-foreground mb-2" />
@@ -166,6 +211,60 @@ function NotificationsPage() {
             </p>
           </CardContent>
         </Card>
+      )}
+
+      {/* Schedule reminders — raised at (scheduled time − reminder minutes) */}
+      {shownReminders.length > 0 && (
+        <div className="space-y-2">
+          {shownReminders.map((r) => {
+            const s = r.schedule;
+            const isRead = !unreadReminders.some((u) => u.key === r.key);
+            return (
+              <Card key={r.key} className={`shadow-sm ${!isRead ? "border-primary/40 bg-primary/2" : ""}`}>
+                <CardContent className="p-4 flex items-start gap-3">
+                  <div
+                    className={`mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full ${
+                      isRead ? "bg-muted text-muted-foreground" : "bg-primary/15 text-primary"
+                    }`}
+                  >
+                    <CalendarClock className="h-3.5 w-3.5" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="font-medium text-sm">Reminder: {s.title}</p>
+                    <p className="text-sm text-muted-foreground mt-0.5">
+                      {[scheduleLabel(s), s.lead_name, formatStart(r.startsAt)].filter(Boolean).join(" · ")}
+                    </p>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      {relativeText(r.startsAt, now)} ·{" "}
+                      <Link to="/calendar" className="text-primary hover:underline">
+                        View in calendar
+                      </Link>
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    {isRead ? (
+                      <Button variant="ghost" size="sm" onClick={() => markReminderUnread(r.key)}>
+                        Mark unread
+                      </Button>
+                    ) : (
+                      <Button variant="ghost" size="sm" onClick={() => markReminderRead(r.key)}>
+                        Mark read
+                      </Button>
+                    )}
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      aria-label="Dismiss reminder"
+                      onClick={() => dismissReminder(r.key)}
+                    >
+                      <Trash2 className="h-4 w-4 text-muted-foreground" />
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            );
+          })}
+        </div>
       )}
 
       <div className="space-y-2">
@@ -181,7 +280,7 @@ function NotificationsPage() {
                   <p className="font-medium text-sm">{n.title}</p>
                   {body && <p className="text-sm text-muted-foreground mt-0.5">{body}</p>}
                   <p className="text-xs text-muted-foreground mt-1">
-                    {new Date(n.created_at).toLocaleString()}
+                    {new Date(normalizeIso(n.created_at)).toLocaleString()}
                   </p>
                 </div>
                 <div className="flex items-center gap-1">
@@ -220,7 +319,7 @@ function NotificationsPage() {
         })}
       </div>
 
-      {total > PAGE_SIZE && (
+      {(data?.total ?? 0) > PAGE_SIZE && (
         <div className="flex items-center justify-end gap-2">
           <span className="text-xs text-muted-foreground mr-2">
             Page {page + 1} of {totalPages}

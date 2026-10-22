@@ -1,6 +1,6 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { defineRoute } from "@/lib/router-compat";
 import { useMemo, useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery } from "@/lib/react-data-client";
 import { apiFetch } from "@/lib/api";
 import { RoleGuard, ADMINS } from "@/components/role-guard";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -12,7 +12,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { objectsToCsv, downloadCsv } from "@/lib/csv";
 import { Download, HandCoins, Loader2, Search } from "lucide-react";
 
-export const Route = createFileRoute("/_authenticated/payout-history")({
+export const Route = defineRoute("/_authenticated/payout-history")({
   head: () => ({
     meta: [
       { title: "Partner Payout History — DigiCRM AI" },

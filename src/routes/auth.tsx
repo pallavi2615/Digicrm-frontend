@@ -1,4 +1,4 @@
-import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
+import { defineRoute, useNavigate, Link } from "@/lib/router-compat";
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -10,7 +10,7 @@ import { Sparkles, Eye, EyeOff, Loader2 } from "lucide-react";
 import { apiFetch } from "@/lib/api";
 import { clearAuthStorage, notifyAuthChanged } from "@/hooks/use-auth";
 
-export const Route = createFileRoute("/auth")({
+export const Route = defineRoute("/auth")({
   validateSearch: (search: Record<string, unknown>): { token?: string } => ({
     token: typeof search.token === "string" && search.token ? search.token : undefined,
   }),

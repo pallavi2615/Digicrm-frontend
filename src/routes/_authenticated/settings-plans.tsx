@@ -1,6 +1,6 @@
 import { RoleGuard, SUPER_ONLY } from "@/components/role-guard";
-import { createFileRoute } from "@tanstack/react-router";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { defineRoute } from "@/lib/router-compat";
+import { useMutation, useQuery, useQueryClient } from "@/lib/react-data-client";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
@@ -11,7 +11,7 @@ import { Crown, Sparkles, Loader2, ShieldAlert } from "lucide-react";
 import { toast } from "sonner";
 import { useMemo } from "react";
 
-export const Route = createFileRoute("/_authenticated/settings-plans")({
+export const Route = defineRoute("/_authenticated/settings-plans")({
   head: () => ({ meta: [{ title: "Plans & Features — DigiCRM AI" }, { name: "robots", content: "noindex" }] }),
   component: () => (
     <RoleGuard allow={SUPER_ONLY} module="settings-plans" label="PLANS">

@@ -1,5 +1,5 @@
-import { createFileRoute } from "@tanstack/react-router";
-import { useQuery } from "@tanstack/react-query";
+import { defineRoute } from "@/lib/router-compat";
+import { useQuery } from "@/lib/react-data-client";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Landmark, TrendingUp, IndianRupee, Wallet, FileStack, CheckCircle2, Timer, CalendarDays, Percent } from "lucide-react";
@@ -8,7 +8,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from "recharts";
 import { useRealtimeTable } from "@/lib/use-realtime-table";
 
-export const Route = createFileRoute("/_authenticated/fintech/")({
+export const Route = defineRoute("/_authenticated/fintech/")({
   component: FintechDashboard,
 });
 

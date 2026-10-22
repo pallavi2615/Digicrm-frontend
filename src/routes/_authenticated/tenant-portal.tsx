@@ -1,8 +1,7 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { defineRoute } from "@/lib/router-compat";
 import { useAuth } from "@/hooks/use-auth";
 import { useMemo, useState } from "react";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useServerFn } from "@tanstack/react-start";
+import { useMutation, useQuery, useQueryClient } from "@/lib/react-data-client";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useActiveTenant } from "@/lib/queries/tenants";
@@ -21,7 +20,7 @@ import {
   Check, FileText, IndianRupee, Loader2, Search, ShieldCheck, Upload, X,
 } from "lucide-react";
 
-export const Route = createFileRoute("/_authenticated/tenant-portal")({
+export const Route = defineRoute("/_authenticated/tenant-portal")({
   head: () => ({
     meta: [
       { title: "Workspace Portal Desk | DigiCRM AI" },
@@ -59,7 +58,7 @@ function TenantPortalDesk() {
   const { packs } = useAllPacks();
   const qc = useQueryClient();
   const { user } = useAuth();
-  const verify = useServerFn(runVerification);
+  const verify = runVerification;
 
   const [key, setKey] = useState("");
   const tenantPackKey = useTenantPackKey(active?.id ?? null);

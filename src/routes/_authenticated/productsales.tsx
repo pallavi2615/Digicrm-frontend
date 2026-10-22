@@ -1,9 +1,9 @@
-import { createFileRoute, Link, Outlet, useRouterState } from "@tanstack/react-router";
+import { defineRoute, Link, Outlet, useRouterState } from "@/lib/router-compat";
 import { LayoutDashboard, Package, FileText, Coins } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { IndustryGuard } from "@/components/industry-guard";
 
-export const Route = createFileRoute("/_authenticated/productsales")({
+export const Route = defineRoute("/_authenticated/productsales")({
   head: () => ({ meta: [{ title: "Product Sales CRM — DigiCRM AI" }] }),
   component: ProductSalesLayout,
 });

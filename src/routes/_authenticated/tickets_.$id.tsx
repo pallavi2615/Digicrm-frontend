@@ -1,5 +1,5 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { defineRoute, Link } from "@/lib/router-compat";
+import { useMutation, useQuery, useQueryClient } from "@/lib/react-data-client";
 import { apiFetch } from "@/lib/api";
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -13,7 +13,7 @@ import { ArrowLeft, Loader2, Send, Clock, User, AlertTriangle } from "lucide-rea
 import { toast } from "sonner";
 import { FeatureGate } from "@/components/feature-gate";
 
-export const Route = createFileRoute("/_authenticated/tickets_/$id")({
+export const Route = defineRoute("/_authenticated/tickets_/$id")({
   head: () => ({ meta: [{ title: "Ticket — DigiCRM AI" }, { name: "robots", content: "noindex" }] }),
   component: TicketDetail,
 });

@@ -1,5 +1,5 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
-import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
+import { defineRoute, Link } from "@/lib/router-compat";
+import { useQuery, useQueryClient, useMutation } from "@/lib/react-data-client";
 import { apiFetch } from "@/lib/api";
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -28,7 +28,7 @@ import {
 import { ApprovalBadge, ApprovalHistory, ProposalTimeline } from "@/components/proposal-timeline";
 
 
-export const Route = createFileRoute("/_authenticated/pipeline")({
+export const Route = defineRoute("/_authenticated/pipeline")({
   head: () => ({ meta: [{ title: "Pipeline — DigiCRM AI" }] }),
   component: PipelinePage,
 });

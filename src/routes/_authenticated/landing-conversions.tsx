@@ -1,6 +1,6 @@
 import { RoleGuard, ADMINS } from "@/components/role-guard";
-import { createFileRoute } from "@tanstack/react-router";
-import { useQuery } from "@tanstack/react-query";
+import { defineRoute } from "@/lib/router-compat";
+import { useQuery } from "@/lib/react-data-client";
 import { apiFetch } from "@/lib/api";
 import { useMemo, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -42,7 +42,7 @@ import {
   LabelList,
 } from "recharts";
 
-export const Route = createFileRoute("/_authenticated/landing-conversions")({
+export const Route = defineRoute("/_authenticated/landing-conversions")({
   head: () => ({
     meta: [
       { title: "Conversions by Source — DigiCRM AI" },

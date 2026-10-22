@@ -1,6 +1,6 @@
 import { RoleGuard, ADMINS } from "@/components/role-guard";
-import { createFileRoute } from "@tanstack/react-router";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { defineRoute } from "@/lib/router-compat";
+import { useQuery, useQueryClient } from "@/lib/react-data-client";
 import { useAuth } from "@/hooks/use-auth";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -12,7 +12,7 @@ import { toast } from "sonner";
 import { useState } from "react";
 import { apiFetch } from "@/lib/api";
 
-export const Route = createFileRoute("/_authenticated/webhook-dead-letter")({
+export const Route = defineRoute("/_authenticated/webhook-dead-letter")({
   head: () => ({ meta: [{ title: "Webhook Retries — DigiCRM AI" }, { name: "robots", content: "noindex" }] }),
   component: () => (
     <RoleGuard allow={ADMINS} module="webhook-dead-letter" label="Webhook Dead Letter">

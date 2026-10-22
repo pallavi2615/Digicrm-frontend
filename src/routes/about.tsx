@@ -1,11 +1,11 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { defineRoute, Link } from "@/lib/router-compat";
 import { SiteShell } from "@/components/site-shell";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Heart, ShieldCheck, Zap, Users, Globe, Rocket } from "lucide-react";
 import { buildRouteMeta } from "@/lib/seo";
 
-export const Route = createFileRoute("/about")({
+export const Route = defineRoute("/about")({
   head: () => buildRouteMeta({
     path: "/about",
     title: "About — DigiCRM AI",

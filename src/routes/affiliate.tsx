@@ -1,6 +1,5 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { defineRoute, Link } from "@/lib/router-compat";
 import { useState } from "react";
-import { useServerFn } from "@tanstack/react-start";
 import { SiteShell } from "@/components/site-shell";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -12,7 +11,7 @@ import { Check, DollarSign, Users, Sparkles } from "lucide-react";
 import { submitAffiliate } from "@/lib/cms.functions";
 import { buildRouteMeta } from "@/lib/seo";
 
-export const Route = createFileRoute("/affiliate")({
+export const Route = defineRoute("/affiliate")({
   head: () => buildRouteMeta({
     path: "/affiliate",
     title: "Affiliate Program — DigiCRM AI",
@@ -22,7 +21,7 @@ export const Route = createFileRoute("/affiliate")({
 });
 
 function AffiliatePage() {
-  const send = useServerFn(submitAffiliate);
+  const send = submitAffiliate;
   const [loading, setLoading] = useState(false);
   const [code, setCode] = useState<string | null>(null);
 

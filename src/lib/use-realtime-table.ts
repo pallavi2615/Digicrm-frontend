@@ -1,5 +1,5 @@
 import { useEffect, useRef } from "react";
-import { useQueryClient, type QueryKey } from "@tanstack/react-query";
+import { useQueryClient, type QueryKey } from "@/lib/react-data-client";
 export function useRealtimeTable(
   _table: string,
   invalidateKeys: QueryKey[],

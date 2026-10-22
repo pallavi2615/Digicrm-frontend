@@ -1,6 +1,6 @@
 import { RoleGuard, ADMINS } from "@/components/role-guard";
-import { createFileRoute } from "@tanstack/react-router";
-import { keepPreviousData, useQuery } from "@tanstack/react-query";
+import { defineRoute } from "@/lib/router-compat";
+import { keepPreviousData, useQuery } from "@/lib/react-data-client";
 import { Fragment, useEffect, useMemo, useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -134,7 +134,7 @@ function buildParams(f: Filters, extra: Record<string, string | number> = {}) {
 /* Route                                                               */
 /* ------------------------------------------------------------------ */
 
-export const Route = createFileRoute("/_authenticated/audit-logs")({
+export const Route = defineRoute("/_authenticated/audit-logs")({
   head: () => ({ meta: [{ title: "Audit Logs — DigiCRM AI" }] }),
   component: () => (
     <RoleGuard allow={ADMINS} module="audit-logs" label="Audit Logs">

@@ -3,7 +3,7 @@
  * Backend-based — Supabase replaced with FastAPI.
  */
 
-import { useQuery } from "@tanstack/react-query";
+import { useQuery } from "@/lib/react-data-client";
 import { apiFetch } from "@/lib/api";
 import { INDUSTRY_PACKS, type IndustryPack } from "./industry-packs";
 import { mergePack, packFromRow, resolvePack, type PackOverride } from "./pack-merge";

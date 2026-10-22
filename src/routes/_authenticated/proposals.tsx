@@ -1,5 +1,5 @@
-import { createFileRoute } from "@tanstack/react-router";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { defineRoute } from "@/lib/router-compat";
+import { useMutation, useQuery, useQueryClient } from "@/lib/react-data-client";
 import { useMemo, useState } from "react";
 import { apiFetch } from "@/lib/api";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -48,7 +48,7 @@ const validateDate = (d: string) => {
   return date.toISOString();
 };
 
-export const Route = createFileRoute("/_authenticated/proposals")({
+export const Route = defineRoute("/_authenticated/proposals")({
   head: () => ({
     meta: [
       { title: "Proposals — DigiCRM AI" },

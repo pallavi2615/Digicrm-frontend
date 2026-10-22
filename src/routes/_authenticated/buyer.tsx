@@ -1,6 +1,6 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { defineRoute } from "@/lib/router-compat";
 import { useState } from "react";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@/lib/react-data-client";
 import {
   Card, CardContent, CardDescription, CardHeader, CardTitle,
 } from "@/components/ui/card";
@@ -19,7 +19,7 @@ import {
 } from "@/lib/buyer.functions";
 import { inr } from "@/lib/re-data";
 
-export const Route = createFileRoute("/_authenticated/buyer")({
+export const Route = defineRoute("/_authenticated/buyer")({
   head: () => ({
     meta: [
       { title: "My Home Booking | DigiCRM AI" },

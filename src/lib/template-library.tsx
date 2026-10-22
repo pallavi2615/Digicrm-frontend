@@ -2,7 +2,7 @@
  * Workspace template library hooks — backend-based.
  */
 
-import { useQuery } from "@tanstack/react-query";
+import { useQuery } from "@/lib/react-data-client";
 import { apiFetch } from "@/lib/api";
 import type { WorkspaceTemplate } from "./workspace-templates";
 

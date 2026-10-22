@@ -8,7 +8,7 @@ import { Upload, Loader2, Download, CheckCircle2, AlertCircle } from "lucide-rea
 import { toast } from "sonner";
 import { apiUpload } from "@/lib/api";
 import { useAuth } from "@/hooks/use-auth";
-import { useQueryClient } from "@tanstack/react-query";
+import { useQueryClient } from "@/lib/react-data-client";
 
 export type CsvImportEntity = "leads" | "contacts" | "companies";
 

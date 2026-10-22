@@ -1,5 +1,5 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
-import { useQuery } from "@tanstack/react-query";
+import { defineRoute, Link } from "@/lib/router-compat";
+import { useQuery } from "@/lib/react-data-client";
 import { Loader2 } from "lucide-react";
 import { brandApi } from "@/lib/brand.api";
 import { Card, CardContent } from "@/components/ui/card";
@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { inr } from "@/lib/creator";
 
-export const Route = createFileRoute("/_authenticated/brand/")({
+export const Route = defineRoute("/_authenticated/brand/")({
   head: () => ({ meta: [{ title: "My Campaigns | Brand Portal" }, { name: "description", content: "All creator campaigns shared with your brand." }] }),
   component: Campaigns,
 });

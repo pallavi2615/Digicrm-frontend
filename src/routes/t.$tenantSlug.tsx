@@ -1,9 +1,6 @@
-import { createFileRoute, notFound } from "@tanstack/react-router";
-import { createServerFn } from "@tanstack/react-start";
-import { createClient } from "@supabase/supabase-js";
-import type { Database } from "@/integrations/supabase/types";
+import { defineRoute, notFound } from "@/lib/router-compat";
 import { useEffect, useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import { supabaseRestGet } from "@/lib/supabase-rest";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -12,37 +9,49 @@ import { toast } from "sonner";
 import { CheckCircle2, Sparkles, Loader2 } from "lucide-react";
 import { installBounceTracking, trackLandingEvent } from "@/lib/landing-analytics";
 
-const getTenantWithLanding = createServerFn({ method: "GET" })
-  .inputValidator((d: { slug: string }) => d)
-  .handler(async ({ data }) => {
-    const key = process.env.SUPABASE_PUBLISHABLE_KEY!;
-    const client = createClient<Database>(process.env.SUPABASE_URL!, key, {
-      auth: { persistSession: false, autoRefreshToken: false },
-      global: { fetch: (input, init) => {
-        const h = new Headers(init?.headers);
-        if (key.startsWith("sb_") && h.get("Authorization") === `Bearer ${key}`) h.delete("Authorization");
-        h.set("apikey", key);
-        return fetch(input, { ...init, headers: h });
-      } },
-    });
-    const { data: tenantRow } = await client
-      .from("tenants_public" as never)
-      .select("id, slug, name, tagline, logo_url, primary_color, accent_color, industry, plan")
-      .eq("slug", data.slug)
-      .maybeSingle();
-    const tenant = tenantRow as { id: string; slug: string; name: string; tagline: string | null; logo_url: string | null; primary_color: string | null; accent_color: string | null; industry: string | null; plan: string } | null;
-    if (!tenant) return null;
-    const { data: lp } = await client
-      .from("tenant_landing_pages")
-      .select("hero_headline, hero_subheadline, cta_label, features, testimonial, title, seo_title, seo_description")
-      .eq("tenant_id", tenant.id)
-      .eq("slug", "home")
-      .eq("is_published", true)
-      .maybeSingle();
-    return { tenant, lp };
-  });
+type PublicTenant = {
+  id: string;
+  slug: string;
+  name: string;
+  tagline: string | null;
+  logo_url: string | null;
+  primary_color: string | null;
+  accent_color: string | null;
+  industry: string | null;
+  plan: string;
+};
 
-export const Route = createFileRoute("/t/$tenantSlug")({
+type TenantLanding = {
+  hero_headline: string | null;
+  hero_subheadline: string | null;
+  cta_label: string | null;
+  features: unknown;
+  testimonial: unknown;
+  title: string | null;
+  seo_title: string | null;
+  seo_description: string | null;
+};
+
+async function getTenantWithLanding({ data }: { data: { slug: string } }) {
+  const tenants = await supabaseRestGet<PublicTenant>("tenants_public", {
+    select: "id,slug,name,tagline,logo_url,primary_color,accent_color,industry,plan",
+    slug: `eq.${data.slug}`,
+    limit: 1,
+  });
+  const tenant = tenants[0] ?? null;
+  if (!tenant) return null;
+
+  const landings = await supabaseRestGet<TenantLanding>("tenant_landing_pages", {
+    select: "hero_headline,hero_subheadline,cta_label,features,testimonial,title,seo_title,seo_description",
+    tenant_id: `eq.${tenant.id}`,
+    slug: "eq.home",
+    is_published: "eq.true",
+    limit: 1,
+  });
+  return { tenant, lp: landings[0] ?? null };
+}
+
+export const Route = defineRoute("/t/$tenantSlug")({
   loader: async ({ params }) => {
     const res = await getTenantWithLanding({ data: { slug: params.tenantSlug } });
     if (!res) throw notFound();

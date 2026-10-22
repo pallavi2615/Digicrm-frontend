@@ -1,6 +1,6 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { defineRoute, useNavigate } from "@/lib/router-compat";
 import { useState } from "react";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@/lib/react-data-client";
 import { useAuth } from "@/hooks/use-auth";
 import { claimIndustry, useIndustryAccess } from "@/lib/industry-access";
 import { setActiveIndustry } from "@/lib/active-industry";
@@ -11,7 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import { Check, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 
-export const Route = createFileRoute("/_authenticated/choose-industry")({
+export const Route = defineRoute("/_authenticated/choose-industry")({
   head: () => ({
     meta: [
       { title: "Choose your industry | DigiCRM AI" },

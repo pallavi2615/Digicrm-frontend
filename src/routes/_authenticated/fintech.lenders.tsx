@@ -1,5 +1,5 @@
-import { createFileRoute } from "@tanstack/react-router";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { defineRoute } from "@/lib/router-compat";
+import { useMutation, useQuery, useQueryClient } from "@/lib/react-data-client";
 import { supabase } from "@/integrations/supabase/client";
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -14,7 +14,7 @@ import { toast } from "sonner";
 import { useAuth } from "@/hooks/use-auth";
 import { StaffGuard } from "@/components/staff-guard";
 
-export const Route = createFileRoute("/_authenticated/fintech/lenders")({
+export const Route = defineRoute("/_authenticated/fintech/lenders")({
   component: () => (
     <StaffGuard module="lenders">
       <LendersPage />

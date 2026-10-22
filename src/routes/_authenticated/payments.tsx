@@ -1,5 +1,5 @@
-import { createFileRoute } from "@tanstack/react-router";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { defineRoute } from "@/lib/router-compat";
+import { useQuery, useMutation, useQueryClient } from "@/lib/react-data-client";
 import { useState } from "react";
 import {
   Card, CardContent, CardHeader, CardTitle,
@@ -13,7 +13,7 @@ import { toast } from "sonner";
 import { apiFetch } from "@/lib/api";
 import { usePermissions } from "@/contexts/PermissionsContext";
 
-export const Route = createFileRoute("/_authenticated/payments")({
+export const Route = defineRoute("/_authenticated/payments")({
   component: PaymentsPage,
 });
 

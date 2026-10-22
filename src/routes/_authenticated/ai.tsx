@@ -1,6 +1,5 @@
-import { createFileRoute } from "@tanstack/react-router";
-import { useServerFn } from "@tanstack/react-start";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { defineRoute } from "@/lib/router-compat";
+import { useMutation, useQuery, useQueryClient } from "@/lib/react-data-client";
 import { useState, useRef, useEffect } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -27,7 +26,7 @@ import { useTenantPackKey } from "@/lib/pack-config";
 import { convertProposalToDeal, proposalStageToDealStage } from "@/lib/proposal-deal";
 import { toast } from "sonner";
 
-export const Route = createFileRoute("/_authenticated/ai")({
+export const Route = defineRoute("/_authenticated/ai")({
   head: () => ({
     meta: [
       { title: "AI Assistant — DigiCRM AI" },
@@ -74,7 +73,7 @@ function AIPage() {
 }
 
 // function ChatPanel() {
-//   const chat = useServerFn(aiChat);
+//   const chat = aiChat;
 //   const [messages, setMessages] = useState<Msg[]>([]);
 //   const [input, setInput] = useState("");
 //   const [packKey, setPackKey] = useState("");
@@ -183,7 +182,7 @@ function AIPage() {
 // }
 
 function ChatPanel() {
-  const chat = useServerFn(aiChat);
+  const chat = aiChat;
   const [messages, setMessages] = useState<Msg[]>([]);
   const [input, setInput] = useState("");
   const [packKey, setPackKey] = useState("");
@@ -354,7 +353,7 @@ function ChatPanel() {
 }
 
 function ProposalPanel() {
-  const chat = useServerFn(aiChat);
+  const chat = aiChat;
   const { user, isManager } = useAuth();
   const perms = usePermissions();
   const qc = useQueryClient();

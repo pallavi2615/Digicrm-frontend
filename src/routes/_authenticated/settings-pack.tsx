@@ -1,6 +1,6 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { defineRoute, Link } from "@/lib/router-compat";
 import { useEffect, useMemo, useState } from "react";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@/lib/react-data-client";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { StaffGuard } from "@/components/staff-guard";
@@ -18,7 +18,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ArrowDown, ArrowUp, Building2, Loader2, Plus, RotateCcw, Save, Trash2 } from "lucide-react";
 import { PackAiTraining } from "@/components/pack-ai-training";
 
-export const Route = createFileRoute("/_authenticated/settings-pack")({
+export const Route = defineRoute("/_authenticated/settings-pack")({
   head: () => ({
     meta: [
       { title: "Workspace Pack Settings | DigiCRM AI" },

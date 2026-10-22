@@ -1,5 +1,5 @@
-import { createFileRoute } from "@tanstack/react-router";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { defineRoute } from "@/lib/router-compat";
+import { useQuery, useQueryClient } from "@/lib/react-data-client";
 import { supabase } from "@/integrations/supabase/client";
 import { useState } from "react";
 import { Card } from "@/components/ui/card";
@@ -8,7 +8,7 @@ import { Loader2, IndianRupee } from "lucide-react";
 import { toast } from "sonner";
 import { useRealtimeTable } from "@/lib/use-realtime-table";
 
-export const Route = createFileRoute("/_authenticated/fintech/pipeline")({
+export const Route = defineRoute("/_authenticated/fintech/pipeline")({
   component: FintechPipelinePage,
 });
 

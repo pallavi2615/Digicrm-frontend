@@ -1,5 +1,5 @@
 // app-topbar.tsx
-import { useNavigate } from "@tanstack/react-router";
+import { useNavigate } from "@/lib/router-compat";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { Button } from "@/components/ui/button";
 import {
@@ -10,12 +10,13 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Search, LogOut, User, Moon, Sun } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { useEffect, useState } from "react";
-import { useQueryClient } from "@tanstack/react-query";
+import { useQueryClient } from "@/lib/react-data-client";
 import { toast } from "sonner";
 import { GlobalSearch } from "@/components/global-search";
 import { TenantSwitcher } from "@/components/tenant-switcher";
 import { CrmSwitcher } from "@/components/crm-switcher";
 import { NotificationsButton } from "@/components/notifications-button";
+import { useScheduleReminderAlerts } from "@/hooks/use-schedule-reminders";
 
 const isSuperAdminRole = (r: unknown) => {
   const v = String(r ?? "").toLowerCase().trim().replace(/[\s-]+/g, "_");
@@ -28,6 +29,9 @@ export function AppTopbar() {
   const { user, roles, logout } = useAuth();
   const [dark, setDark] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
+
+  // Lead-schedule reminders: pop-up alert when due (the bell lists them too)
+  useScheduleReminderAlerts(() => navigate({ to: "/notifications" }));
 
   // Only the platform SuperAdmin may switch between CRMs.
   const isSuperAdmin = roles.some(isSuperAdminRole);

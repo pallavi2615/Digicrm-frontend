@@ -1,6 +1,6 @@
 /**
  * Centralized SEO helper. Every public route calls buildRouteMeta() to
- * produce a TanStack `head()` return object with title, description,
+ * produce the route `head()` descriptor with title, description,
  * canonical (leaf-only), Open Graph, Twitter, and (optional) JSON-LD.
  *
  * CMS-driven defaults (site name, default OG image, twitter handle)

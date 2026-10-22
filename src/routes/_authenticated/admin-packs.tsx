@@ -1,6 +1,6 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { defineRoute, Link } from "@/lib/router-compat";
 import { useEffect, useMemo, useState } from "react";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@/lib/react-data-client";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { RoleGuard } from "@/components/role-guard";
@@ -28,7 +28,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { ArrowLeft, ArrowDown, ArrowUp, Archive, Copy, Loader2, Plus, RotateCcw, Save, Trash2, Wand2 } from "lucide-react";
 
-export const Route = createFileRoute("/_authenticated/admin-packs")({
+export const Route = defineRoute("/_authenticated/admin-packs")({
   head: () => ({
     meta: [
       { title: "Pack Builder & Industry Pack CMS | DigiCRM AI" },

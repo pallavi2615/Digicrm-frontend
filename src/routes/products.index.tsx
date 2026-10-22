@@ -1,4 +1,4 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { defineRoute, Link } from "@/lib/router-compat";
 import { SiteShell } from "@/components/site-shell";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -7,7 +7,7 @@ import * as LucideIcons from "lucide-react";
 import { PRODUCTS } from "@/lib/products";
 import { buildRouteMeta } from "@/lib/seo";
 
-export const Route = createFileRoute("/products/")({
+export const Route = defineRoute("/products/")({
   head: () =>
     buildRouteMeta({
       path: "/products",

@@ -1,5 +1,5 @@
-import { createFileRoute } from "@tanstack/react-router";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { defineRoute } from "@/lib/router-compat";
+import { useQuery, useMutation, useQueryClient } from "@/lib/react-data-client";
 import { apiFetch, apiUpload } from "@/lib/api";
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -32,7 +32,7 @@ import {
   Cell,
 } from "recharts";
 
-export const Route = createFileRoute("/_authenticated/agency/desk")({
+export const Route = defineRoute("/_authenticated/agency/desk")({
   head: () => ({ meta: [{ title: "Agency Desk — DigiCRM AI" }] }),
   component: AgencyPage,
 });

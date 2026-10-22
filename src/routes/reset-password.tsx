@@ -1,4 +1,4 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { defineRoute, useNavigate } from "@/lib/router-compat";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -14,7 +14,7 @@ import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
 import { apiFetch } from "@/lib/api";
 
-export const Route = createFileRoute("/reset-password")({
+export const Route = defineRoute("/reset-password")({
   head: () => ({
     meta: [{ title: "Reset password — DigiCRM AI" }],
   }),

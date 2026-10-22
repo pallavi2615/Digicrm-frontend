@@ -1,5 +1,5 @@
-import { createFileRoute } from "@tanstack/react-router";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { defineRoute } from "@/lib/router-compat";
+import { useMutation, useQuery, useQueryClient } from "@/lib/react-data-client";
 import { apiFetch } from "@/lib/api";
 import { useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
@@ -11,12 +11,15 @@ import { Textarea } from "@/components/ui/textarea";
 import {
   Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
 } from "@/components/ui/dialog";
-import { ChevronLeft, ChevronRight, Video, CheckSquare, Plus, Loader2 } from "lucide-react";
+import {
+  ChevronLeft, ChevronRight, Video, CheckSquare, CalendarClock, Plus, Loader2,
+  PhoneCall, Mail, User, FileText, Activity, MessageSquare, MapPin,
+} from "lucide-react";
 import { toast } from "sonner";
 import { usePermissions } from "@/hooks/use-permissions";
 import { notifyPermissionDenied } from "@/components/permission-denied";
 
-export const Route = createFileRoute("/_authenticated/calendar")({
+export const Route = defineRoute("/_authenticated/calendar")({
   head: () => ({ meta: [{ title: "Calendar — DigiCRM AI" }] }),
   component: CalendarPage,
 });
@@ -60,13 +63,134 @@ interface Task {
   created_at: string;
 }
 
+// Lead schedules created from the Leads page (GET /api/v1/lead-schedules)
+interface LeadSchedule {
+  id: number;
+  lead_id: number;
+  title: string;
+  notes?: string | null;
+  activity_type?: string | null;
+  activity_label?: string | null;
+  display_type?: string | null;
+  scheduled_at: string;
+  duration_minutes?: number | null;
+  status?: string | null;
+  lead_name?: string | null;
+  lead_company?: string | null;
+}
+
 // Unified shape the calendar grid renders, regardless of source endpoint.
 interface Ev {
   id: number;
   title: string;
   date: string;
-  type: "meeting" | "task";
-  origin: "calendar" | "meeting" | "task";
+  type: "meeting" | "task" | "schedule";
+  origin: "calendar" | "meeting" | "task" | "schedule";
+  label?: string | null;      // e.g. "Call", "Demo"
+  sub?: string | null;        // e.g. lead name
+  done?: boolean;
+  activityType?: string | null; // raw activity_type for icon/colour lookup
+}
+
+// The API can return datetimes without a timezone (naive UTC). Treat those as UTC
+// so a schedule entered as 3:30 PM IST doesn't shift by 5h30m on the calendar.
+function normalizeIso(s: string): string {
+  if (!s || !s.includes("T")) return s;
+  return /([zZ]|[+-]\d{2}:?\d{2})$/.test(s) ? s : `${s}Z`;
+}
+
+// ════════════════════════════════════════════════════════════
+// Activity-type metadata — icons + colors for lead schedules
+// ════════════════════════════════════════════════════════════
+type IconType = React.ComponentType<{ className?: string }>;
+
+const ACTIVITY_META: Record<string, { label: string; icon: IconType; chip: string; dot: string }> = {
+  call: {
+    label: "Call", icon: PhoneCall,
+    chip: "bg-blue-100 text-blue-700 dark:bg-blue-500/20 dark:text-blue-300",
+    dot: "text-blue-500",
+  },
+  email: {
+    label: "Mail", icon: Mail,
+    chip: "bg-indigo-100 text-indigo-700 dark:bg-indigo-500/20 dark:text-indigo-300",
+    dot: "text-indigo-500",
+  },
+  meeting: {
+    label: "Meeting", icon: User,
+    chip: "bg-purple-100 text-purple-700 dark:bg-purple-500/20 dark:text-purple-300",
+    dot: "text-purple-500",
+  },
+  proposal: {
+    label: "Proposal", icon: FileText,
+    chip: "bg-amber-100 text-amber-800 dark:bg-amber-500/20 dark:text-amber-300",
+    dot: "text-amber-500",
+  },
+  demo: {
+    label: "Demo", icon: Activity,
+    chip: "bg-cyan-100 text-cyan-700 dark:bg-cyan-500/20 dark:text-cyan-300",
+    dot: "text-cyan-500",
+  },
+  follow_up: {
+    label: "Follow-up", icon: CalendarClock,
+    chip: "bg-teal-100 text-teal-700 dark:bg-teal-500/20 dark:text-teal-300",
+    dot: "text-teal-500",
+  },
+  followup: {
+    label: "Follow-up", icon: CalendarClock,
+    chip: "bg-teal-100 text-teal-700 dark:bg-teal-500/20 dark:text-teal-300",
+    dot: "text-teal-500",
+  },
+  whatsapp: {
+    label: "WhatsApp", icon: MessageSquare,
+    chip: "bg-green-100 text-green-700 dark:bg-green-500/20 dark:text-green-300",
+    dot: "text-green-500",
+  },
+  site_visit: {
+    label: "Site Visit", icon: MapPin,
+    chip: "bg-orange-100 text-orange-700 dark:bg-orange-500/20 dark:text-orange-300",
+    dot: "text-orange-500",
+  },
+  contract: {
+    label: "Contract", icon: FileText,
+    chip: "bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-300",
+    dot: "text-emerald-500",
+  },
+  reminder: {
+    label: "Reminder", icon: CalendarClock,
+    chip: "bg-pink-100 text-pink-700 dark:bg-pink-500/20 dark:text-pink-300",
+    dot: "text-pink-500",
+  },
+  other: {
+    label: "Other", icon: CalendarClock,
+    chip: "bg-slate-100 text-slate-700 dark:bg-slate-500/20 dark:text-slate-300",
+    dot: "text-slate-500",
+  },
+};
+
+const getActivityMeta = (value?: string | null) => {
+  if (!value) return ACTIVITY_META.other;
+  return (
+    ACTIVITY_META[value] ?? {
+      label: value.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase()),
+      icon: CalendarClock,
+      chip: "bg-slate-100 text-slate-700 dark:bg-slate-500/20 dark:text-slate-300",
+      dot: "text-slate-500",
+    }
+  );
+};
+
+// Colors for the non-schedule event types (meeting / task)
+const chipClass = (t: Ev["type"]) =>
+  t === "meeting"
+    ? "bg-info/15 text-info"
+    : t === "task"
+    ? "bg-warning/15 text-warning"
+    : "bg-primary/15 text-primary";
+
+function EvIcon({ type, className }: { type: Ev["type"]; className?: string }) {
+  if (type === "meeting") return <Video className={className} />;
+  if (type === "task") return <CheckSquare className={className} />;
+  return <CalendarClock className={className} />;
 }
 
 function CalendarPage() {
@@ -84,14 +208,17 @@ function CalendarPage() {
     setMode("meeting"); setTitle(""); setDetails(""); setTime("10:00");
   };
 
-  // -------- Fetch calendar events + meetings + tasks, merge into one list --------
+  // -------- Fetch calendar events + meetings + tasks + lead schedules, merge into one list --------
   const { data: events, isLoading } = useQuery({
-    queryKey: ["calendar", "meetings", "tasks"],
+    queryKey: ["calendar", "meetings", "tasks", "lead-schedules"],
+    refetchOnWindowFocus: true,
     queryFn: async (): Promise<Ev[]> => {
-      const [calendarEvents, meetings, tasks] = await Promise.all([
+      const [calendarEvents, meetings, tasks, schedules] = await Promise.all([
         apiFetch<CalendarEvent[]>("/api/v1/calendar"),
         apiFetch<Meeting[]>("/api/v1/meetings"),
         apiFetch<Task[]>("/api/v1/tasks"),
+        // A failure here must not break the rest of the calendar
+        apiFetch<LeadSchedule[]>("/api/v1/lead-schedules").catch(() => [] as LeadSchedule[]),
       ]);
 
       const fromCalendar: Ev[] = calendarEvents.map((e) => ({
@@ -120,7 +247,21 @@ function CalendarPage() {
           origin: "task",
         }));
 
-      return [...fromCalendar, ...fromMeetings, ...fromTasks];
+      const fromSchedules: Ev[] = (Array.isArray(schedules) ? schedules : [])
+        .filter((s) => !!s.scheduled_at)
+        .map((s) => ({
+          id: s.id,
+          title: s.title,
+          date: normalizeIso(s.scheduled_at),
+          type: "schedule",
+          origin: "schedule",
+          label: s.display_type || s.activity_label || s.activity_type || null,
+          sub: s.lead_name || null,
+          done: String(s.status ?? "").toLowerCase() === "completed",
+          activityType: s.activity_type || null,
+        }));
+
+      return [...fromCalendar, ...fromMeetings, ...fromTasks, ...fromSchedules];
     },
   });
 
@@ -177,11 +318,13 @@ function CalendarPage() {
     mutationFn: (ev: Ev) => {
       if (ev.origin === "calendar") return apiFetch<void>(`/api/v1/calendar/${ev.id}`, { method: "DELETE" });
       if (ev.origin === "meeting") return apiFetch<void>(`/api/v1/meetings/${ev.id}`, { method: "DELETE" });
+      if (ev.origin === "schedule") return apiFetch<void>(`/api/v1/lead-schedules/${ev.id}`, { method: "DELETE" });
       return apiFetch<void>(`/api/v1/tasks/${ev.id}`, { method: "DELETE" });
     },
     onSuccess: () => {
       toast.success("Removed");
       qc.invalidateQueries({ queryKey: ["calendar"] });
+      qc.invalidateQueries({ queryKey: ["notifications"] });
     },
     onError: (e: Error) => notifyPermissionDenied(e),
   });
@@ -195,17 +338,20 @@ function CalendarPage() {
   });
   const today = new Date();
 
-  const evsFor = (day: number) => (events ?? []).filter(e => {
-    const d = new Date(e.date);
-    return d.getFullYear() === cursor.getFullYear() && d.getMonth() === cursor.getMonth() && d.getDate() === day;
-  });
+  const evsFor = (day: number) =>
+    (events ?? [])
+      .filter((e) => {
+        const d = new Date(e.date);
+        return d.getFullYear() === cursor.getFullYear() && d.getMonth() === cursor.getMonth() && d.getDate() === day;
+      })
+      .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
 
   return (
     <div className="space-y-5">
       <div className="flex items-start justify-between flex-wrap gap-3">
         <div>
           <h1 className="text-3xl font-bold">Calendar</h1>
-          <p className="text-muted-foreground text-sm mt-1">Meetings and task deadlines at a glance.</p>
+          <p className="text-muted-foreground text-sm mt-1">Meetings, task deadlines and lead schedules at a glance.</p>
         </div>
         <div className="flex items-center gap-2">
           <Button variant="outline" size="icon" onClick={() => setCursor(new Date(cursor.getFullYear(), cursor.getMonth() - 1, 1))}><ChevronLeft className="h-4 w-4" /></Button>
@@ -243,12 +389,27 @@ function CalendarPage() {
                     >
                       <div className={`text-xs font-medium ${isToday ? "text-primary" : ""}`}>{day}</div>
                       <div className="space-y-0.5 mt-1">
-                        {evs.slice(0, 3).map(e => (
-                          <div key={`${e.origin}-${e.id}`} className={`text-[10px] px-1 py-0.5 rounded truncate ${e.type === "meeting" ? "bg-info/15 text-info" : "bg-warning/15 text-warning"}`}>
-                            {e.type === "meeting" ? <Video className="inline h-2.5 w-2.5 mr-0.5" /> : <CheckSquare className="inline h-2.5 w-2.5 mr-0.5" />}
-                            {e.title}
-                          </div>
-                        ))}
+                        {evs.slice(0, 3).map(e => {
+                          // Use activity-aware chip for schedules, generic chip for others
+                          const isSchedule = e.type === "schedule";
+                          const meta = isSchedule ? getActivityMeta(e.activityType) : null;
+                          const ActivityIcon = meta?.icon;
+                          const chipCls = isSchedule && meta ? meta.chip : chipClass(e.type);
+                          return (
+                            <div
+                              key={`${e.origin}-${e.id}`}
+                              className={`text-[10px] px-1 py-0.5 rounded truncate ${chipCls} ${e.done ? "line-through opacity-60" : ""}`}
+                              title={`${e.title}${e.label ? ` · ${e.label}` : ""}${e.sub ? ` · ${e.sub}` : ""}`}
+                            >
+                              {isSchedule && ActivityIcon ? (
+                                <ActivityIcon className="inline h-2.5 w-2.5 mr-0.5" />
+                              ) : (
+                                <EvIcon type={e.type} className="inline h-2.5 w-2.5 mr-0.5" />
+                              )}
+                              {e.title}
+                            </div>
+                          );
+                        })}
                         {evs.length > 3 && <div className="text-[10px] text-muted-foreground">+{evs.length - 3} more</div>}
                       </div>
                     </button>
@@ -257,9 +418,10 @@ function CalendarPage() {
               </div>
             </>
           )}
-          <div className="flex gap-3 mt-4 text-xs text-muted-foreground">
+          <div className="flex gap-3 mt-4 text-xs text-muted-foreground flex-wrap">
             <Badge variant="secondary" className="bg-info/15 text-info border-0"><Video className="h-3 w-3 mr-1" />Meetings</Badge>
             <Badge variant="secondary" className="bg-warning/15 text-warning border-0"><CheckSquare className="h-3 w-3 mr-1" />Tasks</Badge>
+            <Badge variant="secondary" className="bg-primary/15 text-primary border-0"><CalendarClock className="h-3 w-3 mr-1" />Lead schedules</Badge>
           </div>
         </CardContent>
       </Card>
@@ -272,26 +434,47 @@ function CalendarPage() {
           </DialogHeader>
 
           <div className="space-y-3">
-            <div className="space-y-1.5 max-h-40 overflow-y-auto">
+            <div className="space-y-1.5 max-h-60 overflow-y-auto">
               {selected && evsFor(selected.getDate()).length === 0 && (
                 <p className="text-sm text-muted-foreground">Nothing scheduled yet.</p>
               )}
-              {selected && evsFor(selected.getDate()).map((e) => (
-                <div key={`${e.origin}-${e.id}`} className="flex items-center gap-2 rounded border p-2 text-sm">
-                  {e.type === "meeting" ? <Video className="h-3.5 w-3.5 text-info" /> : <CheckSquare className="h-3.5 w-3.5 text-warning" />}
-                  <span className="flex-1 truncate">{e.title}</span>
-                  <span className="text-xs text-muted-foreground">{new Date(e.date).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</span>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="h-6 px-2 text-xs text-destructive hover:text-destructive"
-                    onClick={() => removeEntry.mutate(e)}
-                    disabled={removeEntry.isPending}
-                  >
-                    Remove
-                  </Button>
-                </div>
-              ))}
+              {selected && evsFor(selected.getDate()).map((e) => {
+                const isSchedule = e.type === "schedule";
+                const meta = isSchedule ? getActivityMeta(e.activityType) : null;
+                const ActivityIcon = meta?.icon;
+                return (
+                  <div key={`${e.origin}-${e.id}`} className="flex items-center gap-2 rounded border p-2 text-sm">
+                    {isSchedule && ActivityIcon ? (
+                      <ActivityIcon className={`h-3.5 w-3.5 shrink-0 ${meta?.dot ?? "text-primary"}`} />
+                    ) : (
+                      <EvIcon
+                        type={e.type}
+                        className={`h-3.5 w-3.5 shrink-0 ${e.type === "meeting" ? "text-info" : e.type === "task" ? "text-warning" : "text-primary"}`}
+                      />
+                    )}
+                    <div className="flex-1 min-w-0">
+                      <div className={`truncate ${e.done ? "line-through opacity-60" : ""}`}>{e.title}</div>
+                      {(e.label || e.sub) && (
+                        <div className="text-xs text-muted-foreground truncate">
+                          {[e.label, e.sub].filter(Boolean).join(" · ")}
+                        </div>
+                      )}
+                    </div>
+                    <span className="text-xs text-muted-foreground">
+                      {new Date(e.date).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                    </span>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-6 px-2 text-xs text-destructive hover:text-destructive"
+                      onClick={() => removeEntry.mutate(e)}
+                      disabled={removeEntry.isPending}
+                    >
+                      Remove
+                    </Button>
+                  </div>
+                );
+              })}
             </div>
 
             {(perms.canCreate("meetings") || perms.canCreate("tasks")) && (

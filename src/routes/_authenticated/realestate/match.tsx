@@ -2,9 +2,9 @@
  * MatchAI — match leads to available inventory.
  */
 
-import { createFileRoute } from "@tanstack/react-router";
+import { defineRoute } from "@/lib/router-compat";
 import { useMemo, useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery } from "@/lib/react-data-client";
 import {
   Card, CardContent, CardHeader, CardTitle, CardDescription,
 } from "@/components/ui/card";
@@ -21,7 +21,7 @@ import { Check, X, MessageCircle } from "lucide-react";
 import { listLeads, listProperties } from "@/lib/realestate.functions";
 import { cr, matchScore, waLink, type MatchReq } from "@/lib/re-data";
 
-export const Route = createFileRoute("/_authenticated/realestate/match")({
+export const Route = defineRoute("/_authenticated/realestate/match")({
   head: () => ({ meta: [{ title: "MatchAI | Real Estate CRM" }] }),
   component: MatchPage,
 });

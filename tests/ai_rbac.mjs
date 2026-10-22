@@ -30,7 +30,7 @@ async function tokenFor(email) {
   return { token: data.session.access_token, uid: data.user.id, client: c };
 }
 
-// Call the aiChat server function via TanStack's serialized RPC format.
+// Call the aiChat endpoint using the app's HTTP request format.
 // If the endpoint shape is unavailable (dev-only variance), we fall back to
 // direct handler assertions through the supabase client (grounding query),
 // which still exercises the RLS path the handler relies on.

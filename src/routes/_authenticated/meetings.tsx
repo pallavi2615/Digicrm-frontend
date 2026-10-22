@@ -1,7 +1,7 @@
 import { usePermissions } from "@/hooks/use-permissions";
 import { notifyPermissionDenied } from "@/components/permission-denied";
-import { createFileRoute } from "@tanstack/react-router";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { defineRoute } from "@/lib/router-compat";
+import { useMutation, useQuery, useQueryClient } from "@/lib/react-data-client";
 import { apiFetch } from "@/lib/api";
 import { useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
@@ -35,7 +35,7 @@ const validateDate = (d: string) => {
   return date.toISOString();
 };
 
-export const Route = createFileRoute("/_authenticated/meetings")({
+export const Route = defineRoute("/_authenticated/meetings")({
   head: () => ({ meta: [{ title: "Meetings — DigiCRM AI" }] }),
   component: MeetingsPage,
 });

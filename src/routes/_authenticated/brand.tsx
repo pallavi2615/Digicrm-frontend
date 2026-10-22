@@ -1,5 +1,5 @@
-import { createFileRoute, Link, Outlet, useRouterState } from "@tanstack/react-router";
-import { useQuery } from "@tanstack/react-query";
+import { defineRoute, Link, Outlet, useRouterState } from "@/lib/router-compat";
+import { useQuery } from "@/lib/react-data-client";
 import { Building2, Megaphone, Search, Loader2 } from "lucide-react";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
@@ -10,7 +10,7 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 
-export const Route = createFileRoute("/_authenticated/brand")({
+export const Route = defineRoute("/_authenticated/brand")({
   head: () => ({
     meta: [
       { title: "Brand Portal | DigiCRM AI" },

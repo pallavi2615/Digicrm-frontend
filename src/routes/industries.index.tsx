@@ -1,4 +1,4 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { defineRoute, Link } from "@/lib/router-compat";
 import { SiteShell } from "@/components/site-shell";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -7,7 +7,7 @@ import * as LucideIcons from "lucide-react";
 import { INDUSTRY_GROUPS, ALL_SUB_INDUSTRIES } from "@/lib/industry-taxonomy";
 import { buildRouteMeta } from "@/lib/seo";
 
-export const Route = createFileRoute("/industries/")({
+export const Route = defineRoute("/industries/")({
   head: () =>
     buildRouteMeta({
       path: "/industries",

@@ -1,6 +1,6 @@
 import { RoleGuard, ADMINS } from "@/components/role-guard";
-import { createFileRoute } from "@tanstack/react-router";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { defineRoute } from "@/lib/router-compat";
+import { useQuery, useMutation, useQueryClient } from "@/lib/react-data-client";
 import { apiFetch } from "@/lib/api";
 import { useAuth } from "@/hooks/use-auth";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -12,7 +12,7 @@ import { ShieldAlert, Save, Settings2 } from "lucide-react";
 import { toast } from "sonner";
 import { useEffect, useState } from "react";
 
-export const Route = createFileRoute("/_authenticated/webhook-settings")({
+export const Route = defineRoute("/_authenticated/webhook-settings")({
   head: () => ({ meta: [{ title: "Webhook Retry Settings — DigiCRM AI" }, { name: "robots", content: "noindex" }] }),
   component: () => (
     <RoleGuard allow={ADMINS} module="webhook-settings" label="Webhook Settings">

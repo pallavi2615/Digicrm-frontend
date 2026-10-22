@@ -1,4 +1,4 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { defineRoute, Link } from "@/lib/router-compat";
 import { SiteShell } from "@/components/site-shell";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -12,7 +12,7 @@ import heroImg from "@/assets/dsa-hero.jpg";
 import journeyImg from "@/assets/dsa-journey.jpg";
 import commissionsImg from "@/assets/dsa-commissions.jpg";
 
-export const Route = createFileRoute("/dsa-crm")({
+export const Route = defineRoute("/dsa-crm")({
   head: () => buildRouteMeta({
     path: "/dsa-crm",
     title: "DSA CRM — Loan Origination & Commission Tracking | DigiCRM AI",

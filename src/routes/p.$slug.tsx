@@ -1,4 +1,4 @@
-import { createFileRoute, notFound, Link } from "@tanstack/react-router";
+import { defineRoute, notFound, Link } from "@/lib/router-compat";
 
 import { SiteShell } from "@/components/site-shell";
 import { Button } from "@/components/ui/button";
@@ -8,7 +8,7 @@ import { buildRouteMeta } from "@/lib/seo";
 
 import type { CmsPageBlock as Block } from "@/lib/cms.functions";
 
-export const Route = createFileRoute("/p/$slug")({
+export const Route = defineRoute("/p/$slug")({
   loader: async ({ params }) => {
     const page = await getPageBySlug({ data: { slug: params.slug } });
     if (!page) throw notFound();

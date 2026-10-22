@@ -1,14 +1,17 @@
+
 import React, {
   createContext,
   useContext,
   useEffect,
   useState,
-  ReactNode,
+  type ReactNode,
 } from "react";
 
+import { apiFetch } from "@/lib/api";
+
 interface PermissionsContextType {
-  roles: string[];              // 👈 source of truth
-  role: string | null;          // 👈 convenience (roles[0] ?? null) — backward compat
+  roles: string[];
+  role: string | null;
   isSuperAdmin: boolean;
   isAdmin: boolean;
   isManager: boolean;
@@ -19,55 +22,46 @@ interface PermissionsContextType {
   refresh: () => Promise<void>;
 }
 
-const PermissionsContext = createContext<PermissionsContextType | null>(null);
+const PermissionsContext =
+  createContext<PermissionsContextType | null>(null);
 
-export const PermissionsProvider = ({ children }: { children: ReactNode }) => {
+export const PermissionsProvider = ({
+  children,
+}: {
+  children: ReactNode;
+}) => {
   const [roles, setRoles] = useState<string[]>([]);
-  const [permissions, setPermissions] = useState<Record<string, string[]>>({});
+  const [permissions, setPermissions] = useState<
+    Record<string, string[]>
+  >({});
   const [industries, setIndustries] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
 
   const refresh = async () => {
-    try {
-      const token = localStorage.getItem("access_token");
-      if (!token) {
-        setRoles([]);
-        setLoading(false);
-        return;
-      }
+    const token = localStorage.getItem("access_token");
 
-      const res = await fetch(
-        `${import.meta.env.VITE_API_URL || "http://192.168.1.79:8000"}/api/v1/auth/my-permissions`,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
+    if (!token) {
+      setRoles([]);
+      setPermissions({});
+      setIndustries([]);
+      setLoading(false);
+      return;
+    }
+
+    setLoading(true);
+
+    try {
+      const data = await apiFetch<any>(
+        "/api/v1/auth/my-permissions"
       );
 
-      if (res.status === 401) {
-        localStorage.removeItem("access_token");
-        setRoles([]);
-        setPermissions({});
-        setIndustries([]);
-        setLoading(false);
-        return;
-      }
-
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-
-      const data = await res.json();
-
-      console.log("🟢 PERMISSIONS API RESPONSE:", {
+      console.log("PERMISSIONS API RESPONSE:", {
         role: data.role,
         roles: data.roles,
         permissionsKeys: Object.keys(data.permissions || {}),
         paymentsValue: data.permissions?.payments,
       });
 
-
-
-      // 👇 Backend `role` (string) ya `roles` (array) — dono handle karo
       const rolesArr: string[] = Array.isArray(data.roles)
         ? data.roles
         : data.role
@@ -79,23 +73,34 @@ export const PermissionsProvider = ({ children }: { children: ReactNode }) => {
       setIndustries(data.industries || []);
     } catch (err) {
       console.error("Failed to load permissions", err);
+
+      // Clear permissions if the session is no longer valid.
+      // apiFetch handles token refresh and redirects on failed refresh.
+      if (!localStorage.getItem("access_token")) {
+        setRoles([]);
+        setPermissions({});
+        setIndustries([]);
+      }
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    console.log("🟡 PermissionsProvider MOUNTED — calling refresh()");
+    console.log(
+      "PermissionsProvider mounted — calling refresh()"
+    );
     void refresh();
   }, []);
 
-  const role = roles[0] ?? null; // primary role for legacy code
+  const role = roles[0] ?? null;
 
   const isSuperAdmin = roles.includes("super_admin");
   const isAdmin = isSuperAdmin || roles.includes("admin");
   const isManager = isAdmin || roles.includes("manager");
   const isExecutive =
-    roles.includes("sales_executive") || roles.includes("executive");
+    roles.includes("sales_executive") ||
+    roles.includes("executive");
 
   return (
     <PermissionsContext.Provider
@@ -119,8 +124,12 @@ export const PermissionsProvider = ({ children }: { children: ReactNode }) => {
 
 export const usePermissions = () => {
   const ctx = useContext(PermissionsContext);
+
   if (!ctx) {
-    throw new Error("usePermissions must be used within <PermissionsProvider>");
+    throw new Error(
+      "usePermissions must be used within <PermissionsProvider>"
+    );
   }
+
   return ctx;
 };
