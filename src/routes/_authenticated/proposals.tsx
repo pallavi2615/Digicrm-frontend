@@ -18,6 +18,7 @@ import {
 import {
   FileText, Sparkles, Loader2, Download, Plus, Pencil, Eye, Trash2, Search,
   Clock, ShieldCheck, LayoutTemplate, Send, CheckCircle2, XCircle, ArrowRightLeft,
+  IndianRupee, TrendingUp, Trophy,
 } from "lucide-react";
 import { notifyPermissionDenied } from "@/components/permission-denied";
 import { usePermissions } from "@/hooks/use-permissions";
@@ -161,13 +162,57 @@ const emptyForm = {
 };
 type Form = typeof emptyForm;
 
+type IconType = React.ComponentType<{ className?: string }>;
+
+// ════════════════════════════════════════════════════════════
+// STATUS COLORS — same pill language as the Leads page
+// draft → slate · sent → sky · negotiation → amber
+// accepted → emerald · declined → rose
+// ════════════════════════════════════════════════════════════
 const statusTone: Record<string, string> = {
-  draft: "bg-muted text-muted-foreground",
-  sent: "bg-info/15 text-info",
-  negotiation: "bg-warning/15 text-warning",
-  accepted: "bg-success/15 text-success",
-  declined: "bg-destructive/15 text-destructive",
+  draft:
+    "bg-slate-100 text-slate-600 ring-1 ring-slate-200 dark:bg-slate-500/15 dark:text-slate-300 dark:ring-slate-500/30",
+  sent:
+    "bg-sky-100 text-sky-700 ring-1 ring-sky-200 dark:bg-sky-500/15 dark:text-sky-300 dark:ring-sky-500/30",
+  negotiation:
+    "bg-amber-100 text-amber-800 ring-1 ring-amber-200 dark:bg-amber-500/15 dark:text-amber-300 dark:ring-amber-500/30",
+  accepted:
+    "bg-emerald-100 text-emerald-700 ring-1 ring-emerald-200 dark:bg-emerald-500/15 dark:text-emerald-300 dark:ring-emerald-500/30",
+  declined:
+    "bg-rose-100 text-rose-700 ring-1 ring-rose-200 dark:bg-rose-500/15 dark:text-rose-300 dark:ring-rose-500/30",
 };
+
+const statusIcons: Record<string, IconType> = {
+  draft: FileText,
+  sent: Send,
+  negotiation: ArrowRightLeft,
+  accepted: CheckCircle2,
+  declined: XCircle,
+};
+
+const avatarColors = [
+  "bg-blue-100 text-blue-700 dark:bg-blue-600 dark:text-white",
+  "bg-pink-100 text-pink-700 dark:bg-pink-600 dark:text-white",
+  "bg-emerald-100 text-emerald-700 dark:bg-emerald-600 dark:text-white",
+  "bg-orange-100 text-orange-700 dark:bg-orange-600 dark:text-white",
+  "bg-violet-100 text-violet-700 dark:bg-violet-600 dark:text-white",
+  "bg-teal-100 text-teal-700 dark:bg-teal-600 dark:text-white",
+  "bg-rose-100 text-rose-700 dark:bg-rose-600 dark:text-white",
+  "bg-amber-100 text-amber-700 dark:bg-amber-600 dark:text-white",
+];
+
+function getInitials(name: string | null | undefined): string {
+  const parts = (name || "?").trim().split(/\s+/);
+  const first = parts[0]?.[0] ?? "?";
+  const last = parts.length > 1 ? parts[parts.length - 1][0] : "";
+  return (first + last).toUpperCase();
+}
+
+// Shared form-control look (matches Leads page inputs)
+const FIELD =
+  "h-9 rounded-lg border-slate-200 bg-white dark:border-slate-700 dark:bg-slate-900/70 dark:text-slate-100";
+const FIELD_LABEL = "text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400";
+const DIALOG = "max-h-[90vh] overflow-y-auto rounded-2xl border-slate-200 dark:border-slate-800";
 
 function leadLabel(l: Lead) {
   return l.company || l.name || `Lead #${l.id}`;
@@ -531,64 +576,79 @@ function ProposalsPage() {
   };
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-4 sm:space-y-5">
+      {/* ───────── Header ───────── */}
       <div className="flex items-start justify-between flex-wrap gap-3">
-        <div>
-          <h1 className="text-3xl font-bold flex items-center gap-2">
-            <FileText className="h-7 w-7 text-primary" /> Proposals
-          </h1>
-          <p className="text-muted-foreground text-sm mt-1">
-            Track every proposal with amount, probability, status and close date.
-          </p>
+        <div className="flex items-center gap-3 sm:gap-4">
+          <div className="flex h-11 w-11 sm:h-14 sm:w-14 shrink-0 items-center justify-center rounded-2xl bg-blue-50 text-blue-600 shadow-sm dark:border dark:border-blue-500/20 dark:bg-blue-500/10 dark:text-blue-400">
+            <FileText className="h-6 w-6 sm:h-7 sm:w-7" />
+          </div>
+          <div>
+            <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 dark:text-white">Proposals</h1>
+            <p className="text-muted-foreground text-sm mt-0.5">
+              Track every proposal with amount, probability, status and close date.
+            </p>
+          </div>
         </div>
         {perms.canCreate("proposals") && (
-          <Button size="sm" onClick={openCreate}><Plus className="mr-2 h-4 w-4" /> New proposal</Button>
+          <Button className="h-9 rounded-lg bg-blue-600 text-white shadow-sm hover:bg-blue-700" onClick={openCreate}>
+            <Plus className="mr-2 h-4 w-4" /> New proposal
+          </Button>
         )}
       </div>
 
-      <div className="grid gap-3 sm:grid-cols-3">
-        <Card className="shadow-card"><CardContent className="p-4">
-          <p className="text-xs text-muted-foreground">Open value</p>
-          <p className="text-2xl font-bold">{totals.value.toLocaleString()}</p>
-        </CardContent></Card>
-        <Card className="shadow-card"><CardContent className="p-4">
-          <p className="text-xs text-muted-foreground">Weighted forecast</p>
-          <p className="text-2xl font-bold">{Math.round(totals.weighted).toLocaleString()}</p>
-        </CardContent></Card>
-        <Card className="shadow-card"><CardContent className="p-4">
-          <p className="text-xs text-muted-foreground">Accepted</p>
-          <p className="text-2xl font-bold">{totals.won}</p>
-        </CardContent></Card>
+      {/* ───────── Stat cards ───────── */}
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+        <StatCard label="Open value" value={totals.value.toLocaleString()} icon={IndianRupee} tone="blue" />
+        <StatCard label="Weighted forecast" value={Math.round(totals.weighted).toLocaleString()} icon={TrendingUp} tone="violet" />
+        <StatCard label="Accepted" value={String(totals.won)} icon={Trophy} tone="green" />
       </div>
 
-      <Card className="shadow-card">
-        <CardHeader>
-          <CardTitle className="text-base flex items-center gap-2">
-            <LayoutTemplate className="h-4 w-4 text-primary" /> Templates
+      {/* ───────── Templates ───────── */}
+      <Card className="rounded-2xl border-slate-200/70 shadow-sm dark:border-slate-800 dark:bg-[#0b1226]">
+        <CardHeader className="pb-3">
+          <CardTitle className="flex items-center gap-2.5 text-base">
+            <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-violet-100 text-violet-600 dark:bg-violet-500/20 dark:text-violet-300">
+              <LayoutTemplate className="h-4 w-4" />
+            </span>
+            Templates
+            <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-600 dark:bg-slate-800 dark:text-slate-300">
+              {(templates ?? []).length}
+            </span>
           </CardTitle>
         </CardHeader>
-        <CardContent className="space-y-2">
+        <CardContent className="space-y-2 p-3 pt-0 sm:p-4 sm:pt-0">
           {(templates ?? []).length === 0 && (
-            <p className="text-sm text-muted-foreground">No templates yet.</p>
+            <div className="rounded-xl border border-dashed border-slate-200 py-8 text-center text-sm text-muted-foreground dark:border-slate-700">
+              No templates yet.
+            </div>
           )}
-          <div className="grid gap-2 sm:grid-cols-2">
+          <div className="grid gap-2.5 sm:grid-cols-2">
             {(templates ?? []).map((t) => (
-              <div key={t.id} className="rounded border p-3 flex items-start justify-between gap-2">
-                <div className="min-w-0">
-                  <p className="font-medium text-sm truncate">{t.title}</p>
-                  <p className="text-xs text-muted-foreground line-clamp-1">
-                    {t.category ? `${t.category} · ` : ""}{t.description || "No description"}
-                  </p>
-                  <p className="text-[10px] text-muted-foreground mt-1">
-                    {t.shared_with_team ? "Shared with the team" : "Private"}
-                    {t.amount ? ` · ${t.currency ?? ""} ${Number(t.amount).toLocaleString()}` : ""}
-                  </p>
+              <div
+                key={t.id}
+                className="flex items-start justify-between gap-2 rounded-xl border border-slate-200/70 bg-white p-3 transition-all hover:border-violet-300 hover:shadow-sm dark:border-slate-800 dark:bg-slate-900/60 dark:hover:border-violet-500/50"
+              >
+                <div className="flex min-w-0 items-start gap-3">
+                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-violet-100 text-violet-600 dark:bg-violet-500/20 dark:text-violet-300">
+                    <FileText className="h-4 w-4" />
+                  </div>
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-medium text-slate-800 dark:text-white">{t.title}</p>
+                    <p className="line-clamp-1 text-xs text-muted-foreground">
+                      {t.category ? `${t.category} · ` : ""}{t.description || "No description"}
+                    </p>
+                    <p className="mt-1 text-[10px] text-muted-foreground">
+                      {t.shared_with_team ? "Shared with the team" : "Private"}
+                      {t.amount ? ` · ${t.currency ?? ""} ${Number(t.amount).toLocaleString()}` : ""}
+                    </p>
+                  </div>
                 </div>
-                <div className="flex gap-1 shrink-0">
+                <div className="flex shrink-0 items-center gap-1">
                   <Button
                     size="icon"
                     variant="ghost"
-                    className="h-8 w-8"
+                    className="h-8 w-8 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 hover:text-blue-700 dark:bg-blue-500/20 dark:text-blue-300 dark:hover:bg-blue-500/30"
                     title="Preview template"
                     onClick={() => openPreview(t)}
                   >
@@ -598,7 +658,7 @@ function ProposalsPage() {
                     <Button
                       size="sm"
                       variant="outline"
-                      className="h-8"
+                      className="h-8 rounded-lg border-violet-200 text-violet-700 hover:bg-violet-50 hover:text-violet-800 dark:border-violet-500/40 dark:text-violet-300 dark:hover:bg-violet-500/10"
                       onClick={() => loadTemplate.mutate(t)}
                       disabled={loadTemplate.isPending && loadTemplate.variables?.id === t.id}
                     >
@@ -609,7 +669,13 @@ function ProposalsPage() {
                     </Button>
                   )}
                   {(t.created_by != null && String(t.created_by) === user?.id || isAdmin) && (
-                    <Button size="icon" variant="ghost" className="h-8 w-8" title="Delete template" onClick={() => deleteTemplate.mutate(t.id)}>
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      className="h-8 w-8 rounded-lg bg-rose-50 text-rose-600 hover:bg-rose-100 hover:text-rose-700 dark:bg-rose-500/15 dark:text-rose-300 dark:hover:bg-rose-500/25"
+                      title="Delete template"
+                      onClick={() => deleteTemplate.mutate(t.id)}
+                    >
                       <Trash2 className="h-4 w-4" />
                     </Button>
                   )}
@@ -620,16 +686,32 @@ function ProposalsPage() {
         </CardContent>
       </Card>
 
-      <Card className="shadow-card">
-        <CardHeader className="flex flex-row items-center justify-between gap-3 flex-wrap">
-          <CardTitle className="text-base">All proposals</CardTitle>
-          <div className="flex gap-2 flex-wrap">
-            <div className="relative">
-              <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-              <Input className="pl-8 w-56" placeholder="Search proposals…" value={search} onChange={(e) => setSearch(e.target.value)} />
+      {/* ───────── All proposals ───────── */}
+      <Card className="rounded-2xl border-slate-200/70 shadow-sm dark:border-slate-800 dark:bg-[#0b1226]">
+        <CardHeader className="flex flex-row flex-wrap items-center justify-between gap-3 pb-3">
+          <CardTitle className="flex items-center gap-2.5 text-base">
+            <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-100 text-blue-600 dark:bg-blue-500/20 dark:text-blue-300">
+              <FileText className="h-4 w-4" />
+            </span>
+            All proposals
+            <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-600 dark:bg-slate-800 dark:text-slate-300">
+              {rows.length}
+            </span>
+          </CardTitle>
+          <div className="flex w-full flex-wrap gap-2 sm:w-auto">
+            <div className="relative w-full sm:w-64">
+              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+              <Input
+                className="h-9 rounded-lg border-slate-200 bg-slate-50/60 pl-9 dark:border-slate-700 dark:bg-slate-900/60 dark:text-slate-100 dark:placeholder:text-slate-500"
+                placeholder="Search proposals…"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+              />
             </div>
             <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="w-40"><SelectValue /></SelectTrigger>
+              <SelectTrigger className="h-9 w-full rounded-lg border-slate-200 bg-white sm:w-40 dark:border-slate-700 dark:bg-slate-900/60 dark:text-slate-100">
+                <SelectValue />
+              </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All statuses</SelectItem>
                 {STATUSES.map((s) => <SelectItem key={s} value={s} className="capitalize">{s}</SelectItem>)}
@@ -637,13 +719,13 @@ function ProposalsPage() {
             </Select>
           </div>
         </CardHeader>
-        <CardContent className="space-y-2">
-          {isLoading && [0, 1, 2].map((i) => <Skeleton key={i} className="h-16 w-full" />)}
+        <CardContent className="space-y-2.5 p-3 pt-0 sm:p-4 sm:pt-0">
+          {isLoading && [0, 1, 2].map((i) => <Skeleton key={i} className="h-20 w-full rounded-xl" />)}
 
           {isError && (
             <div className="text-center py-10 space-y-2">
               <p className="text-sm text-muted-foreground">We couldn't load your proposals.</p>
-              <Button size="sm" variant="outline" onClick={() => void refetch()}>Retry</Button>
+              <Button size="sm" variant="outline" className="rounded-lg" onClick={() => void refetch()}>Retry</Button>
             </div>
           )}
 
@@ -656,98 +738,189 @@ function ProposalsPage() {
             </div>
           )}
 
-          {rows.map((p) => (
-            <div key={p.id} className="rounded border p-3 flex items-start justify-between gap-3 flex-wrap">
-              <div className="min-w-0 flex-1">
-                <div className="flex items-center gap-2 flex-wrap">
-                  <p className="font-medium text-sm">{p.title}</p>
-                  <span className={`rounded px-1.5 py-0.5 text-[10px] capitalize ${statusTone[p.status] ?? "bg-muted text-muted-foreground"}`}>{p.status}</span>
-                  <ApprovalBadge status={p.approval_status} />
-                  <span className="text-[10px] text-muted-foreground">{p.version ?? "v1"}</span>
-                  {p.lead_id && <span className="rounded bg-primary/10 text-primary px-1.5 py-0.5 text-[10px]">Linked to lead</span>}
+          {rows.map((p) => {
+            const StatusIcon = statusIcons[p.status];
+            const prob = Math.min(100, Math.max(0, Number(p.probability ?? 0)));
+            return (
+              <div
+                key={p.id}
+                className="flex flex-col gap-3 rounded-xl border border-slate-200/70 bg-white p-3 transition-colors hover:bg-blue-50/40 sm:p-4 lg:flex-row lg:items-center lg:justify-between dark:border-slate-800 dark:bg-slate-900/40 dark:hover:bg-slate-800/40"
+              >
+                {/* Left: identity + meta */}
+                <div className="flex min-w-0 flex-1 items-start gap-3">
+                  <div
+                    className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-xs font-semibold ${avatarColors[p.id % avatarColors.length]}`}
+                  >
+                    {getInitials(p.title)}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <p className="text-sm font-semibold text-slate-800 dark:text-white">{p.title}</p>
+                      <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-semibold capitalize ${statusTone[p.status] ?? "bg-gray-100 text-gray-700"}`}>
+                        {StatusIcon && <StatusIcon className="h-3 w-3" />}
+                        {p.status}
+                      </span>
+                      <ApprovalBadge status={p.approval_status} />
+                      <span className="rounded-md bg-slate-100 px-1.5 py-0.5 text-[10px] font-medium text-slate-600 dark:bg-slate-800 dark:text-slate-300">
+                        {p.version ?? "v1"}
+                      </span>
+                      {p.lead_id && (
+                        <span className="rounded-md bg-violet-50 px-1.5 py-0.5 text-[10px] font-medium text-violet-600 dark:bg-violet-500/20 dark:text-violet-300">
+                          Linked to lead
+                        </span>
+                      )}
+                    </div>
+                    <p className="mt-0.5 line-clamp-1 text-xs text-muted-foreground">{p.description || "No description"}</p>
+                    <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1.5 text-xs text-muted-foreground">
+                      <span className="text-sm font-semibold text-slate-800 dark:text-white">
+                        {p.currency} {Number(p.amount).toLocaleString()}
+                      </span>
+                      <span className="flex items-center gap-2">
+                        <span className="h-1.5 w-16 overflow-hidden rounded-full bg-slate-200 dark:bg-slate-700">
+                          <span className="block h-full rounded-full bg-teal-500" style={{ width: `${prob}%` }} />
+                        </span>
+                        {p.probability}% likely
+                      </span>
+                      <span>Close {p.close_date ? new Date(p.close_date).toLocaleDateString() : "—"}</span>
+                      <span>Owner {p.owner || "Unassigned"}</span>
+                    </div>
+                  </div>
                 </div>
-                <p className="text-xs text-muted-foreground mt-0.5 line-clamp-1">{p.description || "No description"}</p>
-                <div className="flex flex-wrap gap-3 mt-1.5 text-xs text-muted-foreground">
-                  <span>{p.currency} {Number(p.amount).toLocaleString()}</span>
-                  <span>{p.probability}% likely</span>
-                  <span>Close {p.close_date ? new Date(p.close_date).toLocaleDateString() : "—"}</span>
-                  <span>Owner {p.owner || "Unassigned"}</span>
+
+                {/* Right: actions */}
+                <div className="flex flex-wrap items-center gap-1.5 lg:justify-end">
+                  {p.status === "draft" && perms.canEdit("proposals") && (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="h-8 rounded-lg border-sky-200 bg-sky-50 text-sky-700 hover:bg-sky-100 hover:text-sky-800 dark:border-sky-500/40 dark:bg-sky-500/10 dark:text-sky-300 dark:hover:bg-sky-500/20"
+                      onClick={() => sendProposal.mutate(p.id)}
+                      disabled={sendProposal.isPending}
+                    >
+                      <Send className="mr-1.5 h-3.5 w-3.5" /> Send
+                    </Button>
+                  )}
+                  {p.status === "sent" && perms.canEdit("proposals") && (
+                    <>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="h-8 rounded-lg border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 hover:text-emerald-800 dark:border-emerald-500/40 dark:bg-emerald-500/10 dark:text-emerald-300 dark:hover:bg-emerald-500/20"
+                        onClick={() => acceptProposal.mutate(p.id)}
+                        disabled={acceptProposal.isPending}
+                      >
+                        <CheckCircle2 className="mr-1.5 h-3.5 w-3.5" /> Accepted
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="h-8 rounded-lg border-rose-200 bg-rose-50 text-rose-700 hover:bg-rose-100 hover:text-rose-800 dark:border-rose-500/40 dark:bg-rose-500/10 dark:text-rose-300 dark:hover:bg-rose-500/20"
+                        onClick={() => declineProposal.mutate(p.id)}
+                        disabled={declineProposal.isPending}
+                      >
+                        <XCircle className="mr-1.5 h-3.5 w-3.5" /> Declined
+                      </Button>
+                    </>
+                  )}
+                  {perms.canEdit("proposals") && (p.approval_status ?? "pending") !== "pending" && !canConvert(p) && (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="h-8 rounded-lg border-amber-200 bg-amber-50 text-amber-800 hover:bg-amber-100 dark:border-amber-500/40 dark:bg-amber-500/10 dark:text-amber-300 dark:hover:bg-amber-500/20"
+                      onClick={() => requestApproval.mutate(p)}
+                      disabled={requestApproval.isPending}
+                    >
+                      <Clock className="mr-1.5 h-3.5 w-3.5" /> Request approval
+                    </Button>
+                  )}
+                  {isAdmin && p.approval_status === "pending" && (
+                    <>
+                      <Button
+                        size="sm"
+                        className="h-8 rounded-lg bg-emerald-600 text-white hover:bg-emerald-700"
+                        onClick={() => approveProposal.mutate(p.id)}
+                        disabled={approveProposal.isPending}
+                      >
+                        <ShieldCheck className="mr-1.5 h-3.5 w-3.5" /> Approve
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="h-8 rounded-lg border-rose-200 text-rose-700 hover:bg-rose-50 hover:text-rose-800 dark:border-rose-500/40 dark:text-rose-300 dark:hover:bg-rose-500/10"
+                        onClick={() => rejectProposal.mutate(p.id)}
+                        disabled={rejectProposal.isPending}
+                      >
+                        Reject
+                      </Button>
+                    </>
+                  )}
+                  {perms.canEdit("proposals") && canConvert(p) && p.lead_id && (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="h-8 rounded-lg border-indigo-200 bg-indigo-50 text-indigo-700 hover:bg-indigo-100 hover:text-indigo-800 dark:border-indigo-500/40 dark:bg-indigo-500/10 dark:text-indigo-300 dark:hover:bg-indigo-500/20"
+                      onClick={() => openConvert(p)}
+                    >
+                      <ArrowRightLeft className="mr-1.5 h-3.5 w-3.5" />
+                      {p.pipeline_stage === "converted" ? "Update deal" : "Convert to deal"}
+                    </Button>
+                  )}
+                  <Button
+                    size="icon"
+                    variant="ghost"
+                    className="h-8 w-8 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 hover:text-blue-700 dark:bg-blue-500/20 dark:text-blue-300 dark:hover:bg-blue-500/30"
+                    onClick={() => setViewing(p)}
+                    title="View"
+                  >
+                    <Eye className="h-4 w-4" />
+                  </Button>
+                  {perms.canEdit("proposals") && (
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      className="h-8 w-8 rounded-lg bg-slate-50 text-slate-600 hover:bg-slate-100 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700"
+                      onClick={() => openEdit(p)}
+                      title="Edit"
+                    >
+                      <Pencil className="h-4 w-4" />
+                    </Button>
+                  )}
+                  {perms.canDelete("proposals") && (
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      className="h-8 w-8 rounded-lg bg-rose-50 text-rose-600 hover:bg-rose-100 hover:text-rose-700 dark:bg-rose-500/15 dark:text-rose-300 dark:hover:bg-rose-500/25"
+                      onClick={() => del.mutate(p.id)}
+                      title="Delete"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  )}
                 </div>
               </div>
-              <div className="flex gap-1 flex-wrap justify-end">
-                {p.status === "draft" && perms.canEdit("proposals") && (
-                  <Button size="sm" variant="outline" className="h-8" onClick={() => sendProposal.mutate(p.id)} disabled={sendProposal.isPending}>
-                    <Send className="mr-1.5 h-3.5 w-3.5" /> Send
-                  </Button>
-                )}
-                {p.status === "sent" && perms.canEdit("proposals") && (
-                  <>
-                    <Button size="sm" variant="outline" className="h-8" onClick={() => acceptProposal.mutate(p.id)} disabled={acceptProposal.isPending}>
-                      <CheckCircle2 className="mr-1.5 h-3.5 w-3.5" /> Accepted
-                    </Button>
-                    <Button size="sm" variant="outline" className="h-8" onClick={() => declineProposal.mutate(p.id)} disabled={declineProposal.isPending}>
-                      <XCircle className="mr-1.5 h-3.5 w-3.5" /> Declined
-                    </Button>
-                  </>
-                )}
-                {perms.canEdit("proposals") && (p.approval_status ?? "pending") !== "pending" && !canConvert(p) && (
-                  <Button size="sm" variant="outline" className="h-8" onClick={() => requestApproval.mutate(p)} disabled={requestApproval.isPending}>
-                    <Clock className="mr-1.5 h-3.5 w-3.5" /> Request approval
-                  </Button>
-                )}
-                {isAdmin && p.approval_status === "pending" && (
-                  <>
-                    <Button size="sm" className="h-8" onClick={() => approveProposal.mutate(p.id)} disabled={approveProposal.isPending}>
-                      <ShieldCheck className="mr-1.5 h-3.5 w-3.5" /> Approve
-                    </Button>
-                    <Button size="sm" variant="outline" className="h-8" onClick={() => rejectProposal.mutate(p.id)} disabled={rejectProposal.isPending}>
-                      Reject
-                    </Button>
-                  </>
-                )}
-                {perms.canEdit("proposals") && canConvert(p) && p.lead_id && (
-                  <Button size="sm" variant="outline" className="h-8" onClick={() => openConvert(p)}>
-                    <ArrowRightLeft className="mr-1.5 h-3.5 w-3.5" />
-                    {p.pipeline_stage === "converted" ? "Update deal" : "Convert to deal"}
-                  </Button>
-                )}
-                <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => setViewing(p)} title="View">
-                  <Eye className="h-4 w-4" />
-                </Button>
-                {perms.canEdit("proposals") && (
-                  <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => openEdit(p)} title="Edit">
-                    <Pencil className="h-4 w-4" />
-                  </Button>
-                )}
-                {perms.canDelete("proposals") && (
-                  <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => del.mutate(p.id)} title="Delete">
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                )}
-              </div>
-            </div>
-          ))}
+            );
+          })}
         </CardContent>
       </Card>
 
-      {/* Create / edit */}
+      {/* ───────── Create / edit ───────── */}
       <Dialog open={formOpen} onOpenChange={setFormOpen}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className={`max-w-2xl ${DIALOG}`}>
           <DialogHeader>
             <DialogTitle>{editing ? "Edit proposal" : "New proposal"}</DialogTitle>
             <DialogDescription>Link the proposal to a qualified lead and track its forecast.</DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-1">
-            <div className="space-y-1.5"><Label>Title *</Label>
-              <Input value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} placeholder="CRM implementation for Acme" />
+            <div className="space-y-1.5"><Label className={FIELD_LABEL}>Title *</Label>
+              <Input className={FIELD} value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} placeholder="CRM implementation for Acme" />
             </div>
-            <div className="space-y-1.5"><Label>Description</Label>
-              <Textarea rows={3} value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} />
+            <div className="space-y-1.5"><Label className={FIELD_LABEL}>Description</Label>
+              <Textarea className="rounded-lg border-slate-200 dark:border-slate-700 dark:bg-slate-900/70" rows={3} value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} />
             </div>
 
-            <div className="space-y-1.5"><Label>Template</Label>
+            <div className="space-y-1.5"><Label className={FIELD_LABEL}>Template</Label>
               <Select value={form.template_id} onValueChange={(v) => setForm({ ...form, template_id: v })}>
-                <SelectTrigger><SelectValue placeholder="No template" /></SelectTrigger>
+                <SelectTrigger className={FIELD}><SelectValue placeholder="No template" /></SelectTrigger>
                 <SelectContent className="max-h-72">
                   <SelectItem value="none">No template</SelectItem>
                   {(templates ?? []).map((t) => (
@@ -757,10 +930,10 @@ function ProposalsPage() {
               </Select>
             </div>
 
-            <div className="grid sm:grid-cols-2 gap-3">
-              <div className="space-y-1.5"><Label>Related lead</Label>
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <div className="space-y-1.5"><Label className={FIELD_LABEL}>Related lead</Label>
                 <Select value={form.lead_id} onValueChange={(v) => setForm({ ...form, lead_id: v })}>
-                  <SelectTrigger><SelectValue placeholder="None" /></SelectTrigger>
+                  <SelectTrigger className={FIELD}><SelectValue placeholder="None" /></SelectTrigger>
                   <SelectContent className="max-h-72">
                     <SelectItem value="none">None</SelectItem>
                     {relatedLeadOptions.length === 0 && (
@@ -775,8 +948,9 @@ function ProposalsPage() {
                 </Select>
                 <p className="text-[11px] text-muted-foreground">Only leads with status "Qualified" are listed.</p>
               </div>
-              <div className="space-y-1.5"><Label>Owner</Label>
+              <div className="space-y-1.5"><Label className={FIELD_LABEL}>Owner</Label>
                 <Input
+                  className={FIELD}
                   disabled
                   value={
                     form.lead_id === "none"
@@ -791,36 +965,36 @@ function ProposalsPage() {
               </div>
             </div>
 
-            <div className="grid sm:grid-cols-4 gap-3">
+            <div className={`grid grid-cols-2 gap-3 ${editing ? "sm:grid-cols-4" : "sm:grid-cols-3"}`}>
               {editing && (
-                <div className="space-y-1.5"><Label>Status</Label>
+                <div className="col-span-2 space-y-1.5 sm:col-span-1"><Label className={FIELD_LABEL}>Status</Label>
                   <Select value={form.status} onValueChange={(v) => setForm({ ...form, status: v as Status })}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectTrigger className={FIELD}><SelectValue /></SelectTrigger>
                     <SelectContent>
                       {STATUSES.map((s) => <SelectItem key={s} value={s} className="capitalize">{s}</SelectItem>)}
                     </SelectContent>
                   </Select>
                 </div>
               )}
-              <div className="space-y-1.5"><Label>Amount</Label>
-                <Input type="number" min={0} value={form.amount} onChange={(e) => setForm({ ...form, amount: e.target.value })} />
+              <div className="space-y-1.5"><Label className={FIELD_LABEL}>Amount</Label>
+                <Input className={FIELD} type="number" min={0} value={form.amount} onChange={(e) => setForm({ ...form, amount: e.target.value })} />
               </div>
-              <div className="space-y-1.5"><Label>Currency</Label>
+              <div className="space-y-1.5"><Label className={FIELD_LABEL}>Currency</Label>
                 <Select value={form.currency} onValueChange={(v) => setForm({ ...form, currency: v })}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectTrigger className={FIELD}><SelectValue /></SelectTrigger>
                   <SelectContent>
                     {CURRENCIES.map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}
                   </SelectContent>
                 </Select>
               </div>
-              <div className="space-y-1.5"><Label>Probability (%)</Label>
-                <Input type="number" min={0} max={100} value={form.probability} onChange={(e) => setForm({ ...form, probability: e.target.value })} />
+              <div className="space-y-1.5"><Label className={FIELD_LABEL}>Probability (%)</Label>
+                <Input className={FIELD} type="number" min={0} max={100} value={form.probability} onChange={(e) => setForm({ ...form, probability: e.target.value })} />
               </div>
             </div>
 
-            <div className="grid sm:grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <div className="space-y-1.5">
-                <Label>Close date</Label>
+                <Label className={FIELD_LABEL}>Close date</Label>
                 <DatePicker
                   value={form.close_date}
                   onChange={(val) => setForm({ ...form, close_date: val })}
@@ -828,7 +1002,7 @@ function ProposalsPage() {
                 />
               </div>
               <div className="space-y-1.5">
-                <Label>Valid until</Label>
+                <Label className={FIELD_LABEL}>Valid until</Label>
                 <DatePicker
                   value={form.valid_until}
                   onChange={(val) => setForm({ ...form, valid_until: val })}
@@ -838,17 +1012,23 @@ function ProposalsPage() {
             </div>
 
             <Separator />
-            <div className="flex items-center justify-between gap-2">
+            <div className="flex flex-wrap items-center justify-between gap-2">
               <div>
-                <p className="text-sm font-medium">Proposal document</p>
+                <p className="text-sm font-semibold text-slate-800 dark:text-white">Proposal document</p>
                 <p className="text-xs text-muted-foreground">Write the full document below.</p>
               </div>
-              <Button size="sm" variant="outline" onClick={handleGenerateWithAI}>
+              <Button
+                size="sm"
+                variant="outline"
+                className="rounded-lg border-violet-200 text-violet-700 hover:bg-violet-50 hover:text-violet-800 dark:border-violet-500/40 dark:text-violet-300 dark:hover:bg-violet-500/10"
+                onClick={handleGenerateWithAI}
+              >
                 <Sparkles className="mr-2 h-4 w-4" />
                 Generate with AI
               </Button>
             </div>
             <Textarea
+              className="rounded-lg border-slate-200 dark:border-slate-700 dark:bg-slate-900/70"
               rows={8}
               value={form.terms}
               onChange={(e) => setForm({ ...form, terms: e.target.value })}
@@ -856,8 +1036,8 @@ function ProposalsPage() {
             />
           </div>
           <DialogFooter className="gap-2">
-            <Button variant="outline" onClick={() => setFormOpen(false)}>Cancel</Button>
-            <Button onClick={() => save.mutate()} disabled={save.isPending}>
+            <Button variant="outline" className="rounded-lg" onClick={() => setFormOpen(false)}>Cancel</Button>
+            <Button className="rounded-lg bg-blue-600 text-white hover:bg-blue-700" onClick={() => save.mutate()} disabled={save.isPending}>
               {save.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               {editing ? "Save changes" : "Create proposal"}
             </Button>
@@ -865,9 +1045,9 @@ function ProposalsPage() {
         </DialogContent>
       </Dialog>
 
-      {/* Template preview */}
+      {/* ───────── Template preview ───────── */}
       <Dialog open={!!previewing} onOpenChange={(o) => !o && closePreview()}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className={`max-w-2xl ${DIALOG}`}>
           <DialogHeader>
             <DialogTitle>{previewing?.title}</DialogTitle>
             <DialogDescription>
@@ -876,10 +1056,11 @@ function ProposalsPage() {
           </DialogHeader>
 
           <div className="space-y-3">
-            <div className="flex gap-2 items-end">
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-end">
               <div className="flex-1 space-y-1.5">
-                <Label>Client name (optional)</Label>
+                <Label className={FIELD_LABEL}>Client name (optional)</Label>
                 <Input
+                  className={FIELD}
                   value={clientName}
                   onChange={(e) => setClientName(e.target.value)}
                   placeholder="Acme Corp"
@@ -887,6 +1068,7 @@ function ProposalsPage() {
               </div>
               <Button
                 variant="outline"
+                className="h-9 rounded-lg border-violet-200 text-violet-700 hover:bg-violet-50 hover:text-violet-800 dark:border-violet-500/40 dark:text-violet-300 dark:hover:bg-violet-500/10"
                 disabled={!previewing || previewTemplate.isPending}
                 onClick={() =>
                   previewing && previewTemplate.mutate({ id: previewing.id, client: clientName })
@@ -897,31 +1079,25 @@ function ProposalsPage() {
               </Button>
             </div>
 
-            {previewTemplate.isPending && !rendered && <Skeleton className="h-48 w-full" />}
+            {previewTemplate.isPending && !rendered && <Skeleton className="h-48 w-full rounded-xl" />}
 
             {rendered && (
               <div className="space-y-3 text-sm">
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <p className="text-xs text-muted-foreground">Amount</p>
-                    <p className="font-medium">
-                      {rendered.currency ?? ""} {Number(rendered.amount ?? 0).toLocaleString()}
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-xs text-muted-foreground">Category</p>
-                    <p className="font-medium">{previewing?.category || "—"}</p>
-                  </div>
+                <div className="grid grid-cols-2 gap-2">
+                  <DetailTile label="Amount" tone="blue">
+                    {rendered.currency ?? ""} {Number(rendered.amount ?? 0).toLocaleString()}
+                  </DetailTile>
+                  <DetailTile label="Category" tone="violet">{previewing?.category || "—"}</DetailTile>
                 </div>
                 {rendered.description && (
                   <div>
-                    <p className="text-xs text-muted-foreground">Description</p>
+                    <p className={`mb-1 ${FIELD_LABEL}`}>Description</p>
                     <p>{rendered.description}</p>
                   </div>
                 )}
                 <div>
-                  <p className="text-xs text-muted-foreground mb-1">Document</p>
-                  <div className="rounded border p-3 whitespace-pre-wrap max-h-80 overflow-y-auto text-xs">
+                  <p className={`mb-1 ${FIELD_LABEL}`}>Document</p>
+                  <div className="max-h-80 overflow-y-auto whitespace-pre-wrap rounded-xl border border-slate-200 bg-slate-50/60 p-3 text-xs dark:border-slate-700 dark:bg-slate-900/60">
                     {rendered.document_content || rendered.terms || "This template has no document content."}
                   </div>
                 </div>
@@ -930,11 +1106,12 @@ function ProposalsPage() {
           </div>
 
           <DialogFooter className="gap-2">
-            <Button variant="outline" onClick={closePreview}>Close</Button>
+            <Button variant="outline" className="rounded-lg" onClick={closePreview}>Close</Button>
             {perms.canCreate("proposals") && previewing && (
               <>
                 <Button
                   variant="outline"
+                  className="rounded-lg"
                   disabled={createFromTemplate.isPending}
                   onClick={() => createFromTemplate.mutate(previewing.id)}
                 >
@@ -942,6 +1119,7 @@ function ProposalsPage() {
                   Create draft now
                 </Button>
                 <Button
+                  className="rounded-lg bg-blue-600 text-white hover:bg-blue-700"
                   disabled={!rendered}
                   onClick={() => {
                     if (!rendered) return;
@@ -957,40 +1135,56 @@ function ProposalsPage() {
         </DialogContent>
       </Dialog>
 
-      {/* View */}
+      {/* ───────── View ───────── */}
       <Dialog open={!!viewing} onOpenChange={(o) => !o && setViewing(null)}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className={`max-w-2xl ${DIALOG}`}>
           <DialogHeader>
             <DialogTitle>{viewing?.title}</DialogTitle>
             <DialogDescription className="capitalize">{viewing?.status} · owner {viewing?.owner || "Unassigned"}</DialogDescription>
           </DialogHeader>
           {viewing && (
-            <div className="space-y-3 text-sm">
-              <div className="flex items-center gap-2 flex-wrap">
+            <div className="space-y-4 text-sm">
+              <div className="flex flex-wrap items-center gap-2">
+                <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-semibold capitalize ${statusTone[viewing.status] ?? "bg-gray-100 text-gray-700"}`}>
+                  {(() => {
+                    const I = statusIcons[viewing.status];
+                    return I ? <I className="h-3 w-3" /> : null;
+                  })()}
+                  {viewing.status}
+                </span>
                 <ApprovalBadge status={viewing.approval_status} />
-                <span className="text-xs text-muted-foreground">{viewing.version ?? "v1"}</span>
+                <span className="rounded-md bg-slate-100 px-1.5 py-0.5 text-[10px] font-medium text-slate-600 dark:bg-slate-800 dark:text-slate-300">
+                  {viewing.version ?? "v1"}
+                </span>
               </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div><p className="text-xs text-muted-foreground">Amount</p><p className="font-medium">{viewing.currency} {Number(viewing.amount).toLocaleString()}</p></div>
-                <div><p className="text-xs text-muted-foreground">Probability</p><p className="font-medium">{viewing.probability}%</p></div>
-                <div><p className="text-xs text-muted-foreground">Close date</p><p className="font-medium">{viewing.close_date ? new Date(viewing.close_date).toLocaleDateString() : "—"}</p></div>
-                <div><p className="text-xs text-muted-foreground">Valid until</p><p className="font-medium">{viewing.valid_until ? new Date(viewing.valid_until).toLocaleDateString() : "—"}</p></div>
-                <div><p className="text-xs text-muted-foreground">Created</p><p className="font-medium">{new Date(viewing.created_at).toLocaleDateString()}</p></div>
-                <div><p className="text-xs text-muted-foreground">Sent</p><p className="font-medium">{viewing.sent_at ? new Date(viewing.sent_at).toLocaleDateString() : "—"}</p></div>
-                <div><p className="text-xs text-muted-foreground">Accepted</p><p className="font-medium">{viewing.accepted_at ? new Date(viewing.accepted_at).toLocaleDateString() : "—"}</p></div>
-                <div><p className="text-xs text-muted-foreground">Declined</p><p className="font-medium">{viewing.declined_at ? new Date(viewing.declined_at).toLocaleDateString() : "—"}</p></div>
+
+              <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+                <DetailTile label="Amount" tone="blue">{viewing.currency} {Number(viewing.amount).toLocaleString()}</DetailTile>
+                <DetailTile label="Probability" tone="teal">{viewing.probability}%</DetailTile>
+                <DetailTile label="Close date" tone="violet">{viewing.close_date ? new Date(viewing.close_date).toLocaleDateString() : "—"}</DetailTile>
+                <DetailTile label="Valid until" tone="amber">{viewing.valid_until ? new Date(viewing.valid_until).toLocaleDateString() : "—"}</DetailTile>
+                <DetailTile label="Created" tone="slate">{new Date(viewing.created_at).toLocaleDateString()}</DetailTile>
+                <DetailTile label="Sent" tone="sky">{viewing.sent_at ? new Date(viewing.sent_at).toLocaleDateString() : "—"}</DetailTile>
+                <DetailTile label="Accepted" tone="green">{viewing.accepted_at ? new Date(viewing.accepted_at).toLocaleDateString() : "—"}</DetailTile>
+                <DetailTile label="Declined" tone="rose">{viewing.declined_at ? new Date(viewing.declined_at).toLocaleDateString() : "—"}</DetailTile>
               </div>
-              {viewing.description && <div><p className="text-xs text-muted-foreground">Description</p><p>{viewing.description}</p></div>}
+
+              {viewing.description && (
+                <div>
+                  <p className={`mb-1 ${FIELD_LABEL}`}>Description</p>
+                  <p>{viewing.description}</p>
+                </div>
+              )}
               {viewing.terms && (
                 <div>
-                  <p className="text-xs text-muted-foreground mb-1">Document</p>
-                  <div className="rounded border p-3 whitespace-pre-wrap max-h-80 overflow-y-auto text-xs">{viewing.terms}</div>
+                  <p className={`mb-1 ${FIELD_LABEL}`}>Document</p>
+                  <div className="max-h-80 overflow-y-auto whitespace-pre-wrap rounded-xl border border-slate-200 bg-slate-50/60 p-3 text-xs dark:border-slate-700 dark:bg-slate-900/60">
+                    {viewing.terms}
+                  </div>
                 </div>
               )}
 
-              <Separator />
-              <div>
-                <p className="text-xs text-muted-foreground mb-2 flex items-center gap-1.5"><ShieldCheck className="h-3.5 w-3.5" /> Approval</p>
+              <SectionBox title="Approval" icon={ShieldCheck} tone="emerald">
                 <p className="text-xs">
                   {viewing.approval_status === "pending" && "Waiting on admin review."}
                   {viewing.approval_status === "approved" && "Approved."}
@@ -998,38 +1192,35 @@ function ProposalsPage() {
                   {!viewing.approval_status && "No approval requested yet."}
                 </p>
                 {!isAdmin && (
-                  <p className="text-[11px] text-muted-foreground mt-2">Only Admins can approve or reject a proposal.</p>
+                  <p className="mt-2 text-[11px] text-muted-foreground">Only Admins can approve or reject a proposal.</p>
                 )}
-              </div>
+              </SectionBox>
 
-              {/* ⭐ NEW: Activity timeline */}
-              <Separator />
-              <div>
-                <p className="text-xs text-muted-foreground mb-2 flex items-center gap-1.5">
-                  <Clock className="h-3.5 w-3.5" /> Activity timeline
-                </p>
+              {/* ⭐ Activity timeline */}
+              <SectionBox title="Activity timeline" icon={Clock} tone="violet">
                 <ProposalTimeline proposalIds={[String(viewing.id)]} />
-              </div>
+              </SectionBox>
 
-              {/* ⭐ NEW: Approval history (sirf agar approved/rejected hai) */}
+              {/* ⭐ Approval history (only if approved/rejected) */}
               {viewing.approval_status && viewing.approval_status !== "pending" && (
-                <>
-                  <Separator />
-                  <div>
-                    <p className="text-xs text-muted-foreground mb-2 flex items-center gap-1.5">
-                      <ShieldCheck className="h-3.5 w-3.5" /> Approval history
-                    </p>
-                    <ApprovalHistory proposalId={String(viewing.id)} />
-                  </div>
-                </>
+                <SectionBox title="Approval history" icon={ShieldCheck} tone="amber">
+                  <ApprovalHistory proposalId={String(viewing.id)} />
+                </SectionBox>
               )}
             </div>
           )}
 
-          <DialogFooter>
-            {viewing && <Button variant="outline" onClick={() => download(viewing)}><Download className="mr-2 h-4 w-4" /> Download</Button>}
+          <DialogFooter className="gap-2">
+            {viewing && (
+              <Button variant="outline" className="rounded-lg" onClick={() => download(viewing)}>
+                <Download className="mr-2 h-4 w-4" /> Download
+              </Button>
+            )}
             {viewing && perms.canEdit("proposals") && (
-              <Button onClick={() => { const p = viewing; setViewing(null); openEdit(p); }}>
+              <Button
+                className="rounded-lg bg-blue-600 text-white hover:bg-blue-700"
+                onClick={() => { const p = viewing; setViewing(null); openEdit(p); }}
+              >
                 <Pencil className="mr-2 h-4 w-4" /> Edit
               </Button>
             )}
@@ -1037,9 +1228,9 @@ function ProposalsPage() {
         </DialogContent>
       </Dialog>
 
-      {/* Convert to deal */}
+      {/* ───────── Convert to deal ───────── */}
       <Dialog open={!!converting} onOpenChange={(o) => !o && setConverting(null)}>
-        <DialogContent className="max-w-md">
+        <DialogContent className={`max-w-md ${DIALOG}`}>
           <DialogHeader>
             <DialogTitle>{converting?.pipeline_stage === "converted" ? "Update pipeline deal" : "Convert to pipeline deal"}</DialogTitle>
             <DialogDescription>
@@ -1047,9 +1238,9 @@ function ProposalsPage() {
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-3">
-            <div className="space-y-1.5"><Label>Pipeline stage</Label>
+            <div className="space-y-1.5"><Label className={FIELD_LABEL}>Pipeline stage</Label>
               <Select value={convertForm.stage} onValueChange={(v) => setConvertForm({ ...convertForm, stage: v as LeadStatus })}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectTrigger className={FIELD}><SelectValue /></SelectTrigger>
                 <SelectContent>
                   {DEAL_STAGES.map((s) => (
                     <SelectItem key={s} value={s} className="capitalize">{s.replace("_", " ")}</SelectItem>
@@ -1057,19 +1248,120 @@ function ProposalsPage() {
                 </SelectContent>
               </Select>
             </div>
-            <div className="space-y-1.5"><Label>Deal value</Label>
-              <Input type="number" min={0} value={convertForm.value} onChange={(e) => setConvertForm({ ...convertForm, value: e.target.value })} />
+            <div className="space-y-1.5"><Label className={FIELD_LABEL}>Deal value</Label>
+              <Input className={FIELD} type="number" min={0} value={convertForm.value} onChange={(e) => setConvertForm({ ...convertForm, value: e.target.value })} />
             </div>
           </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setConverting(null)}>Cancel</Button>
-            <Button onClick={() => convert.mutate()} disabled={convert.isPending}>
+          <DialogFooter className="gap-2">
+            <Button variant="outline" className="rounded-lg" onClick={() => setConverting(null)}>Cancel</Button>
+            <Button className="rounded-lg bg-blue-600 text-white hover:bg-blue-700" onClick={() => convert.mutate()} disabled={convert.isPending}>
               {convert.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               {converting?.pipeline_stage === "converted" ? "Update deal" : "Update lead"}
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
+    </div>
+  );
+}
+
+// ============ HELPERS (same visual language as the Leads page) ============
+const statTones: Record<string, { card: string; icon: string }> = {
+  blue: {
+    card: "from-blue-50 to-white border-blue-100 dark:from-blue-950 dark:to-slate-950 dark:border-blue-500/40",
+    icon: "bg-blue-100 text-blue-600 dark:bg-blue-500/25 dark:text-blue-300",
+  },
+  violet: {
+    card: "from-violet-50 to-white border-violet-100 dark:from-violet-950 dark:to-slate-950 dark:border-violet-500/40",
+    icon: "bg-violet-500 text-white",
+  },
+  green: {
+    card: "from-green-50 to-white border-green-100 dark:from-emerald-950 dark:to-slate-950 dark:border-emerald-500/40",
+    icon: "bg-green-100 text-green-600 dark:bg-emerald-500/25 dark:text-emerald-300",
+  },
+};
+
+function StatCard({
+  label, value, icon: Icon, tone,
+}: {
+  label: string;
+  value: string;
+  icon: IconType;
+  tone: keyof typeof statTones;
+}) {
+  const t = statTones[tone];
+  return (
+    <div className={`flex items-center gap-3 sm:gap-4 rounded-2xl border bg-linear-to-br p-3 sm:p-4 shadow-sm ${t.card}`}>
+      <div className={`flex h-10 w-10 sm:h-11 sm:w-11 shrink-0 items-center justify-center rounded-full ${t.icon}`}>
+        <Icon className="h-5 w-5" />
+      </div>
+      <div className="min-w-0">
+        <div className="truncate text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-300">{label}</div>
+        <div className="truncate text-xl sm:text-2xl font-bold text-slate-800 dark:text-white">{value}</div>
+      </div>
+    </div>
+  );
+}
+
+const tileTones: Record<string, string> = {
+  blue: "border-blue-100 bg-blue-50 dark:border-blue-500/30 dark:bg-blue-500/10",
+  violet: "border-violet-100 bg-violet-50 dark:border-violet-500/30 dark:bg-violet-500/10",
+  teal: "border-teal-100 bg-teal-50 dark:border-teal-500/30 dark:bg-teal-500/10",
+  amber: "border-amber-100 bg-amber-50 dark:border-amber-500/30 dark:bg-amber-500/10",
+  green: "border-emerald-100 bg-emerald-50 dark:border-emerald-500/30 dark:bg-emerald-500/10",
+  rose: "border-rose-100 bg-rose-50 dark:border-rose-500/30 dark:bg-rose-500/10",
+  sky: "border-sky-100 bg-sky-50 dark:border-sky-500/30 dark:bg-sky-500/10",
+  slate: "border-slate-200 bg-slate-50 dark:border-slate-700 dark:bg-slate-800/60",
+};
+
+function DetailTile({
+  label, tone, children,
+}: {
+  label: string;
+  tone: keyof typeof tileTones;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className={`min-w-0 rounded-xl border p-3 ${tileTones[tone]}`}>
+      <p className="text-[11px] uppercase tracking-wide text-muted-foreground">{label}</p>
+      <p className="mt-1 truncate text-sm font-semibold text-slate-900 dark:text-white">{children}</p>
+    </div>
+  );
+}
+
+const sectionTones: Record<string, { box: string; chip: string }> = {
+  emerald: {
+    box: "border-emerald-100 dark:border-emerald-500/25",
+    chip: "bg-emerald-100 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-300",
+  },
+  violet: {
+    box: "border-violet-100 dark:border-violet-500/25",
+    chip: "bg-violet-100 text-violet-600 dark:bg-violet-500/20 dark:text-violet-300",
+  },
+  amber: {
+    box: "border-amber-100 dark:border-amber-500/25",
+    chip: "bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-300",
+  },
+};
+
+function SectionBox({
+  title, icon: Icon, tone, children,
+}: {
+  title: string;
+  icon: IconType;
+  tone: keyof typeof sectionTones;
+  children: React.ReactNode;
+}) {
+  const t = sectionTones[tone];
+  return (
+    <div className={`rounded-xl border bg-white p-4 shadow-sm dark:bg-slate-900/60 ${t.box}`}>
+      <div className="mb-3 flex items-center gap-2">
+        <span className={`flex h-7 w-7 items-center justify-center rounded-lg ${t.chip}`}>
+          <Icon className="h-3.5 w-3.5" />
+        </span>
+        <h3 className="text-sm font-semibold text-slate-900 dark:text-white">{title}</h3>
+      </div>
+      {children}
     </div>
   );
 }

@@ -164,6 +164,7 @@ const LEADS_ITEMS: NavItem[] = [
   { title: "Contacts", url: "/contacts", icon: UserCircle },
   { title: "Companies", url: "/companies", icon: Building2 },
   { title: "Pipeline", url: "/pipeline", icon: KanbanSquare },
+  { title: "Proposals", url: "/proposals", icon: FileText },
   { title: "Lead Sources", url: "/lead-sources", icon: TrendingUp },
 ];
 

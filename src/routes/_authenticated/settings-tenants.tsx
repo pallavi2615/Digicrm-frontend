@@ -2,7 +2,7 @@ import { RoleGuard, ADMINS } from "@/components/role-guard";
 import { defineRoute } from "@/lib/router-compat";
 import { useMutation, useQuery, useQueryClient } from "@/lib/react-data-client";
 import { useState } from "react";
-import { apiFetch } from "@/lib/api";
+import { apiFetch, apiUpload, API_URL } from "@/lib/api";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -19,12 +19,13 @@ import {
 } from "@/components/ui/table";
 import {
   Building2, Plus, Copy, Loader2, ShieldAlert, Mail, Search,
+  FileText, Upload, CheckCircle2, XCircle, Trash2, ExternalLink,
 } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/hooks/use-auth";
 
 // ============================================================
-// TYPES (match app/schemas/tenant.py)
+// TYPES (match app/schemas/tenant.py + tenant_document.py)
 // ============================================================
 
 type TenantListItem = {
@@ -33,7 +34,6 @@ type TenantListItem = {
   subdomain: string | null;
   status: string;
   created_at?: string;
-  // Optional — shown only if your TenantListItem schema returns them
   lead_count?: number;
   proposal_count?: number;
   user_count?: number;
@@ -48,6 +48,7 @@ type CreatePayload = {
   admin_full_name: string;
   plan: string;
   industry_template: string;
+  draft_id?: string; // required by backend — set from the documents step
   tagline?: string;
   primary_color?: string;
   accent_color?: string;
@@ -76,11 +77,44 @@ type ResendResponse = {
   admin_email: string;
 };
 
+type DocStatus = "pending" | "verified" | "rejected";
+
+type TenantDoc = {
+  id: number;
+  draft_id?: string | null;
+  tenant_id?: number | null;
+  document_type: string;
+  document_number?: string | null;
+  file_name: string;
+  file_url: string;
+  file_size?: number;
+  file_type?: string;
+  status: DocStatus;
+  rejection_reason?: string | null;
+  issued_date?: string | null;
+  expiry_date?: string | null;
+  created_at?: string;
+};
+
+type DraftDocsResponse = { draft_id: string; documents: TenantDoc[] };
+
+// Document types. `value` must match your DocumentType enum values.
+// GST + CIN are mandatory on the backend; add optional ones (PAN etc.) here.
+const DOC_TYPES: { value: string; label: string; required: boolean }[] = [
+  { value: "gst", label: "GST Certificate", required: true },
+  { value: "cin", label: "CIN (Certificate of Incorporation)", required: true },
+];
+
+// Backend serves /uploads/... — prefix with API origin if frontend is on a different host
+const fileHref = (url: string) => (url.startsWith("http") ? url : `${API_URL}${url}`);
+
 // ============================================================
 // API HELPERS
 // ============================================================
 
 const TENANT_LIST_KEY = ["tenant", "all"];
+const draftDocsKey = (draftId: string | null) => ["tenant-documents", "draft", draftId];
+const tenantDocsKey = (tenantId: number) => ["tenant-documents", "tenant", tenantId];
 
 const api = {
   list: (search: string, status: string) => {
@@ -100,6 +134,35 @@ const api = {
     apiFetch<ResendResponse>(`/api/v1/tenant/${id}/resend-welcome`, {
       method: "POST",
     }),
+
+  // ---- tenant-documents ----
+    uploadDoc: (args: {
+    document_type: string;
+    document_number?: string;
+    draft_id?: string | null;
+    file: File;
+  }) => {
+    const fd = new FormData();
+    fd.append("document_type", args.document_type);
+    if (args.document_number) fd.append("document_number", args.document_number);
+    if (args.draft_id) fd.append("draft_id", args.draft_id);
+    fd.append("file", args.file);
+    return apiUpload<TenantDoc>("/api/v1/tenant-documents/upload", fd);
+  },
+  draftDocs: (draftId: string) =>
+    apiFetch<DraftDocsResponse>(`/api/v1/tenant-documents/draft/${draftId}`),
+  verifyDoc: (
+    id: number,
+    body: { status: DocStatus; rejection_reason?: string; document_number?: string },
+  ) =>
+    apiFetch<TenantDoc>(`/api/v1/tenant-documents/${id}/verify`, {
+      method: "PATCH",
+      body: JSON.stringify(body),
+    }),
+  deleteDoc: (id: number) =>
+    apiFetch<void>(`/api/v1/tenant-documents/${id}`, { method: "DELETE" }),
+  tenantDocs: (tenantId: number) =>
+    apiFetch<TenantDoc[]>(`/api/v1/tenant-documents/tenant/${tenantId}`),
 };
 
 // ============================================================
@@ -134,6 +197,13 @@ function slugify(v: string) {
     .slice(0, 60);
 }
 
+function DocStatusBadge({ status }: { status: DocStatus }) {
+  if (status === "verified")
+    return <Badge className="bg-green-600 hover:bg-green-600">Verified</Badge>;
+  if (status === "rejected") return <Badge variant="destructive">Rejected</Badge>;
+  return <Badge variant="outline">Pending</Badge>;
+}
+
 // ============================================================
 // ROUTE
 // ============================================================
@@ -158,7 +228,6 @@ export const Route = defineRoute("/_authenticated/settings-tenants")({
 
 function SettingsTenants() {
   const { roles } = useAuth();
-  // All tenant-management endpoints are SuperAdmin-only on the backend
   const isSuperAdmin = roles.includes("super_admin");
   const qc = useQueryClient();
 
@@ -294,7 +363,236 @@ function SettingsTenants() {
 }
 
 // ============================================================
-// CREATE TENANT DIALOG  →  POST /tenant/with-admin
+// DOCUMENTS STEP (used inside CreateTenantDialog)
+// upload → verify/reject → delete   (/tenant-documents/*)
+// ============================================================
+
+function DocumentsStep({
+  draftId,
+  setDraftId,
+  docs,
+}: {
+  draftId: string | null;
+  setDraftId: (id: string) => void;
+  docs: TenantDoc[];
+}) {
+  const qc = useQueryClient();
+  const refresh = (id: string | null) =>
+    qc.invalidateQueries({ queryKey: draftDocsKey(id) });
+
+  const upload = useMutation({
+    mutationFn: api.uploadDoc,
+    onSuccess: (doc) => {
+      const id = doc.draft_id ?? draftId;
+      if (id) {
+        setDraftId(id);
+        refresh(id);
+      }
+      toast.success("Document uploaded");
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const verify = useMutation({
+    mutationFn: (v: Parameters<typeof api.verifyDoc>) => api.verifyDoc(v[0], v[1]),
+    onSuccess: (_d, v) => {
+      refresh(draftId);
+      toast.success(v[1].status === "verified" ? "Document verified" : "Document rejected");
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const remove = useMutation({
+    mutationFn: (id: number) => api.deleteDoc(id),
+    onSuccess: () => {
+      refresh(draftId);
+      toast.success("Document removed");
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  // Upload one at a time so two parallel first-uploads can't create two draft_ids
+  const busy = upload.isPending || verify.isPending || remove.isPending;
+
+  return (
+    <div className="space-y-3">
+      <p className="text-xs text-muted-foreground">
+        Upload and verify the required documents (JPG, PNG, WebP, PDF or Word, max 10 MB).
+        The tenant can only be created once every uploaded document is verified.
+      </p>
+      {DOC_TYPES.map((def) => {
+        const doc = [...docs]
+          .filter((d) => d.document_type === def.value)
+          .sort((a, b) => b.id - a.id)[0];
+        return (
+          <DocumentRow
+            key={def.value}
+            def={def}
+            doc={doc}
+            busy={busy}
+            uploading={upload.isPending && upload.variables?.document_type === def.value}
+            onUpload={(file, number) =>
+              upload.mutate({
+                document_type: def.value,
+                document_number: number || undefined,
+                draft_id: draftId,
+                file,
+              })
+            }
+            onVerify={() => verify.mutate([doc!.id, { status: "verified" }])}
+            onReject={(reason) =>
+              verify.mutate([doc!.id, { status: "rejected", rejection_reason: reason }])
+            }
+            onDelete={() => remove.mutate(doc!.id)}
+          />
+        );
+      })}
+    </div>
+  );
+}
+
+function DocumentRow({
+  def,
+  doc,
+  busy,
+  uploading,
+  onUpload,
+  onVerify,
+  onReject,
+  onDelete,
+}: {
+  def: { value: string; label: string; required: boolean };
+  doc?: TenantDoc;
+  busy: boolean;
+  uploading: boolean;
+  onUpload: (file: File, number: string) => void;
+  onVerify: () => void;
+  onReject: (reason: string) => void;
+  onDelete: () => void;
+}) {
+  const [file, setFile] = useState<File | null>(null);
+  const [number, setNumber] = useState("");
+  const [rejecting, setRejecting] = useState(false);
+  const [reason, setReason] = useState("");
+
+  return (
+    <div className="border rounded-lg p-3 space-y-2 bg-muted/30">
+      <div className="flex items-center justify-between gap-2">
+        <div className="flex items-center gap-2 text-sm font-medium">
+          <FileText className="h-4 w-4" />
+          {def.label}
+          {def.required && <span className="text-destructive">*</span>}
+        </div>
+        {doc && <DocStatusBadge status={doc.status} />}
+      </div>
+
+      {!doc ? (
+        <div className="grid grid-cols-1 sm:grid-cols-[1fr_1fr_auto] gap-2 items-end">
+          <div>
+            <Label className="text-xs">Document number</Label>
+            <Input value={number} onChange={(e) => setNumber(e.target.value)} />
+          </div>
+          <div>
+            <Label className="text-xs">File</Label>
+            <Input
+              type="file"
+              accept="image/jpeg,image/png,image/webp,application/pdf,.doc,.docx"
+              onChange={(e) => setFile(e.target.files?.[0] ?? null)}
+            />
+          </div>
+          <Button
+            size="sm"
+            disabled={!file || busy}
+            onClick={() => file && onUpload(file, number)}
+          >
+            {uploading ? (
+              <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+            ) : (
+              <Upload className="h-3 w-3 mr-1" />
+            )}
+            Upload
+          </Button>
+        </div>
+      ) : (
+        <div className="space-y-2">
+          <div className="flex items-center justify-between gap-2 text-xs">
+            <a
+              href={fileHref(doc.file_url)}
+              target="_blank"
+              rel="noreferrer"
+              className="flex items-center gap-1 underline truncate"
+            >
+              <ExternalLink className="h-3 w-3 shrink-0" />
+              <span className="truncate">{doc.file_name}</span>
+            </a>
+            {doc.document_number && (
+              <span className="text-muted-foreground shrink-0">#{doc.document_number}</span>
+            )}
+          </div>
+
+          {doc.status === "rejected" && (
+            <div className="text-xs text-destructive">
+              Rejected{doc.rejection_reason ? `: ${doc.rejection_reason}` : ""}. Delete it and
+              upload a corrected file — rejected documents block tenant creation.
+            </div>
+          )}
+
+          {rejecting && (
+            <div className="flex gap-2">
+              <Input
+                placeholder="Rejection reason (required)"
+                value={reason}
+                onChange={(e) => setReason(e.target.value)}
+              />
+              <Button
+                size="sm"
+                variant="destructive"
+                disabled={!reason.trim() || busy}
+                onClick={() => {
+                  onReject(reason.trim());
+                  setRejecting(false);
+                  setReason("");
+                }}
+              >
+                Confirm
+              </Button>
+              <Button size="sm" variant="outline" onClick={() => setRejecting(false)}>
+                Cancel
+              </Button>
+            </div>
+          )}
+
+          {!rejecting && (
+            <div className="flex gap-2">
+              {doc.status !== "verified" && (
+                <Button size="sm" variant="outline" disabled={busy} onClick={onVerify}>
+                  <CheckCircle2 className="h-3 w-3 mr-1 text-green-600" /> Verify
+                </Button>
+              )}
+              {doc.status !== "rejected" && (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  disabled={busy}
+                  onClick={() => setRejecting(true)}
+                >
+                  <XCircle className="h-3 w-3 mr-1 text-destructive" /> Reject
+                </Button>
+              )}
+              <Button size="sm" variant="ghost" disabled={busy} onClick={onDelete}>
+                <Trash2 className="h-3 w-3 mr-1" /> Delete
+              </Button>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ============================================================
+// CREATE TENANT DIALOG
+// Step 1: details  →  Step 2: documents  →  POST /tenant/with-admin
 // ============================================================
 
 function CreateTenantDialog({
@@ -304,6 +602,8 @@ function CreateTenantDialog({
   onClose: () => void;
   onSaved: () => void;
 }) {
+  const [step, setStep] = useState<1 | 2>(1);
+  const [draftId, setDraftId] = useState<string | null>(null);
   const [form, setForm] = useState<CreatePayload>({
     name: "",
     slug: "",
@@ -324,16 +624,23 @@ function CreateTenantDialog({
     queryFn: api.templates,
   });
 
+  const { data: draft } = useQuery({
+    queryKey: draftDocsKey(draftId),
+    queryFn: () => api.draftDocs(draftId!),
+    enabled: !!draftId,
+  });
+  const docs = draft?.documents ?? [];
+
   const set = <K extends keyof CreatePayload>(k: K, v: CreatePayload[K]) =>
     setForm((f) => ({ ...f, [k]: v }));
 
   const create = useMutation({
     mutationFn: () => {
-      // Strip empty optional strings so backend gets null/undefined
       const payload: Record<string, unknown> = {};
       Object.entries(form).forEach(([k, v]) => {
         if (v !== "") payload[k] = v;
       });
+      payload.draft_id = draftId;
       return api.create(payload as CreatePayload);
     },
     onSuccess: (res) => {
@@ -344,8 +651,15 @@ function CreateTenantDialog({
     onError: (e: Error) => toast.error(e.message),
   });
 
-  const valid =
+  const detailsValid =
     form.name && form.slug && form.admin_email && form.admin_full_name && form.industry_template;
+
+  // Mirrors backend: every doc verified + all required types present
+  const allVerified = docs.length > 0 && docs.every((d) => d.status === "verified");
+  const requiredPresent = DOC_TYPES.filter((t) => t.required).every((t) =>
+    docs.some((d) => d.document_type === t.value && d.status === "verified"),
+  );
+  const docsReady = !!draftId && allVerified && requiredPresent;
 
   // ---- Success screen ----
   if (result) {
@@ -386,125 +700,149 @@ function CreateTenantDialog({
     );
   }
 
-  // ---- Form ----
   return (
     <Dialog open onOpenChange={onClose}>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>New Tenant</DialogTitle>
+          <DialogTitle>
+            New Tenant — {step === 1 ? "Step 1 of 2: Details" : "Step 2 of 2: Documents"}
+          </DialogTitle>
         </DialogHeader>
 
-        <div className="space-y-4">
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <Label>Company name *</Label>
-              <Input
-                value={form.name}
-                onChange={(e) => {
-                  set("name", e.target.value);
-                  set("slug", slugify(e.target.value));
-                }}
-              />
-            </div>
-            <div>
-              <Label>Slug / Subdomain *</Label>
-              <Input value={form.slug} onChange={(e) => set("slug", slugify(e.target.value))} />
-            </div>
-            <div>
-              <Label>Admin full name *</Label>
-              <Input
-                value={form.admin_full_name}
-                onChange={(e) => set("admin_full_name", e.target.value)}
-              />
-            </div>
-            <div>
-              <Label>Admin email *</Label>
-              <Input
-                type="email"
-                value={form.admin_email}
-                onChange={(e) => set("admin_email", e.target.value)}
-              />
-            </div>
-            <div>
-              <Label>Industry template *</Label>
-              <Select value={form.industry_template} onValueChange={(v) => set("industry_template", v)}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select template" />
-                </SelectTrigger>
-                <SelectContent>
-                  {Object.entries(templates ?? {}).map(([key, t]) => (
-                    <SelectItem key={key} value={key}>
-                      {t.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div>
-              <Label>Plan</Label>
-              <Select value={form.plan} onValueChange={(v) => set("plan", v)}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {/* Adjust to the plan values your backend accepts */}
-                  <SelectItem value="starter">Starter</SelectItem>
-                  <SelectItem value="pro">Pro</SelectItem>
-                  <SelectItem value="enterprise">Enterprise</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-
-          <div className="border rounded-lg p-4 space-y-3 bg-muted/30">
-            <div className="text-xs font-semibold uppercase text-muted-foreground">
-              Branding (optional)
-            </div>
+        {/* ---- Step 1: Form ---- */}
+        {step === 1 && (
+          <div className="space-y-4">
             <div className="grid grid-cols-2 gap-3">
-              <div className="col-span-2">
-                <Label>Tagline</Label>
-                <Input value={form.tagline} onChange={(e) => set("tagline", e.target.value)} />
-              </div>
               <div>
-                <Label>Primary color</Label>
+                <Label>Company name *</Label>
                 <Input
-                  type="color"
-                  value={form.primary_color}
-                  onChange={(e) => set("primary_color", e.target.value)}
+                  value={form.name}
+                  onChange={(e) => {
+                    set("name", e.target.value);
+                    set("slug", slugify(e.target.value));
+                  }}
                 />
               </div>
               <div>
-                <Label>Accent color</Label>
+                <Label>Slug / Subdomain *</Label>
+                <Input value={form.slug} onChange={(e) => set("slug", slugify(e.target.value))} />
+              </div>
+              <div>
+                <Label>Admin full name *</Label>
                 <Input
-                  type="color"
-                  value={form.accent_color}
-                  onChange={(e) => set("accent_color", e.target.value)}
+                  value={form.admin_full_name}
+                  onChange={(e) => set("admin_full_name", e.target.value)}
                 />
               </div>
               <div>
-                <Label>Logo URL</Label>
-                <Input value={form.logo_url} onChange={(e) => set("logo_url", e.target.value)} />
+                <Label>Admin email *</Label>
+                <Input
+                  type="email"
+                  value={form.admin_email}
+                  onChange={(e) => set("admin_email", e.target.value)}
+                />
               </div>
               <div>
-                <Label>Custom domain</Label>
-                <Input
-                  placeholder="crm.example.com"
-                  value={form.custom_domain}
-                  onChange={(e) => set("custom_domain", e.target.value)}
-                />
+                <Label>Industry template *</Label>
+                <Select
+                  value={form.industry_template}
+                  onValueChange={(v) => set("industry_template", v)}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select template" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {Object.entries(templates ?? {}).map(([key, t]) => (
+                      <SelectItem key={key} value={key}>
+                        {t.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label>Plan</Label>
+                <Select value={form.plan} onValueChange={(v) => set("plan", v)}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="starter">Starter</SelectItem>
+                    <SelectItem value="pro">Pro</SelectItem>
+                    <SelectItem value="enterprise">Enterprise</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            <div className="border rounded-lg p-4 space-y-3 bg-muted/30">
+              <div className="text-xs font-semibold uppercase text-muted-foreground">
+                Branding (optional)
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="col-span-2">
+                  <Label>Tagline</Label>
+                  <Input value={form.tagline} onChange={(e) => set("tagline", e.target.value)} />
+                </div>
+                <div>
+                  <Label>Primary color</Label>
+                  <Input
+                    type="color"
+                    value={form.primary_color}
+                    onChange={(e) => set("primary_color", e.target.value)}
+                  />
+                </div>
+                <div>
+                  <Label>Accent color</Label>
+                  <Input
+                    type="color"
+                    value={form.accent_color}
+                    onChange={(e) => set("accent_color", e.target.value)}
+                  />
+                </div>
+                <div>
+                  <Label>Logo URL</Label>
+                  <Input value={form.logo_url} onChange={(e) => set("logo_url", e.target.value)} />
+                </div>
+                <div>
+                  <Label>Custom domain</Label>
+                  <Input
+                    placeholder="crm.example.com"
+                    value={form.custom_domain}
+                    onChange={(e) => set("custom_domain", e.target.value)}
+                  />
+                </div>
               </div>
             </div>
           </div>
-        </div>
+        )}
+
+        {/* ---- Step 2: Documents ---- */}
+        {step === 2 && (
+          <DocumentsStep draftId={draftId} setDraftId={setDraftId} docs={docs} />
+        )}
 
         <DialogFooter>
-          <Button variant="outline" onClick={onClose}>
-            Cancel
-          </Button>
-          <Button onClick={() => create.mutate()} disabled={create.isPending || !valid}>
-            {create.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-            Create Tenant
-          </Button>
+          {step === 1 ? (
+            <>
+              <Button variant="outline" onClick={onClose}>
+                Cancel
+              </Button>
+              <Button onClick={() => setStep(2)} disabled={!detailsValid}>
+                Next: Documents
+              </Button>
+            </>
+          ) : (
+            <>
+              <Button variant="outline" onClick={() => setStep(1)} disabled={create.isPending}>
+                Back
+              </Button>
+              <Button onClick={() => create.mutate()} disabled={create.isPending || !docsReady}>
+                {create.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+                Create Tenant
+              </Button>
+            </>
+          )}
         </DialogFooter>
       </DialogContent>
     </Dialog>
@@ -512,7 +850,8 @@ function CreateTenantDialog({
 }
 
 // ============================================================
-// MANAGE TENANT DIALOG  →  POST /tenant/{id}/resend-welcome
+// MANAGE TENANT DIALOG
+// POST /tenant/{id}/resend-welcome  +  GET /tenant-documents/tenant/{id}
 // ============================================================
 
 function ManageTenantDialog({
@@ -524,6 +863,11 @@ function ManageTenantDialog({
 }) {
   const [resent, setResent] = useState<ResendResponse | null>(null);
 
+  const { data: docs = [], isLoading: docsLoading } = useQuery({
+    queryKey: tenantDocsKey(tenant.id),
+    queryFn: () => api.tenantDocs(tenant.id),
+  });
+
   const resend = useMutation({
     mutationFn: () => api.resendWelcome(tenant.id),
     onSuccess: (res) => {
@@ -533,9 +877,12 @@ function ManageTenantDialog({
     onError: (e: Error) => toast.error(e.message),
   });
 
+  const docLabel = (t: string) =>
+    DOC_TYPES.find((d) => d.value === t)?.label ?? t.toUpperCase();
+
   return (
     <Dialog open onOpenChange={onClose}>
-      <DialogContent className="max-w-lg">
+      <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Manage {tenant.name}</DialogTitle>
         </DialogHeader>
@@ -556,6 +903,41 @@ function ManageTenantDialog({
             </div>
           </div>
 
+          {/* Documents */}
+          <div className="border rounded-lg p-4 space-y-2 bg-muted/30">
+            <div className="text-xs font-semibold uppercase text-muted-foreground flex items-center gap-1">
+              <FileText className="h-3 w-3" /> Documents
+            </div>
+            {docsLoading ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : docs.length === 0 ? (
+              <p className="text-xs text-muted-foreground">No documents on file.</p>
+            ) : (
+              <ul className="space-y-2">
+                {docs.map((d) => (
+                  <li key={d.id} className="flex items-center justify-between gap-2 text-xs">
+                    <div className="min-w-0">
+                      <div className="font-medium">{docLabel(d.document_type)}</div>
+                      <a
+                        href={fileHref(d.file_url)}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="underline truncate block"
+                      >
+                        {d.file_name}
+                      </a>
+                      {d.document_number && (
+                        <div className="text-muted-foreground">#{d.document_number}</div>
+                      )}
+                    </div>
+                    <DocStatusBadge status={d.status} />
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+
+          {/* Admin credentials */}
           <div className="border rounded-lg p-4 space-y-2 bg-muted/30">
             <div className="text-xs font-semibold uppercase text-muted-foreground flex items-center gap-1">
               <Mail className="h-3 w-3" /> Admin credentials

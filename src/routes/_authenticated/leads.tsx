@@ -42,24 +42,30 @@ import {
   ArrowUp, ArrowDown, Minus, Flame, Sparkles, PhoneCall, BadgeCheck,
   FileText, Trophy, XCircle, MessageSquare, ChevronLeft, ChevronRight,
   ChevronsLeft, ChevronsRight, SlidersHorizontal, CalendarDays, Flag, CircleDot,
-  Eye, Check,
+  Eye, Check, Link as LinkIcon, PhoneMissed, PhoneForwarded,
 } from "lucide-react";
 import { toast } from "sonner";
 import { Lead360Dialog } from "@/components/leads/Lead360Dialog";
+import { ExportLeadsDialog } from "@/components/leads/ExportLeadsDialog";
 
-const VALID_STATUSES = ["new", "contacted", "qualified", "proposal_sent", "won", "lost"];
+const VALID_STATUSES = ["new", "attempt_to_call", "call_again", "contacted", "qualified", "proposal_sent", "won", "lost"];
 
 const PRIORITY_TAG = "priority";
 const MANAGER_ROLES = ["manager", "sales_manager"];
 const EXECUTIVE_ROLES = ["executive", "sales_executive"];
 const STATUS_OPTIONS = [
   { value: "new", label: "New" },
+  { value: "attempt_to_call", label: "Attempt to Call" },
+  { value: "call_again", label: "Call Again" },
   { value: "contacted", label: "Contacted" },
   { value: "qualified", label: "Qualified" },
   { value: "proposal_sent", label: "Proposal Sent" },
   { value: "won", label: "Won" },
   { value: "lost", label: "Lost" },
 ];
+
+const statusLabel = (s: string) =>
+  STATUS_OPTIONS.find((o) => o.value === s)?.label ?? s.replace(/_/g, " ");
 
 const PRIORITY_OPTIONS = [
   { value: "low", label: "Low" },
@@ -171,6 +177,18 @@ interface LeadStats {
   lost: number;
 }
 
+interface LeadsPaginatedResponse {
+  items: Lead[];
+  meta: {
+    total_items: number;
+    total_pages: number;
+    current_page: number;
+    page_size: number;
+    has_next: boolean;
+    has_previous: boolean;
+  };
+}
+
 interface CreateLeadPayload {
   name: string;
   email: string;
@@ -217,10 +235,10 @@ interface ScheduleForm {
   duration_minutes: string;
   reminder_minutes_before: string;
   priority: string;
+  meeting_url: string;
 }
 
 const PAGE_SIZE = 20;
-const FETCH_BATCH = 100;
 const FETCH_MAX_BATCHES = 50;
 
 // ════════════════════════════════════════════════════════════
@@ -235,6 +253,10 @@ const FETCH_MAX_BATCHES = 50;
 const statusColors: Record<string, string> = {
   new:
     "bg-sky-100 text-sky-700 ring-1 ring-sky-200 dark:bg-sky-500/15 dark:text-sky-300 dark:ring-sky-500/30",
+  attempt_to_call:
+    "bg-lime-100 text-lime-800 ring-1 ring-lime-200 dark:bg-lime-500/15 dark:text-lime-300 dark:ring-lime-500/30",
+  call_again:
+    "bg-orange-100 text-orange-700 ring-1 ring-orange-200 dark:bg-orange-500/15 dark:text-orange-300 dark:ring-orange-500/30",
   contacted:
     "bg-amber-100 text-amber-800 ring-1 ring-amber-200 dark:bg-amber-500/15 dark:text-amber-300 dark:ring-amber-500/30",
   qualified:
@@ -270,6 +292,8 @@ type IconType = React.ComponentType<{ className?: string }>;
 
 const statusIcons: Record<string, IconType> = {
   new: Sparkles,
+  attempt_to_call: PhoneMissed,
+  call_again: PhoneForwarded,
   contacted: PhoneCall,
   qualified: BadgeCheck,
   proposal_sent: FileText,
@@ -325,6 +349,7 @@ const emptyScheduleForm: ScheduleForm = {
   duration_minutes: "30",
   reminder_minutes_before: "15",
   priority: "medium",
+  meeting_url: "",
 };
 
 function getLeadAmount(lead: Lead): number {
@@ -565,29 +590,36 @@ function LeadsPage() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [importResultOpen, setImportResultOpen] = useState(false);
   const [importResult, setImportResult] = useState<ImportLeadsResult | null>(null);
+  const [exportOpen, setExportOpen] = useState(false);
 
-  const { data: leads, isLoading, isFetching, error } = useQuery({
-    queryKey: ["leads", isSuperadmin, search, statusFilter, tenantFilter],
+   const { data: leadsData, isLoading, isFetching, error } = useQuery({
+    queryKey: ["leads", isSuperadmin, page, search, statusFilter, priorityFilter, tenantFilter, dateFrom, dateTo],
     enabled: !authLoading,
     queryFn: async () => {
       const base = isSuperadmin ? "/api/v1/superadmin/leads" : "/api/v1/leads";
-      const all: Lead[] = [];
-      for (let i = 0; i < FETCH_MAX_BATCHES; i++) {
-        const params = new URLSearchParams();
-        if (search) params.append("search", search);
-        if (statusFilter !== "all") params.append("status", statusFilter);
-        if (isSuperadmin && tenantFilter !== "all") params.append("tenant_id", tenantFilter);
-        params.append("limit", String(FETCH_BATCH));
-        params.append("offset", String(i * FETCH_BATCH));
-        const batch = await apiFetch<LeadsResponse>(`${base}?${params.toString()}`);
-        const rows = Array.isArray(batch) ? batch : [];
-        all.push(...rows);
-        if (rows.length < FETCH_BATCH) break;
+      const params = new URLSearchParams();
+      
+      params.append("page", String(page + 1));
+      params.append("size", String(PAGE_SIZE));
+      
+      if (search) params.append("search", search);
+      if (statusFilter !== "all") params.append("status", statusFilter);
+      if (priorityFilter !== "all") params.append("priority", priorityFilter);
+      if (dateFrom) params.append("from_date", dateFrom);
+      if (dateTo) params.append("to_date", dateTo);
+      
+      if (isSuperadmin && tenantFilter !== "all") params.append("tenant_id", tenantFilter);
+
+      const res = await apiFetch<LeadsPaginatedResponse>(`${base}?${params.toString()}`);
+      
+      // Backward compatibility fallback (Agar backend purana array bhej raha ho)
+      if (Array.isArray(res)) {
+        return { items: res, meta: { total_items: res.length, total_pages: 1, current_page: 1, page_size: 100, has_next: false, has_previous: false } };
       }
-      return all;
+      
+      return res;
     },
   });
-
   const { data: stats } = useQuery({
     queryKey: ["leads", "stats"],
     queryFn: () => apiFetch<LeadStats>("/api/v1/leads/stats"),
@@ -759,7 +791,7 @@ function LeadsPage() {
           activity_label: typeLabel,
           title: form.title.trim(),
           notes: form.notes.trim() || null,
-          attachment_url,
+          attachment_url: form.meeting_url.trim() || null,
           attachment_name,
           scheduled_at: new Date(form.scheduled_at).toISOString(),
           duration_minutes: toNumber(form.duration_minutes) || 30,
@@ -1058,28 +1090,9 @@ function LeadsPage() {
     e.target.value = "";
   };
 
-  const items = leads ?? [];
-
-  const scopedItems = useMemo(() => {
-    if (isExecutive && currentUserId) {
-      return items.filter((l) => l.assigned_to === currentUserId);
-    }
-    return items;
-  }, [items, isExecutive, currentUserId]);
-
-  const filteredItems = useMemo(() => {
-    const start = dateFrom ? new Date(`${dateFrom}T00:00:00`) : null;
-    const end = dateTo ? new Date(`${dateTo}T23:59:59.999`) : null;
-    return scopedItems.filter((lead) => {
-      if (priorityFilter !== "all" && lead.priority !== priorityFilter) return false;
-      if (start || end) {
-        const created = new Date(lead.created_at);
-        if (start && created < start) return false;
-        if (end && created > end) return false;
-      }
-      return true;
-    });
-  }, [scopedItems, priorityFilter, dateFrom, dateTo]);
+   // ✅ Backend se aaya hua data
+  const items = leadsData?.items ?? [];
+  const meta = leadsData?.meta;
 
   const activeFilterCount =
     (statusFilter !== "all" ? 1 : 0) +
@@ -1095,13 +1108,10 @@ function LeadsPage() {
     setPage(0);
   };
 
-  const totalFiltered = filteredItems.length;
-  const totalPages = Math.max(1, Math.ceil(totalFiltered / PAGE_SIZE));
-  const safePage = Math.min(page, totalPages - 1);
-  const pagedItems = useMemo(
-    () => filteredItems.slice(safePage * PAGE_SIZE, safePage * PAGE_SIZE + PAGE_SIZE),
-    [filteredItems, safePage]
-  );
+  // ✅ Backend Meta se Pagination Details
+  const totalFiltered = meta?.total_items ?? items.length;
+  const totalPages = meta?.total_pages ?? 1;
+  const safePage = meta?.current_page ? meta.current_page - 1 : 0;
   const rangeStart = totalFiltered === 0 ? 0 : safePage * PAGE_SIZE + 1;
   const rangeEnd = Math.min(totalFiltered, (safePage + 1) * PAGE_SIZE);
 
@@ -1123,9 +1133,9 @@ function LeadsPage() {
     setSelectedIds(new Set());
   }, [search, statusFilter, priorityFilter, tenantFilter, dateFrom, dateTo, page]);
 
-  const selectedLeads = pagedItems.filter((l) => selectedIds.has(l.id));
+  const selectedLeads = items.filter((l) => selectedIds.has(l.id));
   const allSelected =
-    pagedItems.length > 0 && selectedLeads.length === pagedItems.length;
+    items.length > 0 && selectedLeads.length === items.length;
   const someSelected = selectedLeads.length > 0 && !allSelected;
   const allPrioritized =
     selectedLeads.length > 0 &&
@@ -1139,7 +1149,7 @@ function LeadsPage() {
       return next;
     });
   const toggleAll = () =>
-    setSelectedIds(allSelected ? new Set() : new Set(pagedItems.map((l) => l.id)));
+    setSelectedIds(allSelected ? new Set() : new Set(items.map((l) => l.id)));
 
   const total = isSuperadmin ? items.length : stats?.total ?? items.length;
   const colCount = (isSuperadmin ? 9 : isExecutive ? 7 : 8) + (canBulk ? 1 : 0);
@@ -1207,7 +1217,7 @@ function LeadsPage() {
             </>
           )}
 
-          <Button variant="outline" className="h-9 rounded-lg border-emerald-200 bg-emerald-50 text-emerald-700 shadow-sm hover:bg-emerald-100 hover:text-emerald-800 dark:border-emerald-500/50 dark:bg-emerald-500/15 dark:text-emerald-300 dark:hover:bg-emerald-500/25 dark:hover:text-emerald-200" onClick={() => exportLeads.mutate()} disabled={exportLeads.isPending}>
+          <Button variant="outline" onClick={() => setExportOpen(true)} className="h-9 rounded-lg border-emerald-200 bg-emerald-50 text-emerald-700 shadow-sm hover:bg-emerald-100 hover:text-emerald-800 dark:border-emerald-500/50 dark:bg-emerald-500/15 dark:text-emerald-300 dark:hover:bg-emerald-500/25 dark:hover:text-emerald-200" >
             {exportLeads.isPending ? (
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
             ) : (
@@ -1215,6 +1225,8 @@ function LeadsPage() {
             )}
             Export
           </Button>
+
+          <ExportLeadsDialog open={exportOpen} onOpenChange={setExportOpen} />
 
           {canWrite && (
             <Dialog open={createOpen} onOpenChange={setCreateOpen}>
@@ -1614,7 +1626,7 @@ function LeadsPage() {
                   </TableRow>
                 )}
 
-                {!showLoading && !error && pagedItems.length === 0 && (
+                {!showLoading && !error && items.length === 0 && (
                   <TableRow>
                     <TableCell colSpan={colCount} className="text-center py-16">
                       <Users className="h-9 w-10 mx-auto text-muted-foreground mb-2" />
@@ -1623,7 +1635,7 @@ function LeadsPage() {
                   </TableRow>
                 )}
 
-                {!showLoading && !error && pagedItems.map((lead) => {
+                {!showLoading && !error && items.map((lead) => {
                   const amount = getLeadAmount(lead);
                   const assigneeName = getUserDisplayName(lead.assigned_to, users);
                   const assigneeUser = lead.assigned_to
@@ -1943,8 +1955,8 @@ function LeadsPage() {
               </DialogHeader>
 
               <div className="flex gap-2">
-                <Badge className={`${statusColors[viewingLead.status] || "bg-gray-100 text-gray-700"} border-0 capitalize`}>
-                  {viewingLead.status.replace("_", " ")}
+                <Badge className={`${statusColors[viewingLead.status] || "bg-gray-100 text-gray-700"} border-0`}>
+                  {statusLabel(viewingLead.status)}
                 </Badge>
                 <Badge className={`${priorityColors[viewingLead.priority] || "bg-gray-100 text-gray-700"} border-0 capitalize`}>
                   {viewingLead.priority || "—"}
@@ -2174,6 +2186,24 @@ function LeadsPage() {
               </div>
 
               <div className="grid gap-2">
+                <Label htmlFor="sch-meeting-url">
+                  Meeting URL <span className="text-xs font-normal text-muted-foreground">(optional)</span>
+                </Label>
+                <div className="relative">
+                  <LinkIcon className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                  <Input
+                    id="sch-meeting-url"
+                    type="url"
+                    inputMode="url"
+                    value={scheduleForm.meeting_url}
+                    onChange={(e) => setScheduleForm((f) => ({ ...f, meeting_url: e.target.value }))}
+                    placeholder="https://meet.google.com/... or https://zoom.us/j/..."
+                    className="h-9 pl-9"
+                  />
+                </div>
+              </div>
+
+              <div className="grid gap-2">
                 <Label htmlFor="sch-when">Date & Time</Label>
                 <div className="relative">
                   <Input
@@ -2376,7 +2406,7 @@ function StatusBadge({ status }: { status: string }) {
   return (
     <span className={`${PILL_BASE} ${statusColors[status] || "bg-gray-100 text-gray-700"} gap-1 px-2.5 py-0.5 capitalize`}>
       {Icon && <Icon className="h-3 w-3" />}
-      {status.replace("_", " ")}
+      {statusLabel(status)}
     </span>
   );
 }
