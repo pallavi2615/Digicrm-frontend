@@ -19,7 +19,7 @@ import {
   KanbanSquare, Loader2, FileText, ArrowRightLeft, SlidersHorizontal, X,
   ChevronLeft, ChevronRight, Sparkles, PhoneCall, BadgeCheck, MessageSquare,
   Trophy, XCircle, IndianRupee, CalendarDays, Mail, Phone, Users, Clock,
-  ArrowUp, ArrowDown, Minus, Flame,
+  ArrowUp, ArrowDown, Minus, Flame, PhoneMissed, PhoneForwarded,
 } from "lucide-react";
 
 import { usePermissions } from "@/hooks/use-permissions";
@@ -41,7 +41,7 @@ export const Route = defineRoute("/_authenticated/pipeline")({
   component: PipelinePage,
 });
 
-type Status = "new" | "contacted" | "qualified" | "proposal_sent" | "negotiation" | "won" | "lost";
+type Status = "new" | "attempt_to_call" | "call_again" | "contacted" | "qualified" | "proposal_sent" | "negotiation" | "won" | "lost";
 interface Deal {
   id: string; company_name: string; contact_person: string | null; status: Status;
   estimated_value: number | null; priority: string; email?: string | null; phone?: string | null;
@@ -81,56 +81,73 @@ const stages: {
   key: Status; label: string; prob: number; icon: IconType;
   bar: string; card: string; iconCls: string; count: string;
 }[] = [
-  {
-    key: "new", label: "New", prob: 10, icon: Sparkles,
-    bar: "bg-sky-500",
-    card: "border-sky-500/20 from-sky-500/10 via-sky-500/[0.03]",
-    iconCls: "bg-sky-500/15 text-sky-500",
-    count: "bg-sky-500 text-white",
-  },
-  {
-    key: "contacted", label: "Contacted", prob: 25, icon: PhoneCall,
-    bar: "bg-amber-500",
-    card: "border-amber-500/20 from-amber-500/10 via-amber-500/[0.03]",
-    iconCls: "bg-amber-500/15 text-amber-500",
-    count: "bg-amber-500 text-white",
-  },
-  {
-    key: "qualified", label: "Qualified", prob: 40, icon: BadgeCheck,
-    bar: "bg-fuchsia-500",
-    card: "border-fuchsia-500/20 from-fuchsia-500/10 via-fuchsia-500/[0.03]",
-    iconCls: "bg-fuchsia-500/15 text-fuchsia-500",
-    count: "bg-fuchsia-500 text-white",
-  },
-  {
-    key: "proposal_sent", label: "Proposal", prob: 60, icon: FileText,
-    bar: "bg-indigo-500",
-    card: "border-indigo-500/20 from-indigo-500/10 via-indigo-500/[0.03]",
-    iconCls: "bg-indigo-500/15 text-indigo-500",
-    count: "bg-indigo-500 text-white",
-  },
-  {
-    key: "negotiation", label: "Negotiation", prob: 80, icon: MessageSquare,
-    bar: "bg-violet-500",
-    card: "border-violet-500/20 from-violet-500/10 via-violet-500/[0.03]",
-    iconCls: "bg-violet-500/15 text-violet-500",
-    count: "bg-violet-500 text-white",
-  },
-  {
-    key: "won", label: "Won", prob: 100, icon: Trophy,
-    bar: "bg-emerald-500",
-    card: "border-emerald-500/20 from-emerald-500/10 via-emerald-500/[0.03]",
-    iconCls: "bg-emerald-500/15 text-emerald-500",
-    count: "bg-emerald-500 text-white",
-  },
-  {
-    key: "lost", label: "Lost", prob: 0, icon: XCircle,
-    bar: "bg-rose-500",
-    card: "border-rose-500/20 from-rose-500/10 via-rose-500/[0.03]",
-    iconCls: "bg-rose-500/15 text-rose-500",
-    count: "bg-rose-500 text-white",
-  },
-];
+    {
+      key: "new", label: "New", prob: 10, icon: Sparkles,
+      bar: "bg-sky-500",
+      card: "border-sky-500/20 from-sky-500/10 via-sky-500/[0.03]",
+      iconCls: "bg-sky-500/15 text-sky-500",
+      count: "bg-sky-500 text-white",
+    },
+    {
+      key: "attempt_to_call", label: "Attempt to Call", prob: 15, icon: PhoneMissed,
+      bar: "bg-lime-500",
+      card: "border-lime-500/20 from-lime-500/10 via-lime-500/[0.03]",
+      iconCls: "bg-lime-500/15 text-lime-600",
+      count: "bg-lime-500 text-white",
+    },
+    {
+      key: "call_again", label: "Call Again", prob: 20, icon: PhoneForwarded,
+      bar: "bg-orange-500",
+      card: "border-orange-500/20 from-orange-500/10 via-orange-500/[0.03]",
+      iconCls: "bg-orange-500/15 text-orange-500",
+      count: "bg-orange-500 text-white",
+    },
+    {
+      key: "contacted", label: "Contacted", prob: 25, icon: PhoneCall,
+      bar: "bg-amber-500",
+      card: "border-amber-500/20 from-amber-500/10 via-amber-500/[0.03]",
+      iconCls: "bg-amber-500/15 text-amber-500",
+      count: "bg-amber-500 text-white",
+    },
+    {
+      key: "qualified", label: "Qualified", prob: 40, icon: BadgeCheck,
+      bar: "bg-fuchsia-500",
+      card: "border-fuchsia-500/20 from-fuchsia-500/10 via-fuchsia-500/[0.03]",
+      iconCls: "bg-fuchsia-500/15 text-fuchsia-500",
+      count: "bg-fuchsia-500 text-white",
+    },
+    {
+      key: "proposal_sent", label: "Proposal", prob: 60, icon: FileText,
+      bar: "bg-indigo-500",
+      card: "border-indigo-500/20 from-indigo-500/10 via-indigo-500/[0.03]",
+      iconCls: "bg-indigo-500/15 text-indigo-500",
+      count: "bg-indigo-500 text-white",
+    },
+    {
+      key: "negotiation", label: "Negotiation", prob: 80, icon: MessageSquare,
+      bar: "bg-violet-500",
+      card: "border-violet-500/20 from-violet-500/10 via-violet-500/[0.03]",
+      iconCls: "bg-violet-500/15 text-violet-500",
+      count: "bg-violet-500 text-white",
+    },
+    {
+      key: "won", label: "Won", prob: 100, icon: Trophy,
+      bar: "bg-emerald-500",
+      card: "border-emerald-500/20 from-emerald-500/10 via-emerald-500/[0.03]",
+      iconCls: "bg-emerald-500/15 text-emerald-500",
+      count: "bg-emerald-500 text-white",
+    },
+    {
+      key: "lost", label: "Lost", prob: 0, icon: XCircle,
+      bar: "bg-rose-500",
+      card: "border-rose-500/20 from-rose-500/10 via-rose-500/[0.03]",
+      iconCls: "bg-rose-500/15 text-rose-500",
+      count: "bg-rose-500 text-white",
+    },
+  ];
+
+const stageLabel = (key: string) =>
+  stages.find((s) => s.key === key)?.label ?? key.replace(/_/g, " ");
 
 /** Urgent deals surface at the top of every stage column. */
 const PRIORITY_RANK: Record<string, number> = { urgent: 4, high: 3, medium: 2, low: 1 };
@@ -312,7 +329,7 @@ function PipelinePage() {
     } catch (e) {
       return toast.error((e as Error).message);
     }
-    toast.success(`Moved to ${status.replace("_", " ")}`);
+    toast.success(`Moved to ${stageLabel(status)}`);
     qc.invalidateQueries({ queryKey: ["pipeline-deals"] });
     qc.invalidateQueries({ queryKey: ["kpi"] });
   };
@@ -670,7 +687,7 @@ function PipelinePage() {
                 </div>
               ) : (
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <InfoTile icon={KanbanSquare} label="Stage" value={detail.status.replace("_", " ")} tone="blue" />
+                  <InfoTile icon={KanbanSquare} label="Stage" value={stageLabel(detail.status)} tone="blue" />
                   <InfoTile icon={IndianRupee} label="Value" value={inr.format(Number(detail.estimated_value ?? 0))} tone="green" />
                   <InfoTile icon={Flame} label="Priority" value={detail.priority} tone="orange" />
                   <InfoTile icon={CalendarDays} label="Expected close" value={detail.expected_close_date ?? null} tone="purple" />

@@ -42,24 +42,29 @@ import {
   ArrowUp, ArrowDown, Minus, Flame, Sparkles, PhoneCall, BadgeCheck,
   FileText, Trophy, XCircle, MessageSquare, ChevronLeft, ChevronRight,
   ChevronsLeft, ChevronsRight, SlidersHorizontal, CalendarDays, Flag, CircleDot,
-  Eye, Check,
+  Eye, Check, Link as LinkIcon, PhoneMissed, PhoneForwarded,
 } from "lucide-react";
 import { toast } from "sonner";
 import { Lead360Dialog } from "@/components/leads/Lead360Dialog";
 
-const VALID_STATUSES = ["new", "contacted", "qualified", "proposal_sent", "won", "lost"];
+const VALID_STATUSES = ["new", "attempt_to_call", "call_again", "contacted", "qualified", "proposal_sent", "won", "lost"];
 
 const PRIORITY_TAG = "priority";
 const MANAGER_ROLES = ["manager", "sales_manager"];
 const EXECUTIVE_ROLES = ["executive", "sales_executive"];
 const STATUS_OPTIONS = [
   { value: "new", label: "New" },
+  { value: "attempt_to_call", label: "Attempt to Call" },
+  { value: "call_again", label: "Call Again" },
   { value: "contacted", label: "Contacted" },
   { value: "qualified", label: "Qualified" },
   { value: "proposal_sent", label: "Proposal Sent" },
   { value: "won", label: "Won" },
   { value: "lost", label: "Lost" },
 ];
+
+const statusLabel = (s: string) =>
+  STATUS_OPTIONS.find((o) => o.value === s)?.label ?? s.replace(/_/g, " ");
 
 const PRIORITY_OPTIONS = [
   { value: "low", label: "Low" },
@@ -217,6 +222,7 @@ interface ScheduleForm {
   duration_minutes: string;
   reminder_minutes_before: string;
   priority: string;
+  meeting_url: string;
 }
 
 const PAGE_SIZE = 20;
@@ -235,6 +241,10 @@ const FETCH_MAX_BATCHES = 50;
 const statusColors: Record<string, string> = {
   new:
     "bg-sky-100 text-sky-700 ring-1 ring-sky-200 dark:bg-sky-500/15 dark:text-sky-300 dark:ring-sky-500/30",
+  attempt_to_call:
+    "bg-lime-100 text-lime-800 ring-1 ring-lime-200 dark:bg-lime-500/15 dark:text-lime-300 dark:ring-lime-500/30",
+  call_again:
+    "bg-orange-100 text-orange-700 ring-1 ring-orange-200 dark:bg-orange-500/15 dark:text-orange-300 dark:ring-orange-500/30",
   contacted:
     "bg-amber-100 text-amber-800 ring-1 ring-amber-200 dark:bg-amber-500/15 dark:text-amber-300 dark:ring-amber-500/30",
   qualified:
@@ -270,6 +280,8 @@ type IconType = React.ComponentType<{ className?: string }>;
 
 const statusIcons: Record<string, IconType> = {
   new: Sparkles,
+  attempt_to_call: PhoneMissed,
+  call_again: PhoneForwarded,
   contacted: PhoneCall,
   qualified: BadgeCheck,
   proposal_sent: FileText,
@@ -325,6 +337,7 @@ const emptyScheduleForm: ScheduleForm = {
   duration_minutes: "30",
   reminder_minutes_before: "15",
   priority: "medium",
+  meeting_url: "",
 };
 
 function getLeadAmount(lead: Lead): number {
@@ -759,7 +772,7 @@ function LeadsPage() {
           activity_label: typeLabel,
           title: form.title.trim(),
           notes: form.notes.trim() || null,
-          attachment_url,
+          attachment_url: form.meeting_url.trim() || null,
           attachment_name,
           scheduled_at: new Date(form.scheduled_at).toISOString(),
           duration_minutes: toNumber(form.duration_minutes) || 30,
@@ -1943,8 +1956,8 @@ function LeadsPage() {
               </DialogHeader>
 
               <div className="flex gap-2">
-                <Badge className={`${statusColors[viewingLead.status] || "bg-gray-100 text-gray-700"} border-0 capitalize`}>
-                  {viewingLead.status.replace("_", " ")}
+                <Badge className={`${statusColors[viewingLead.status] || "bg-gray-100 text-gray-700"} border-0`}>
+                  {statusLabel(viewingLead.status)}
                 </Badge>
                 <Badge className={`${priorityColors[viewingLead.priority] || "bg-gray-100 text-gray-700"} border-0 capitalize`}>
                   {viewingLead.priority || "—"}
@@ -2174,6 +2187,24 @@ function LeadsPage() {
               </div>
 
               <div className="grid gap-2">
+                <Label htmlFor="sch-meeting-url">
+                  Meeting URL <span className="text-xs font-normal text-muted-foreground">(optional)</span>
+                </Label>
+                <div className="relative">
+                  <LinkIcon className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                  <Input
+                    id="sch-meeting-url"
+                    type="url"
+                    inputMode="url"
+                    value={scheduleForm.meeting_url}
+                    onChange={(e) => setScheduleForm((f) => ({ ...f, meeting_url: e.target.value }))}
+                    placeholder="https://meet.google.com/... or https://zoom.us/j/..."
+                    className="h-9 pl-9"
+                  />
+                </div>
+              </div>
+
+              <div className="grid gap-2">
                 <Label htmlFor="sch-when">Date & Time</Label>
                 <div className="relative">
                   <Input
@@ -2376,7 +2407,7 @@ function StatusBadge({ status }: { status: string }) {
   return (
     <span className={`${PILL_BASE} ${statusColors[status] || "bg-gray-100 text-gray-700"} gap-1 px-2.5 py-0.5 capitalize`}>
       {Icon && <Icon className="h-3 w-3" />}
-      {status.replace("_", " ")}
+      {statusLabel(status)}
     </span>
   );
 }

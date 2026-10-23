@@ -11,7 +11,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { Ticket as TicketIcon, Plus, Search, AlertTriangle, Loader2, Clock } from "lucide-react";
+import { Ticket as TicketIcon, Plus, Search, AlertTriangle, Loader2, Clock, ChevronLeft, ChevronRight } from "lucide-react";
 import { toast } from "sonner";
 
 export const Route = defineRoute("/_authenticated/tickets")({
@@ -55,6 +55,18 @@ type TicketStats = {
   sla_breached: number;
 };
 
+type TicketsPaginatedResponse = {
+  items: Ticket[];
+  meta: {
+    total_items: number;
+    total_pages: number;
+    current_page: number;
+    page_size: number;
+    has_next: boolean;
+    has_previous: boolean;
+  };
+};
+
 const STATUS_COLORS: Record<string, string> = {
   open: "bg-blue-500/10 text-blue-500 border-blue-500/20",
   pending: "bg-yellow-500/10 text-yellow-500 border-yellow-500/20",
@@ -74,20 +86,31 @@ const URGENCY_COLORS: Record<string, string> = {
   critical: "bg-red-500/10 text-red-500 font-semibold",
 };
 
+const navBtn = "h-8 w-8 rounded-lg border border-border/60 bg-card text-sm font-medium flex items-center justify-center transition-colors hover:bg-muted disabled:opacity-40 disabled:hover:bg-card disabled:cursor-not-allowed";
+
 function TicketsPage() {
   const [status, setStatus] = useState<string>("all");
   const [priority, setPriority] = useState<string>("all");
   const [urgency, setUrgency] = useState<string>("all");
   const [search, setSearch] = useState("");
   const [showNew, setShowNew] = useState(false);
+  
+  // Pagination State
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(20);
+
   const navigate = useNavigate();
 
-  const { data: tickets = [], isLoading } = useQuery({
-    queryKey: ["tickets"],
-    queryFn: () => apiFetch<Ticket[]>("/api/v1/tickets"),
-    // Keep SLA countdowns roughly fresh without a realtime subscription.
+  // API Call with Pagination
+  const { data: ticketsData, isLoading } = useQuery({
+    queryKey: ["tickets", page, pageSize],
+    queryFn: () => apiFetch<TicketsPaginatedResponse>(`/api/v1/tickets?page=${page}&size=${pageSize}`),
     refetchInterval: 30000,
   });
+
+  // Extract items and meta safely
+  const tickets = ticketsData?.items ?? [];
+  const meta = ticketsData?.meta;
 
   const { data: stats } = useQuery({
     queryKey: ["tickets", "stats"],
@@ -95,6 +118,7 @@ function TicketsPage() {
     refetchInterval: 30000,
   });
 
+  // Local Filters (Search, Status, etc.) on the current page data
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
     return tickets.filter((t) => {
@@ -118,6 +142,9 @@ function TicketsPage() {
     closed: tickets.filter((t) => t.status === "closed").length,
     sla_breached: tickets.filter((t) => t.sla_breached).length,
   };
+
+  const totalPages = meta?.total_pages ?? 1;
+  const totalItems = meta?.total_items ?? tickets.length;
 
   return (
     <div className="space-y-6">
@@ -221,6 +248,30 @@ function TicketsPage() {
               </TableBody>
             </Table>
           </div>
+
+          {/* PAGINATION CONTROLS */}
+          {!isLoading && tickets.length > 0 && (
+            <div className="flex items-center justify-between mt-4 flex-wrap gap-3">
+              <div className="flex items-center gap-3 text-sm text-muted-foreground flex-wrap">
+                <span>Showing <span className="font-semibold text-foreground">{(page - 1) * pageSize + 1}–{Math.min(page * pageSize, totalItems)}</span> of <span className="font-semibold text-foreground">{totalItems}</span> tickets</span>
+                <span className="hidden sm:inline text-border">|</span>
+                <div className="flex items-center gap-2">
+                  <span>Rows per page</span>
+                  <Select value={String(pageSize)} onValueChange={(v) => { setPageSize(Number(v)); setPage(1); }}>
+                    <SelectTrigger className="w-20 h-8"><SelectValue /></SelectTrigger>
+                    <SelectContent>{[5, 10, 20, 50].map(n => <SelectItem key={n} value={String(n)}>{n}</SelectItem>)}</SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-1.5">
+                <button type="button" className={navBtn} disabled={page <= 1} onClick={() => setPage(page - 1)}><ChevronLeft className="h-4 w-4" /></button>
+                <span className="text-sm font-medium px-2">Page {page} of {totalPages}</span>
+                <button type="button" className={navBtn} disabled={page >= totalPages} onClick={() => setPage(page + 1)}><ChevronRight className="h-4 w-4" /></button>
+              </div>
+            </div>
+          )}
+
         </CardContent>
       </Card>
 

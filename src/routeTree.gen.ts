@@ -40,6 +40,7 @@ import { Route as AuthenticatedTicketsRouteImport } from './routes/_authenticate
 import { Route as AuthenticatedTenantPortalRouteImport } from './routes/_authenticated/tenant-portal'
 import { Route as AuthenticatedTenantDashboardRouteImport } from './routes/_authenticated/tenant-dashboard'
 import { Route as AuthenticatedTenantBillingRouteImport } from './routes/_authenticated/tenant-billing'
+import { Route as AuthenticatedTeamRouteImport } from './routes/_authenticated/team'
 import { Route as AuthenticatedTasksRouteImport } from './routes/_authenticated/tasks'
 import { Route as AuthenticatedSettingsTenantsRouteImport } from './routes/_authenticated/settings-tenants'
 import { Route as AuthenticatedSettingsPlansRouteImport } from './routes/_authenticated/settings-plans'
@@ -291,6 +292,11 @@ const AuthenticatedTenantBillingRoute =
     path: '/tenant-billing',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
+const AuthenticatedTeamRoute = AuthenticatedTeamRouteImport.update({
+  id: '/team',
+  path: '/team',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const AuthenticatedTasksRoute = AuthenticatedTasksRouteImport.update({
   id: '/tasks',
   path: '/tasks',
@@ -856,6 +862,7 @@ export interface FileRoutesByFullPath {
   '/settings-plans': typeof AuthenticatedSettingsPlansRoute
   '/settings-tenants': typeof AuthenticatedSettingsTenantsRoute
   '/tasks': typeof AuthenticatedTasksRoute
+  '/team': typeof AuthenticatedTeamRoute
   '/tenant-billing': typeof AuthenticatedTenantBillingRoute
   '/tenant-dashboard': typeof AuthenticatedTenantDashboardRoute
   '/tenant-portal': typeof AuthenticatedTenantPortalRoute
@@ -972,6 +979,7 @@ export interface FileRoutesByTo {
   '/settings-plans': typeof AuthenticatedSettingsPlansRoute
   '/settings-tenants': typeof AuthenticatedSettingsTenantsRoute
   '/tasks': typeof AuthenticatedTasksRoute
+  '/team': typeof AuthenticatedTeamRoute
   '/tenant-billing': typeof AuthenticatedTenantBillingRoute
   '/tenant-dashboard': typeof AuthenticatedTenantDashboardRoute
   '/tenant-portal': typeof AuthenticatedTenantPortalRoute
@@ -1095,6 +1103,7 @@ export interface FileRoutesById {
   '/_authenticated/settings-plans': typeof AuthenticatedSettingsPlansRoute
   '/_authenticated/settings-tenants': typeof AuthenticatedSettingsTenantsRoute
   '/_authenticated/tasks': typeof AuthenticatedTasksRoute
+  '/_authenticated/team': typeof AuthenticatedTeamRoute
   '/_authenticated/tenant-billing': typeof AuthenticatedTenantBillingRoute
   '/_authenticated/tenant-dashboard': typeof AuthenticatedTenantDashboardRoute
   '/_authenticated/tenant-portal': typeof AuthenticatedTenantPortalRoute
@@ -1220,6 +1229,7 @@ export interface FileRouteTypes {
     | '/settings-plans'
     | '/settings-tenants'
     | '/tasks'
+    | '/team'
     | '/tenant-billing'
     | '/tenant-dashboard'
     | '/tenant-portal'
@@ -1336,6 +1346,7 @@ export interface FileRouteTypes {
     | '/settings-plans'
     | '/settings-tenants'
     | '/tasks'
+    | '/team'
     | '/tenant-billing'
     | '/tenant-dashboard'
     | '/tenant-portal'
@@ -1458,6 +1469,7 @@ export interface FileRouteTypes {
     | '/_authenticated/settings-plans'
     | '/_authenticated/settings-tenants'
     | '/_authenticated/tasks'
+    | '/_authenticated/team'
     | '/_authenticated/tenant-billing'
     | '/_authenticated/tenant-dashboard'
     | '/_authenticated/tenant-portal'
@@ -1767,6 +1779,13 @@ declare module '@tanstack/react-router' {
       path: '/tenant-billing'
       fullPath: '/tenant-billing'
       preLoaderRoute: typeof AuthenticatedTenantBillingRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/team': {
+      id: '/_authenticated/team'
+      path: '/team'
+      fullPath: '/team'
+      preLoaderRoute: typeof AuthenticatedTeamRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/tasks': {
@@ -2586,6 +2605,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedSettingsPlansRoute: typeof AuthenticatedSettingsPlansRoute
   AuthenticatedSettingsTenantsRoute: typeof AuthenticatedSettingsTenantsRoute
   AuthenticatedTasksRoute: typeof AuthenticatedTasksRoute
+  AuthenticatedTeamRoute: typeof AuthenticatedTeamRoute
   AuthenticatedTenantBillingRoute: typeof AuthenticatedTenantBillingRoute
   AuthenticatedTenantDashboardRoute: typeof AuthenticatedTenantDashboardRoute
   AuthenticatedTenantPortalRoute: typeof AuthenticatedTenantPortalRoute
@@ -2651,6 +2671,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedSettingsPlansRoute: AuthenticatedSettingsPlansRoute,
   AuthenticatedSettingsTenantsRoute: AuthenticatedSettingsTenantsRoute,
   AuthenticatedTasksRoute: AuthenticatedTasksRoute,
+  AuthenticatedTeamRoute: AuthenticatedTeamRoute,
   AuthenticatedTenantBillingRoute: AuthenticatedTenantBillingRoute,
   AuthenticatedTenantDashboardRoute: AuthenticatedTenantDashboardRoute,
   AuthenticatedTenantPortalRoute: AuthenticatedTenantPortalRoute,
