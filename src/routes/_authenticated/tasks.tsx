@@ -19,6 +19,7 @@ import {
   Plus, Loader2, CheckSquare, Trash2, Calendar, Pencil, Paperclip, X,
   Upload, FileText, Image as ImageIcon, Download, RefreshCw, Search,
   ClipboardList, Clock, PlayCircle, CheckCircle2, AlertTriangle, Users, User,
+  ChevronLeft, ChevronRight
 } from "lucide-react";
 import { toast } from "sonner";
 import { DatePicker } from "@/components/ui/datetime-picker";
@@ -63,7 +64,7 @@ interface Task {
   due_date: string | null;
   completed_at: string | null;
   assigned_to: number | null;
-  assigned_to_name?: string | null; // optional – add to TaskResponse on backend for nicer team view
+  assigned_to_name?: string | null;
   created_by: number | null;
   lead_id: number | null;
   contact_id: number | null;
@@ -92,6 +93,18 @@ interface TeamMember {
   is_self: boolean;
 }
 
+interface TasksPaginatedResponse {
+  items: Task[];
+  meta: {
+    total_items: number;
+    total_pages: number;
+    current_page: number;
+    page_size: number;
+    has_next: boolean;
+    has_previous: boolean;
+  };
+}
+
 interface TaskCreatePayload {
   title: string;
   description?: string | null;
@@ -101,7 +114,6 @@ interface TaskCreatePayload {
   assigned_to?: number | null;
 }
 
-// Roles that can see the "My Team Tasks" section
 const TEAM_ROLES = ["super_admin", "admin", "manager"];
 
 const priorityStyles: Record<TaskPriority, string> = {
@@ -138,13 +150,10 @@ const empty: TaskCreatePayload = {
   due_date: null,
 };
 
-const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10 MB
+const MAX_FILE_SIZE = 10 * 1024 * 1024;
 
-// Row grid layouts (full literal strings so Tailwind can see them)
-const GRID_MY =
-  "md:grid-cols-[28px_minmax(0,3fr)_120px_110px_130px_84px]";
-const GRID_TEAM =
-  "md:grid-cols-[28px_minmax(0,3fr)_120px_110px_130px_150px_84px]";
+const GRID_MY = "md:grid-cols-[28px_minmax(0,3fr)_120px_110px_130px_84px]";
+const GRID_TEAM = "md:grid-cols-[28px_minmax(0,3fr)_120px_110px_130px_150px_84px]";
 
 // ============================================================
 // HELPERS
@@ -176,6 +185,8 @@ function initials(name: string) {
     .slice(0, 2)
     .toUpperCase();
 }
+
+const navBtn = "h-8 w-8 rounded-lg border border-border/60 bg-card text-sm font-medium flex items-center justify-center transition-colors hover:bg-muted disabled:opacity-40 disabled:hover:bg-card disabled:cursor-not-allowed";
 
 // ============================================================
 // SMALL UI PIECES
@@ -222,7 +233,7 @@ function TasksPage() {
     .replace(/[\s-]+/g, "_");
   const canViewTeam = TEAM_ROLES.includes(role);
 
-  const [scope, setScope] = useState<TaskScope>("my"); // "My Tasks" is the default
+  const [scope, setScope] = useState<TaskScope>("my");
   const effectiveScope: TaskScope = canViewTeam ? scope : "my";
 
   const [open, setOpen] = useState(false);
@@ -234,21 +245,28 @@ function TasksPage() {
   const [detailId, setDetailId] = useState<number | null>(null);
   const [pickedFiles, setPickedFiles] = useState<File[]>([]);
 
+  // Pagination State
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(20);
+
   useEffect(() => {
     if (filterParam) setFilter(filterParam);
   }, [filterParam]);
 
-  // -------- Fetch tasks (scoped) --------
+  // -------- Fetch tasks (scoped & paginated) --------
   const {
-    data: tasks,
+    data: tasksData,
     isLoading,
     refetch,
     isFetching,
   } = useQuery({
-    queryKey: ["tasks", effectiveScope],
+    queryKey: ["tasks", effectiveScope, page, pageSize],
     queryFn: () =>
-      apiFetch<Task[]>(`/api/v1/tasks?scope=${effectiveScope}&limit=500`),
+      apiFetch<TasksPaginatedResponse>(`/api/v1/tasks?scope=${effectiveScope}&page=${page}&size=${pageSize}`),
   });
+
+  const tasks = tasksData?.items ?? [];
+  const meta = tasksData?.meta;
 
   // -------- Fetch stats (scoped) --------
   const { data: stats } = useQuery({
@@ -257,7 +275,7 @@ function TasksPage() {
       apiFetch<TaskStats>(`/api/v1/tasks/stats?scope=${effectiveScope}`),
   });
 
-  // -------- Team members (assignee dropdown + names in team view) --------
+  // -------- Team members --------
   const {
     data: members,
     isLoading: membersLoading,
@@ -468,6 +486,9 @@ function TasksPage() {
   const gridCols = showAssignee ? GRID_TEAM : GRID_MY;
   const todayStr = localToday();
 
+  const totalPages = meta?.total_pages ?? 1;
+  const totalItems = meta?.total_items ?? tasks.length;
+
   // ============================================================
   // RENDER
   // ============================================================
@@ -482,7 +503,7 @@ function TasksPage() {
           <div>
             <h1 className="text-3xl font-bold tracking-tight">Tasks</h1>
             <p className="mt-1 text-sm text-muted-foreground">
-              {tasks?.length ?? 0} tasks · {effectiveScope === "team"
+              {totalItems} tasks · {effectiveScope === "team"
                 ? "Track what your team is working on."
                 : "Track your daily to-dos and deadlines."}
             </p>
@@ -525,6 +546,7 @@ function TasksPage() {
                 onClick={() => {
                   setScope(key);
                   setMemberFilter("all");
+                  setPage(1); // Reset page on scope change
                 }}
                 className={`flex items-center gap-2 rounded-xl px-5 py-2.5 text-sm font-medium transition-all ${
                   active
@@ -689,7 +711,6 @@ function TasksPage() {
                   )}
                 </button>
 
-                {/* mobile: actions sit in the 3rd column; desktop: ordered by grid below */}
                 <div className="flex items-center justify-end gap-1 md:order-last">
                   <Button
                     variant="ghost"
@@ -748,6 +769,29 @@ function TasksPage() {
             );
           })}
         </div>
+
+        {/* PAGINATION CONTROLS */}
+        {!isLoading && tasks.length > 0 && (
+          <div className="flex items-center justify-between mt-4 flex-wrap gap-3">
+            <div className="flex items-center gap-3 text-sm text-muted-foreground flex-wrap">
+              <span>Showing <span className="font-semibold text-foreground">{(page - 1) * pageSize + 1}–{Math.min(page * pageSize, totalItems)}</span> of <span className="font-semibold text-foreground">{totalItems}</span> tasks</span>
+              <span className="hidden sm:inline text-border">|</span>
+              <div className="flex items-center gap-2">
+                <span>Rows per page</span>
+                <Select value={String(pageSize)} onValueChange={(v) => { setPageSize(Number(v)); setPage(1); }}>
+                  <SelectTrigger className="w-20 h-8"><SelectValue /></SelectTrigger>
+                  <SelectContent>{[5, 10, 20, 50].map(n => <SelectItem key={n} value={String(n)}>{n}</SelectItem>)}</SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-1.5">
+              <button type="button" className={navBtn} disabled={page <= 1} onClick={() => setPage(page - 1)}><ChevronLeft className="h-4 w-4" /></button>
+              <span className="text-sm font-medium px-2">Page {page} of {totalPages}</span>
+              <button type="button" className={navBtn} disabled={page >= totalPages} onClick={() => setPage(page + 1)}><ChevronRight className="h-4 w-4" /></button>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* ---------- Create / Edit dialog ---------- */}
@@ -856,11 +900,6 @@ function TasksPage() {
                   <p className="text-xs text-destructive">
                     Couldn't load team members. Check that GET /tasks/team-members is registered
                     above /tasks/{"{task_id}"}.
-                  </p>
-                )}
-                {!membersLoading && !membersError && (members ?? []).length <= 1 && (
-                  <p className="text-xs text-muted-foreground">
-                    No team members found — users must be invited by you or have you as their manager.
                   </p>
                 )}
               </div>
