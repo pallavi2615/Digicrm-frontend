@@ -1257,7 +1257,7 @@ function EditTicketDialog({ ticket, onClose }: { ticket: Ticket; onClose: () => 
                 onChange={(event) => { if (event.target.files) addAttachmentFiles(event.target.files); event.currentTarget.value = ""; }}
               />
               <Paperclip className="mb-1 h-5 w-5 text-muted-foreground" />
-              <span className="text-sm font-medium">Click to add files or drag and drop</span>
+              <span className="text-sm font-medium">Click to add file or drag and drop</span>
               <span className="mt-1 text-xs text-muted-foreground">Images, PDF, DOCX, XLSX, TXT or CSV</span>
             </label>
             {pendingAttachments.length > 0 && (
