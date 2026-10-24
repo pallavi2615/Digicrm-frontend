@@ -89,7 +89,7 @@ const industrySubNav: Record<string, NavItem[]> = {
     { title: "Pipeline", url: "/it/pipeline", icon: TrendingUp },
   ],
   "/realestate": [
-    { title: "Real Estate Dashboard", url: "/realestate", icon: LayoutDashboard },
+    // { title: "Real Estate Dashboard", url: "/realestate", icon: LayoutDashboard },
     { title: "Lead360", url: "/realestate/leads", icon: Users },
     { title: "Projects & Inventory", url: "/realestate/projects", icon: Building2 },
     { title: "MatchAI", url: "/realestate/match", icon: Target },
