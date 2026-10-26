@@ -1,4 +1,4 @@
-import { defineRoute, Link, useNavigate } from "@/lib/router-compat";
+import { defineRoute, Link } from "@/lib/router-compat";
 import { useMutation, useQuery, useQueryClient } from "@/lib/react-data-client";
 import { apiFetch, apiUpload } from "@/lib/api";
 import { useEffect, useMemo, useState } from "react";
@@ -6,14 +6,12 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import {
-  Ticket as TicketIcon, Plus, Search, AlertTriangle, Loader2, Clock,
-  CircleDot, CheckCircle2, Layers, ArrowUp, ArrowDown, Minus, Flame, Mail,
-} from "lucide-react";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import {
   Ticket as TicketIcon,
   Plus,
@@ -23,6 +21,7 @@ import {
   Clock,
   ChevronLeft,
   ChevronRight,
+  ChevronDown,
   Eye,
   Pencil,
   CalendarClock,
@@ -44,7 +43,7 @@ import {
   Trash2,
 } from "lucide-react";
 import { toast } from "sonner";
-import { Ticket360Drawer } from "@/routes/_authenticated/Ticket360Drawer";
+import { Ticket360Drawer } from "@/components/Ticket360Drawer";
 import { useAuth } from "@/hooks/use-auth";
 
 export const Route = defineRoute("/_authenticated/tickets")({
@@ -100,77 +99,19 @@ type TicketsPaginatedResponse = {
   };
 };
 
-type IconType = React.ComponentType<{ className?: string }>;
-
-// ════════════════════════════════════════════════════════════
-// Same pill language as the Leads page
-// status   → open sky · pending amber · resolved emerald · closed slate
-// priority → low slate · medium teal · high orange · urgent red
-// urgency  → soft tones, so it never looks like priority
-// ════════════════════════════════════════════════════════════
 const STATUS_COLORS: Record<string, string> = {
-  open:
-    "bg-sky-100 text-sky-700 ring-1 ring-sky-200 dark:bg-sky-500/15 dark:text-sky-300 dark:ring-sky-500/30",
-  pending:
-    "bg-amber-100 text-amber-800 ring-1 ring-amber-200 dark:bg-amber-500/15 dark:text-amber-300 dark:ring-amber-500/30",
-  resolved:
-    "bg-emerald-100 text-emerald-700 ring-1 ring-emerald-200 dark:bg-emerald-500/15 dark:text-emerald-300 dark:ring-emerald-500/30",
-  closed:
-    "bg-slate-100 text-slate-600 ring-1 ring-slate-200 dark:bg-slate-500/15 dark:text-slate-300 dark:ring-slate-500/30",
+  open: "bg-blue-500/10 text-blue-500 border-blue-500/20",
+  pending: "bg-yellow-500/10 text-yellow-500 border-yellow-500/20",
+  resolved: "bg-green-500/10 text-green-500 border-green-500/20",
+  closed: "bg-gray-500/10 text-gray-500 border-gray-500/20",
 };
 const PRIORITY_COLORS: Record<string, string> = {
-  low:
-    "bg-slate-100 text-slate-600 ring-1 ring-slate-200 dark:bg-slate-500/15 dark:text-slate-300 dark:ring-slate-500/30",
-  medium:
-    "bg-teal-100 text-teal-700 ring-1 ring-teal-200 dark:bg-teal-500/15 dark:text-teal-300 dark:ring-teal-500/30",
-  high:
-    "bg-orange-500 text-white ring-1 ring-orange-600 dark:bg-orange-500/90 dark:text-white dark:ring-orange-400/40",
-  urgent:
-    "bg-red-600 text-white ring-1 ring-red-700 dark:bg-red-600 dark:text-white dark:ring-red-400/40",
+  low: "bg-slate-500/10 text-slate-500",
+  medium: "bg-blue-500/10 text-blue-500",
+  high: "bg-orange-500/10 text-orange-500",
+  urgent: "bg-red-500/10 text-red-500",
 };
 const URGENCY_COLORS: Record<string, string> = {
-  low: "bg-slate-50 text-slate-600 dark:bg-slate-500/20 dark:text-slate-300",
-  medium: "bg-sky-50 text-sky-600 dark:bg-sky-500/20 dark:text-sky-300",
-  high: "bg-amber-50 text-amber-700 dark:bg-amber-500/20 dark:text-amber-300",
-  critical: "bg-rose-100 text-rose-700 font-semibold dark:bg-rose-500/25 dark:text-rose-200",
-};
-
-const STATUS_ICONS: Record<string, IconType> = {
-  open: CircleDot,
-  pending: Clock,
-  resolved: CheckCircle2,
-  closed: Layers,
-};
-const PRIORITY_ICONS: Record<string, IconType> = {
-  low: ArrowDown,
-  medium: Minus,
-  high: ArrowUp,
-  urgent: Flame,
-};
-
-const AVATAR_COLORS = [
-  "bg-blue-100 text-blue-700 dark:bg-blue-600 dark:text-white",
-  "bg-pink-100 text-pink-700 dark:bg-pink-600 dark:text-white",
-  "bg-emerald-100 text-emerald-700 dark:bg-emerald-600 dark:text-white",
-  "bg-orange-100 text-orange-700 dark:bg-orange-600 dark:text-white",
-  "bg-violet-100 text-violet-700 dark:bg-violet-600 dark:text-white",
-  "bg-teal-100 text-teal-700 dark:bg-teal-600 dark:text-white",
-  "bg-rose-100 text-rose-700 dark:bg-rose-600 dark:text-white",
-  "bg-amber-100 text-amber-700 dark:bg-amber-600 dark:text-white",
-];
-
-function getInitials(name: string | null | undefined, fallback?: string | null): string {
-  const src = (name || fallback || "?").trim();
-  const parts = src.split(/\s+/);
-  const first = parts[0]?.[0] ?? "?";
-  const last = parts.length > 1 ? parts[parts.length - 1][0] : "";
-  return (first + last).toUpperCase();
-}
-
-const PILL_BASE = "inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-semibold capitalize";
-const FIELD =
-  "h-9 rounded-lg border-slate-200 bg-white dark:border-slate-700 dark:bg-slate-900/70 dark:text-slate-100";
-const FIELD_LABEL = "text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400";
   low: "bg-slate-500/10 text-slate-500",
   medium: "bg-sky-500/10 text-sky-500",
   high: "bg-amber-500/10 text-amber-500",
@@ -188,10 +129,11 @@ type SavedTicketFilters = {
   search: string;
   dateFrom: string;
   dateTo: string;
+  slaBreachedOnly: boolean;
 };
 
 const DEFAULT_TICKET_FILTERS: SavedTicketFilters = {
-  status: "all", priority: "all", urgency: "all", search: "", dateFrom: "", dateTo: "",
+  status: "all", priority: "all", urgency: "all", search: "", dateFrom: "", dateTo: "", slaBreachedOnly: false,
 };
 
 function readSavedTicketFilters(): SavedTicketFilters {
@@ -205,6 +147,10 @@ function readSavedTicketFilters(): SavedTicketFilters {
 }
 
 function TicketsPage() {
+  const { isAdmin, user } = useAuth();
+  const roleValue = String((user as any)?.role ?? (user as any)?.role_name ?? (user as any)?.user_role ?? "").toLowerCase();
+  const isManager = !isAdmin && (roleValue.includes("manager") || roleValue.includes("team_lead"));
+  const isExecutive = !isAdmin && !isManager;
   const [initialFilters] = useState<SavedTicketFilters>(readSavedTicketFilters);
   const [status, setStatus] = useState<string>(initialFilters.status);
   const [priority, setPriority] = useState<string>(initialFilters.priority);
@@ -213,28 +159,35 @@ function TicketsPage() {
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [dateFrom, setDateFrom] = useState(initialFilters.dateFrom);
   const [dateTo, setDateTo] = useState(initialFilters.dateTo);
+  const [slaBreachedOnly, setSlaBreachedOnly] = useState<boolean>(initialFilters.slaBreachedOnly);
   const [showNew, setShowNew] = useState(false);
   const [view360TicketId, setView360TicketId] = useState<number | null>(null);
   const [editingTicket, setEditingTicket] = useState<Ticket | null>(null);
   const [schedulingTicket, setSchedulingTicket] = useState<Ticket | null>(null);
   const [selectedTicketIds, setSelectedTicketIds] = useState<Set<number>>(new Set());
+  const [bulkActionsOpen, setBulkActionsOpen] = useState(false);
+  useEffect(() => {
+    if (selectedTicketIds.size === 0) setBulkActionsOpen(false);
+  }, [selectedTicketIds.size]);
+  const [bulkAction, setBulkAction] = useState<string>("status");
+  const [bulkActionValue, setBulkActionValue] = useState<string>("open");
+  const [bulkSaving, setBulkSaving] = useState(false);
  
   // Pagination State
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(20);
 
-  const navigate = useNavigate();
 
   // Preserve selected filters and search across page refreshes until cleared.
   useEffect(() => {
     try {
       window.localStorage.setItem(TICKET_FILTERS_STORAGE_KEY, JSON.stringify({
-        status, priority, urgency, search, dateFrom, dateTo,
+        status, priority, urgency, search, dateFrom, dateTo, slaBreachedOnly,
       }));
     } catch {
       // Browser storage may be unavailable; filters still work for this session.
     }
-  }, [status, priority, urgency, search, dateFrom, dateTo]);
+  }, [status, priority, urgency, search, dateFrom, dateTo, slaBreachedOnly]);
 
   // API Call with Pagination
   const { data: ticketsData, isLoading } = useQuery({
@@ -254,6 +207,120 @@ function TicketsPage() {
   });
 
   const queryClient = useQueryClient();
+
+  const { data: bulkAssignees = [], isLoading: bulkAssigneesLoading } = useQuery({
+    queryKey: ["ticket-assignees"],
+    queryFn: async () => {
+      const res = await apiFetch<any>("/api/v1/users/assignees");
+      const list = Array.isArray(res) ? res : res?.data ?? res?.items ?? res?.users ?? [];
+      return list as Array<{ id: number | string; full_name?: string | null; name?: string | null; email?: string | null }>;
+    },
+  });
+
+  const allowedBulkActions = [
+    ...(isAdmin ? [{ value: "delete", label: "Delete selected" }] : []),
+    ...(!isExecutive ? [{ value: "assign", label: "Assign to" }] : []),
+    { value: "status", label: "Change status" },
+    { value: "priority", label: "Change priority" },
+    { value: "escalate", label: "Escalate selected" },
+  ];
+
+  // Only admins are shown the delete action. The backend must also enforce admin permissions.
+  const deleteTicket = useMutation({
+    mutationFn: (ticket: Ticket) =>
+      apiFetch(`/api/v1/tickets/${ticket.id}`, { method: "DELETE" }),
+    onSuccess: (_result, ticket) => {
+      toast.success(`Ticket #${ticket.ticket_number} deleted`);
+      queryClient.invalidateQueries({ queryKey: ["tickets"] });
+      queryClient.invalidateQueries({ queryKey: ["tickets", "stats"] });
+      queryClient.invalidateQueries({ queryKey: ["ticket", String(ticket.id)] });
+      setSelectedTicketIds((current) => {
+        const next = new Set(current);
+        next.delete(ticket.id);
+        return next;
+      });
+    },
+    onError: (error: Error) => toast.error(error.message || "Failed to delete ticket"),
+  });
+
+  const handleDeleteTicket = (ticket: Ticket) => {
+    if (!isAdmin) return;
+    const confirmed = window.confirm(
+      `Delete ticket #${ticket.ticket_number} — "${ticket.subject}"? This action cannot be undone.`,
+    );
+    if (confirmed) deleteTicket.mutate(ticket);
+  };
+
+  const applyBulkChanges = async () => {
+    const ids = Array.from(selectedTicketIds);
+    if (!ids.length || bulkSaving) return;
+    if (!allowedBulkActions.some((action) => action.value === bulkAction)) {
+      toast.error("You do not have permission to perform this bulk action");
+      return;
+    }
+    if (bulkAction === "assign" && !bulkActionValue) {
+      toast.error("Choose a user to assign the selected tickets to");
+      return;
+    }
+    if (bulkAction === "delete") {
+      if (!isAdmin) {
+        toast.error("Only admins can delete tickets");
+        return;
+      }
+      if (!window.confirm(`Delete ${ids.length} selected ticket${ids.length === 1 ? "" : "s"}? This action cannot be undone.`)) return;
+    }
+
+    setBulkSaving(true);
+    let succeeded = 0;
+    const failed: number[] = [];
+    try {
+      for (const id of ids) {
+        try {
+          if (bulkAction === "delete") {
+            await apiFetch(`/api/v1/tickets/${id}`, { method: "DELETE" });
+          } else if (bulkAction === "status") {
+            await apiFetch(`/api/v1/tickets/${id}`, { method: "PUT", body: JSON.stringify({ status: bulkActionValue }) });
+          } else if (bulkAction === "priority") {
+            await apiFetch(`/api/v1/tickets/${id}`, { method: "PUT", body: JSON.stringify({ priority: bulkActionValue }) });
+          } else if (bulkAction === "assign") {
+            await apiFetch(`/api/v1/tickets/${id}`, { method: "PUT", body: JSON.stringify({ assigned_to: Number(bulkActionValue) }) });
+          } else if (bulkAction === "escalate") {
+            const current = await apiFetch<Ticket>(`/api/v1/tickets/${id}`);
+            await apiFetch(`/api/v1/tickets/${id}`, {
+              method: "PUT",
+              body: JSON.stringify({
+                custom_fields: {
+                  ...(current?.custom_fields ?? {}),
+                  escalated: true,
+                  escalation_requested: true,
+                  escalation_requested_at: new Date().toISOString(),
+                },
+              }),
+            });
+          }
+          succeeded += 1;
+        } catch {
+          failed.push(id);
+        }
+      }
+
+      if (succeeded > 0) {
+        const label = allowedBulkActions.find((action) => action.value === bulkAction)?.label ?? "Bulk changes";
+        toast.success(`${label}: ${succeeded} ticket${succeeded === 1 ? "" : "s"} updated`);
+      }
+      if (failed.length) toast.error(`Could not update ${failed.length} ticket${failed.length === 1 ? "" : "s"} (ID${failed.length === 1 ? "" : "s"}: ${failed.join(", ")})`);
+      if (succeeded > 0) {
+        setSelectedTicketIds(new Set());
+        await Promise.all([
+          queryClient.invalidateQueries({ queryKey: ["tickets"] }),
+          queryClient.invalidateQueries({ queryKey: ["tickets", "stats"] }),
+        ]);
+      }
+    } finally {
+      setBulkSaving(false);
+    }
+  };
+
   const togglePriorityMarker = useMutation({
     mutationFn: (ticket: Ticket) =>
       apiFetch(`/api/v1/tickets/${ticket.id}`, {
@@ -272,6 +339,22 @@ function TicketsPage() {
     onError: (error: Error) => toast.error(error.message),
   });
 
+  // Allow status and priority to be updated directly from the table.
+  const updateTicketField = useMutation({
+    mutationFn: ({ id, field, value }: { id: number; field: "status" | "priority"; value: string }) =>
+      apiFetch(`/api/v1/tickets/${id}`, {
+        method: "PUT",
+        body: JSON.stringify({ [field]: value }),
+      }),
+    onSuccess: (_result, variables) => {
+      toast.success(`Ticket ${variables.field} updated`);
+      queryClient.invalidateQueries({ queryKey: ["tickets"] });
+      queryClient.invalidateQueries({ queryKey: ["ticket", String(variables.id)] });
+      queryClient.invalidateQueries({ queryKey: ["tickets", "stats"] });
+    },
+    onError: (error: Error) => toast.error(error.message || "Failed to update ticket"),
+  });
+
   // Local Filters (Search, Status, etc.) on the current page data
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -281,6 +364,11 @@ function TicketsPage() {
       if (status !== "all" && t.status !== status) return false;
       if (priority !== "all" && t.priority !== priority) return false;
       if (urgency !== "all" && t.urgency !== urgency) return false;
+      if (slaBreachedOnly) {
+        const dueAt = t.sla_due_at ? new Date(t.sla_due_at).getTime() : Number.NaN;
+        const overdueWithoutResponse = !t.first_response_at && Number.isFinite(dueAt) && dueAt < Date.now();
+        if (!t.sla_breached && !overdueWithoutResponse) return false;
+      }
       if (start || end) {
         const created = new Date(t.created_at);
         if (start && created < start) return false;
@@ -294,14 +382,15 @@ function TicketsPage() {
         String(t.id).includes(q)
       );
     });
-  }, [tickets, status, priority, urgency, search, dateFrom, dateTo]);
+  }, [tickets, status, priority, urgency, search, dateFrom, dateTo, slaBreachedOnly]);
 
   const activeFilterCount =
     (status !== "all" ? 1 : 0) +
     (priority !== "all" ? 1 : 0) +
     (urgency !== "all" ? 1 : 0) +
     (dateFrom ? 1 : 0) +
-    (dateTo ? 1 : 0);
+    (dateTo ? 1 : 0) +
+    (slaBreachedOnly ? 1 : 0);
 
   const clearFilters = () => {
     setStatus("all");
@@ -310,6 +399,7 @@ function TicketsPage() {
     setDateFrom("");
     setDateTo("");
     setSearch("");
+    setSlaBreachedOnly(false);
     setPage(1);
     try {
       window.localStorage.removeItem(TICKET_FILTERS_STORAGE_KEY);
@@ -350,54 +440,39 @@ function TicketsPage() {
   };
 
   return (
-    <div className="space-y-4 sm:space-y-5">
-      {/* ───────── Header ───────── */}
-      <div className="flex items-start justify-between gap-3 flex-wrap">
-        <div className="flex items-center gap-3 sm:gap-4">
-          <div className="flex h-11 w-11 sm:h-14 sm:w-14 shrink-0 items-center justify-center rounded-2xl bg-blue-50 text-blue-600 shadow-sm dark:border dark:border-blue-500/20 dark:bg-blue-500/10 dark:text-blue-400">
-            <TicketIcon className="h-6 w-6 sm:h-7 sm:w-7" />
-          </div>
-          <div>
-            <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 dark:text-white">Tickets</h1>
-            <p className="text-muted-foreground text-sm mt-0.5">Support inbox</p>
-          </div>
+    <div className="space-y-6">
+      <div className="flex items-start justify-between gap-4 flex-wrap">
+        <div>
+          <h1 className="text-2xl font-semibold flex items-center gap-2">
+            <TicketIcon className="h-6 w-6" /> Tickets
+          </h1>
+          <p className="text-sm text-muted-foreground mt-1">Support inbox</p>
         </div>
-        <Button
-          className="h-9 rounded-lg bg-blue-600 text-white shadow-sm hover:bg-blue-700"
-          onClick={() => setShowNew(true)}
-        >
+        <Button onClick={() => setShowNew(true)}>
           <Plus className="h-4 w-4 mr-2" /> New Ticket
         </Button>
       </div>
 
-      {/* ───────── Stat cards (click to filter by status) ───────── */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
-        <StatCard label="All" value={counts.all} icon={TicketIcon} tone="blue" onClick={() => setStatus("all")} active={status === "all"} />
-        <StatCard label="Open" value={counts.open} icon={CircleDot} tone="sky" onClick={() => setStatus("open")} active={status === "open"} />
-        <StatCard label="Pending" value={counts.pending} icon={Clock} tone="orange" onClick={() => setStatus("pending")} active={status === "pending"} />
-        <StatCard label="Resolved" value={counts.resolved} icon={CheckCircle2} tone="green" onClick={() => setStatus("resolved")} active={status === "resolved"} />
-        <StatCard label="SLA Breached" value={counts.sla_breached} icon={AlertTriangle} tone="red" />
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-6">
         <StatCard label="All Tickets" value={counts.all} icon={Inbox} tone="blue" onClick={() => setStatus("all")} active={status === "all"} />
         <StatCard label="Open" value={counts.open} icon={CircleDot} tone="teal" onClick={() => setStatus("open")} active={status === "open"} />
         <StatCard label="Pending" value={counts.pending} icon={Hourglass} tone="amber" onClick={() => setStatus("pending")} active={status === "pending"} />
         <StatCard label="Resolved" value={counts.resolved} icon={CheckCircle2} tone="green" onClick={() => setStatus("resolved")} active={status === "resolved"} />
         <StatCard label="Closed" value={counts.closed} icon={Archive} tone="violet" onClick={() => setStatus("closed")} active={status === "closed"} />
-        <StatCard label="SLA Breached" value={counts.sla_breached} icon={AlertTriangle} tone="danger" />
+        <StatCard
+          label="SLA Breached"
+          value={counts.sla_breached}
+          icon={AlertTriangle}
+          tone="danger"
+          onClick={() => {
+            setStatus("all");
+            setSlaBreachedOnly((current) => !current);
+            setPage(1);
+          }}
+          active={slaBreachedOnly}
+        />
       </div>
 
-      {/* ───────── Filters + table ───────── */}
-      <Card className="rounded-2xl border-slate-200/70 shadow-sm dark:border-slate-800 dark:bg-[#0b1226]">
-        <CardContent className="p-3 sm:p-4">
-          <div className="flex gap-3 mb-4 flex-wrap">
-            <div className="relative w-full min-w-0 sm:min-w-60 sm:flex-1">
-              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-              <Input
-                placeholder="Search subject, email, #number"
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                className="h-9 rounded-lg border-slate-200 bg-slate-50/60 pl-9 dark:border-slate-700 dark:bg-slate-900/60 dark:text-slate-100 dark:placeholder:text-slate-500"
-              />
       <Card>
         <CardContent className="p-4">
           <div className="mb-4 flex flex-wrap gap-3">
@@ -410,31 +485,85 @@ function TicketsPage() {
                 className="h-10 rounded-xl border-slate-200 bg-slate-50/60 pl-9 dark:border-slate-700 dark:bg-slate-900/60 dark:text-slate-100 dark:placeholder:text-slate-500"
               />
             </div>
-            <Select value={priority} onValueChange={setPriority}>
-              <SelectTrigger className="h-9 w-full rounded-lg border-slate-200 bg-white sm:w-40 dark:border-slate-700 dark:bg-slate-900/60 dark:text-slate-100">
-                <SelectValue placeholder="Priority" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All priorities</SelectItem>
-                <SelectItem value="low">Low</SelectItem>
-                <SelectItem value="medium">Medium</SelectItem>
-                <SelectItem value="high">High</SelectItem>
-                <SelectItem value="urgent">Urgent</SelectItem>
-              </SelectContent>
-            </Select>
-            <Select value={urgency} onValueChange={setUrgency}>
-              <SelectTrigger className="h-9 w-full rounded-lg border-slate-200 bg-white sm:w-40 dark:border-slate-700 dark:bg-slate-900/60 dark:text-slate-100">
-                <SelectValue placeholder="Urgency" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All urgencies</SelectItem>
-                <SelectItem value="low">Low</SelectItem>
-                <SelectItem value="medium">Medium</SelectItem>
-                <SelectItem value="high">High</SelectItem>
-                <SelectItem value="critical">Critical</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
+            <div className="relative">
+              <Button
+                type="button"
+                variant="outline"
+                className="h-10 rounded-xl border-slate-200 bg-white px-4 font-medium text-slate-800 shadow-sm hover:bg-slate-50 hover:text-slate-900 disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-700 dark:bg-slate-900/60 dark:text-slate-100 dark:hover:bg-slate-800"
+                disabled={selectedTicketIds.size === 0 || bulkSaving}
+                onClick={() => setBulkActionsOpen((open) => !open)}
+                aria-expanded={bulkActionsOpen}
+                aria-controls="ticket-bulk-actions"
+                title={selectedTicketIds.size === 0 ? "Select one or more tickets to enable actions" : "Bulk actions for selected tickets"}
+              >
+                Actions
+                {selectedTicketIds.size > 0 && (
+                  <span className="ml-2 flex h-5 min-w-5 items-center justify-center rounded-full bg-blue-600 px-1.5 text-xs font-semibold text-white">
+                    {selectedTicketIds.size}
+                  </span>
+                )}
+                <ChevronDown className="ml-2 h-4 w-4" />
+              </Button>
+              {bulkActionsOpen && selectedTicketIds.size > 0 && (
+                <div id="ticket-bulk-actions" className="absolute right-0 top-full z-50 mt-2 w-64 overflow-hidden rounded-xl border border-slate-200 bg-white py-1 shadow-xl dark:border-slate-700 dark:bg-slate-950">
+                  <div className="border-b border-slate-100 px-3 py-2 text-xs text-slate-500 dark:border-slate-800">
+                    {selectedTicketIds.size} ticket{selectedTicketIds.size === 1 ? "" : "s"} selected
+                  </div>
+                  {allowedBulkActions.map((action) => (
+                    <button
+                      key={action.value}
+                      type="button"
+                      onClick={() => {
+                        setBulkAction(action.value);
+                        setBulkActionValue(action.value === "status" ? "open" : action.value === "priority" ? "medium" : "");
+                      }}
+                      className={`flex w-full items-center justify-between px-3 py-2.5 text-left text-sm hover:bg-slate-50 dark:hover:bg-slate-900 ${bulkAction === action.value ? "bg-slate-50 font-medium dark:bg-slate-900" : ""} ${action.value === "delete" ? "text-red-600 dark:text-red-400" : "text-slate-700 dark:text-slate-200"}`}
+                    >
+                      <span>{action.value === "status" ? "Status Change" : action.value === "assign" ? "Assign To" : action.value === "priority" ? "Change Priority" : action.value === "escalate" ? "Escalate selected" : action.label}</span>
+                      <ChevronRight className="h-4 w-4 text-slate-400" />
+                    </button>
+                  ))}
+                  {bulkAction === "status" && (
+                    <div className="border-t border-slate-100 p-3 dark:border-slate-800">
+                      <label className="mb-1 block text-xs font-medium text-slate-500">New status</label>
+                      <Select value={bulkActionValue || "open"} onValueChange={setBulkActionValue}>
+                        <SelectTrigger className="h-9 rounded-lg"><SelectValue placeholder="Choose status" /></SelectTrigger>
+                        <SelectContent><SelectItem value="open">Open</SelectItem><SelectItem value="pending">Pending</SelectItem><SelectItem value="resolved">Resolved</SelectItem><SelectItem value="closed">Closed</SelectItem></SelectContent>
+                      </Select>
+                    </div>
+                  )}
+                  {bulkAction === "priority" && (
+                    <div className="border-t border-slate-100 p-3 dark:border-slate-800">
+                      <label className="mb-1 block text-xs font-medium text-slate-500">New priority</label>
+                      <Select value={bulkActionValue || "medium"} onValueChange={setBulkActionValue}>
+                        <SelectTrigger className="h-9 rounded-lg"><SelectValue placeholder="Choose priority" /></SelectTrigger>
+                        <SelectContent><SelectItem value="low">Low</SelectItem><SelectItem value="medium">Medium</SelectItem><SelectItem value="high">High</SelectItem><SelectItem value="urgent">Urgent</SelectItem></SelectContent>
+                      </Select>
+                    </div>
+                  )}
+                  {bulkAction === "assign" && (
+                    <div className="border-t border-slate-100 p-3 dark:border-slate-800">
+                      <label className="mb-1 block text-xs font-medium text-slate-500">Assign to</label>
+                      <Select value={bulkActionValue || ""} onValueChange={setBulkActionValue}>
+                        <SelectTrigger className="h-9 rounded-lg"><SelectValue placeholder={bulkAssigneesLoading ? "Loading users…" : "Choose user"} /></SelectTrigger>
+                        <SelectContent>{bulkAssignees.map((person) => <SelectItem key={String(person.id)} value={String(person.id)}>{person.full_name || person.name || person.email || `User ${person.id}`}</SelectItem>)}</SelectContent>
+                      </Select>
+                    </div>
+                  )}
+                  {(bulkAction === "escalate" || bulkAction === "delete") && (
+                    <p className={`border-t border-slate-100 px-3 py-2 text-xs dark:border-slate-800 ${bulkAction === "delete" ? "text-red-600 dark:text-red-400" : "text-slate-500"}`}>
+                      {bulkAction === "delete" ? "This action cannot be undone." : "Flag selected tickets for manager review."}
+                    </p>
+                  )}
+                  <div className="flex items-center justify-between gap-2 border-t border-slate-100 p-2 dark:border-slate-800">
+                    <Button type="button" variant="ghost" size="sm" className="h-8 px-2" onClick={() => { setSelectedTicketIds(new Set()); setBulkActionsOpen(false); }}>Clear</Button>
+                    <Button type="button" className="h-8 rounded-lg bg-blue-600 px-3 text-white hover:bg-blue-700" onClick={async () => { await applyBulkChanges(); setBulkActionsOpen(false); }} disabled={bulkSaving || (bulkAction === "assign" && (!bulkActionValue || bulkAssigneesLoading))}>
+                      {bulkSaving ? <Loader2 className="mr-1 h-4 w-4 animate-spin" /> : null} Save Changes
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </div>
             <Button
               className="relative h-10 rounded-xl bg-blue-600 px-4 text-white shadow-sm hover:bg-blue-700 dark:border dark:border-blue-500 dark:bg-slate-900/80 dark:hover:bg-slate-800"
               onClick={() => setFiltersOpen((open) => !open)}
@@ -515,18 +644,9 @@ function TicketsPage() {
           )}
 
 
-          <div className="rounded-xl border border-slate-200/70 overflow-hidden dark:border-slate-800">
-            <Table className="min-w-225">
+          <div className="rounded-md border overflow-x-auto">
+            <Table>
               <TableHeader>
-                <TableRow className="bg-slate-50 hover:bg-slate-50 dark:border-slate-800 dark:bg-slate-900/60 dark:hover:bg-slate-900/60">
-                  <TableHead className="w-24 text-left font-medium text-slate-500 dark:text-slate-300">#</TableHead>
-                  <TableHead className="text-left font-medium text-slate-500 dark:text-slate-300">Subject</TableHead>
-                  <TableHead className="text-left font-medium text-slate-500 dark:text-slate-300">Requester</TableHead>
-                  <TableHead className="text-left font-medium text-slate-500 dark:text-slate-300">Status</TableHead>
-                  <TableHead className="text-left font-medium text-slate-500 dark:text-slate-300">Priority</TableHead>
-                  <TableHead className="text-left font-medium text-slate-500 dark:text-slate-300">Urgency</TableHead>
-                  <TableHead className="text-left font-medium text-slate-500 dark:text-slate-300">SLA</TableHead>
-                  <TableHead className="text-left font-medium text-slate-500 dark:text-slate-300">Created</TableHead>
                 <TableRow>
                   <TableHead className="w-10 px-3">
                     <input
@@ -543,88 +663,14 @@ function TicketsPage() {
                   <TableHead>Requester</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead>Priority</TableHead>
-                  <TableHead>SLA &amp; Due Date</TableHead>
+                  <TableHead>SLA & Due Date</TableHead>
                   <TableHead>Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {isLoading ? (
-                  <TableRow>
-                    <TableCell colSpan={8} className="py-10 text-center">
-                      <Loader2 className="h-5 w-5 animate-spin mx-auto text-muted-foreground" />
-                    </TableCell>
-                  </TableRow>
+                  <TableRow><TableCell colSpan={8} className="py-10 text-center"><Loader2 className="h-5 w-5 animate-spin inline" /></TableCell></TableRow>
                 ) : filtered.length === 0 ? (
-                  <TableRow>
-                    <TableCell colSpan={8} className="py-16 text-center">
-                      <TicketIcon className="h-9 w-10 mx-auto text-muted-foreground mb-2" />
-                      <p className="text-sm text-muted-foreground">No tickets yet — try the customer portal or create one.</p>
-                    </TableCell>
-                  </TableRow>
-                ) : filtered.map((t) => {
-                  const StatusIcon = STATUS_ICONS[t.status];
-                  const PriorityIcon = PRIORITY_ICONS[t.priority];
-                  const urg = t.urgency ?? "medium";
-                  return (
-                    <TableRow
-                      key={t.id}
-                      className="cursor-pointer border-slate-100 transition-colors hover:bg-blue-50/40 dark:border-slate-800/80 dark:hover:bg-slate-800/40"
-                      onClick={() => navigate({ to: "/tickets/$id", params: { id: String(t.id) } })}
-                    >
-                      <TableCell className="text-left">
-                        <span className="rounded-md bg-slate-100 px-2 py-0.5 font-mono text-xs font-medium text-slate-600 dark:bg-slate-800 dark:text-slate-300">
-                          #{t.ticket_number}
-                        </span>
-                      </TableCell>
-                      <TableCell className="max-w-75 truncate text-left font-medium text-slate-800 dark:text-white">
-                        {t.subject}
-                      </TableCell>
-                      <TableCell className="text-left">
-                        <div className="flex items-center justify-start gap-3">
-                          <div
-                            className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-xs font-semibold ${AVATAR_COLORS[t.id % AVATAR_COLORS.length]}`}
-                          >
-                            {getInitials(t.requester_name, t.requester_email)}
-                          </div>
-                          <div className="min-w-0 text-left">
-                            <div className="text-sm font-medium text-slate-800 dark:text-white">
-                              {t.requester_name ?? t.requester_email}
-                            </div>
-                            {t.requester_name && (
-                              <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                                <Mail className="h-3 w-3 shrink-0 text-slate-400" />
-                                {t.requester_email}
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                      </TableCell>
-                      <TableCell className="text-left">
-                        <span className={`${PILL_BASE} ${STATUS_COLORS[t.status] ?? "bg-gray-100 text-gray-700"}`}>
-                          {StatusIcon && <StatusIcon className="h-3 w-3" />}
-                          {t.status}
-                        </span>
-                      </TableCell>
-                      <TableCell className="text-left">
-                        <span className={`${PILL_BASE} ${PRIORITY_COLORS[t.priority] ?? "bg-gray-100 text-gray-700"}`}>
-                          {PriorityIcon && <PriorityIcon className="h-3 w-3" />}
-                          {t.priority}
-                        </span>
-                      </TableCell>
-                      <TableCell className="text-left">
-                        <span className={`inline-block rounded-md px-2.5 py-0.5 text-xs capitalize ${URGENCY_COLORS[urg] ?? "bg-slate-100 text-slate-600"}`}>
-                          {urg}
-                        </span>
-                      </TableCell>
-                      <TableCell className="text-left">
-                        <SlaCell dueAt={t.sla_due_at} breached={t.sla_breached} responded={!!t.first_response_at} />
-                      </TableCell>
-                      <TableCell className="text-left text-xs text-muted-foreground whitespace-nowrap">
-                        {new Date(t.created_at).toLocaleDateString()}
-                      </TableCell>
-                    </TableRow>
-                  );
-                })}
                   <TableRow><TableCell colSpan={8} className="py-10 text-center text-muted-foreground">No tickets yet — try the customer portal or create one.</TableCell></TableRow>
                 ) : filtered.map((t) => {
                   const dueDateValue = typeof t.custom_fields?.due_date === "string" ? t.custom_fields.due_date : "";
@@ -632,8 +678,7 @@ function TicketsPage() {
                   return (
                     <TableRow
                       key={t.id}
-                      className={`cursor-pointer hover:bg-muted/40 ${selectedTicketIds.has(t.id) ? "bg-primary/5" : ""}`}
-                      onClick={() => navigate({ to: "/tickets/$id", params: { id: String(t.id) } })}
+                      className={`${selectedTicketIds.has(t.id) ? "bg-primary/5" : ""}`}
                     >
                       <TableCell onClick={(e) => e.stopPropagation()}>
                         <input
@@ -650,11 +695,51 @@ function TicketsPage() {
                         <div>{t.requester_name ?? t.requester_email}</div>
                         {t.requester_name && <div className="text-xs text-muted-foreground">{t.requester_email}</div>}
                       </TableCell>
-                      <TableCell>
-                        <Badge variant="outline" className={STATUS_COLORS[t.status] ?? ""}>{t.status}</Badge>
+                      <TableCell onClick={(e) => e.stopPropagation()}>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <button
+                              type="button"
+                              aria-label={`Change status for ticket ${t.ticket_number}`}
+                              disabled={updateTicketField.isPending && updateTicketField.variables?.id === t.id}
+                              className={`inline-flex h-7 items-center rounded-full border px-2.5 text-xs font-medium capitalize transition-opacity hover:opacity-80 disabled:cursor-wait disabled:opacity-60 ${STATUS_COLORS[t.status] ?? "bg-muted text-foreground border-border"}`}
+                            >
+                              {t.status}
+                            </button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="start">
+                            {["open", "pending", "resolved", "closed"].map((value) => (
+                              <DropdownMenuItem key={value} disabled={value === t.status} onSelect={() => updateTicketField.mutate({ id: t.id, field: "status", value })}>
+                                <span className={`mr-2 inline-block h-2 w-2 rounded-full ${value === "open" ? "bg-blue-500" : value === "pending" ? "bg-yellow-500" : value === "resolved" ? "bg-green-500" : "bg-gray-500"}`} />
+                                <span className="capitalize">{value}</span>
+                                {value === t.status && <CheckCircle2 className="ml-2 h-3.5 w-3.5" />}
+                              </DropdownMenuItem>
+                            ))}
+                          </DropdownMenuContent>
+                        </DropdownMenu>
                       </TableCell>
-                      <TableCell>
-                        <span className={`text-xs px-2 py-1 rounded ${PRIORITY_COLORS[t.priority] ?? ""}`}>{t.priority}</span>
+                      <TableCell onClick={(e) => e.stopPropagation()}>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <button
+                              type="button"
+                              aria-label={`Change priority for ticket ${t.ticket_number}`}
+                              disabled={updateTicketField.isPending && updateTicketField.variables?.id === t.id}
+                              className={`inline-flex h-7 items-center rounded-full border border-transparent px-2.5 text-xs font-medium capitalize transition-opacity hover:opacity-80 disabled:cursor-wait disabled:opacity-60 ${PRIORITY_COLORS[t.priority] ?? "bg-muted text-foreground"}`}
+                            >
+                              {t.priority}
+                            </button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="start">
+                            {["low", "medium", "high", "urgent"].map((value) => (
+                              <DropdownMenuItem key={value} disabled={value === t.priority} onSelect={() => updateTicketField.mutate({ id: t.id, field: "priority", value })}>
+                                <span className={`mr-2 inline-block h-2 w-2 rounded-full ${value === "low" ? "bg-slate-500" : value === "medium" ? "bg-blue-500" : value === "high" ? "bg-orange-500" : "bg-red-500"}`} />
+                                <span className="capitalize">{value}</span>
+                                {value === t.priority && <CheckCircle2 className="ml-2 h-3.5 w-3.5" />}
+                              </DropdownMenuItem>
+                            ))}
+                          </DropdownMenuContent>
+                        </DropdownMenu>
                       </TableCell>
                       <TableCell>
                         <div className="space-y-1">
@@ -674,17 +759,58 @@ function TicketsPage() {
                           >
                             <Eye className="h-3.5 w-3.5" />
                           </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-7 w-7 rounded-lg bg-slate-50 text-slate-600 hover:bg-slate-100 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700"
-                            title="Edit ticket"
-                            aria-label="Edit ticket"
-                            onClick={() => setEditingTicket(t)}
-                          >
-                            <Pencil className="h-3.5 w-3.5" />
-                          </Button>
-                          <Button
+                          {isAdmin ? (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-7 w-7 rounded-lg bg-slate-50 text-slate-600 hover:bg-slate-100 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700"
+                              title="Edit ticket details (admin)"
+                              aria-label="Edit ticket details (admin)"
+                              onClick={() => setEditingTicket(t)}
+                            >
+                              <Pencil className="h-3.5 w-3.5" />
+                            </Button>
+                          ) : (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-7 w-7 rounded-lg bg-slate-50 text-slate-600 hover:bg-slate-100 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700"
+                              title="Open ticket details"
+                              aria-label="Open ticket details"
+                              onClick={() => { window.location.href = `/tickets/${t.id}`; }}
+                            >
+                              <Pencil className="h-3.5 w-3.5" />
+                            </Button>
+                          )}
+                          {isAdmin && (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-7 w-7 rounded-lg bg-violet-50 text-violet-600 hover:bg-violet-100 dark:bg-violet-500/20 dark:text-violet-300 dark:hover:bg-violet-500/30"
+                              title="Open ticket detail page"
+                              aria-label="Open ticket detail page"
+                              onClick={() => { window.location.href = `/tickets/${t.id}`; }}
+                            >
+                              <ExternalLink className="h-3.5 w-3.5" />
+                            </Button>
+                          )}
+                          {isAdmin && (
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="icon"
+                              className="h-7 w-7 shrink-0 rounded-lg bg-red-50 text-red-600 hover:bg-red-100 hover:text-red-700 dark:bg-red-500/20 dark:text-red-300 dark:hover:bg-red-500/30"
+                              title="Delete ticket (admin only)"
+                              aria-label={`Delete ticket ${t.ticket_number}`}
+                              disabled={deleteTicket.isPending && deleteTicket.variables?.id === t.id}
+                              onClick={() => handleDeleteTicket(t)}
+                            >
+                              {deleteTicket.isPending && deleteTicket.variables?.id === t.id
+                                ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                                : <Trash2 className="h-3.5 w-3.5" />}
+                            </Button>
+                          )}
+                          {/* <Button
                             variant="ghost"
                             size="icon"
                             className="h-7 w-7 rounded-lg bg-indigo-50 text-indigo-600 hover:bg-indigo-100 hover:text-indigo-700 dark:bg-indigo-500/20 dark:text-indigo-300 dark:hover:bg-indigo-500/30 dark:hover:text-indigo-200"
@@ -693,7 +819,7 @@ function TicketsPage() {
                             onClick={() => setSchedulingTicket(t)}
                           >
                             <CalendarClock className="h-3.5 w-3.5" />
-                          </Button>
+                          </Button> */}
                           <Button
                             variant="ghost"
                             size="icon"
@@ -713,12 +839,6 @@ function TicketsPage() {
               </TableBody>
             </Table>
           </div>
-
-          {!isLoading && filtered.length > 0 && (
-            <p className="mt-4 text-sm text-muted-foreground">
-              Showing {filtered.length} of {tickets.length} tickets
-            </p>
-          )}
 
           {/* PAGINATION CONTROLS */}
           {!isLoading && tickets.length > 0 && (
@@ -753,7 +873,7 @@ function TicketsPage() {
           onClose={() => setView360TicketId(null)}
         />
       )}
-      {editingTicket && (
+      {isAdmin && editingTicket && (
         <EditTicketDialog
           ticket={editingTicket}
           onClose={() => setEditingTicket(null)}
@@ -763,71 +883,23 @@ function TicketsPage() {
   );
 }
 
-const statTones: Record<string, { card: string; icon: string }> = {
-  blue: {
-    card: "from-blue-50 to-white border-blue-100 dark:from-blue-950 dark:to-slate-950 dark:border-blue-500/40",
-    icon: "bg-blue-100 text-blue-600 dark:bg-blue-500/25 dark:text-blue-300",
-  },
-  sky: {
-    card: "from-sky-50 to-white border-sky-100 dark:from-sky-950 dark:to-slate-950 dark:border-sky-500/40",
-    icon: "bg-sky-500 text-white",
-  },
-  orange: {
-    card: "from-orange-50 to-white border-orange-100 dark:from-orange-950 dark:to-slate-950 dark:border-orange-500/40",
-    icon: "bg-orange-100 text-orange-600 dark:bg-orange-500/30 dark:text-orange-300",
-  },
-  green: {
-    card: "from-green-50 to-white border-green-100 dark:from-emerald-950 dark:to-slate-950 dark:border-emerald-500/40",
-    icon: "bg-green-100 text-green-600 dark:bg-emerald-500/25 dark:text-emerald-300",
-  },
-  red: {
-    card: "from-red-50 to-white border-red-100 dark:from-red-950 dark:to-slate-950 dark:border-red-500/40",
-    icon: "bg-red-500 text-white",
-  },
-};
-
-function StatCard({ label, value, icon: Icon, tone, onClick, active }: {
-  label: string;
-  value: number;
-  icon: IconType;
-  tone: keyof typeof statTones;
-  onClick?: () => void;
-  active?: boolean;
-}) {
-  const t = statTones[tone];
-  const clickable = !!onClick;
 function StatCard({ label, value, icon: Icon, tone = "blue", onClick, active }: {
   label: string; value: number; icon: React.ComponentType<{ className?: string }>; tone?: "blue" | "teal" | "amber" | "green" | "violet" | "danger"; onClick?: () => void; active?: boolean;
 }) {
   const tones = {
-    blue: { border: "border-blue-100", icon: "bg-blue-100 text-blue-600", active: "ring-blue-300 bg-blue-50/80" },
-    teal: { border: "border-teal-100", icon: "bg-teal-100 text-teal-600", active: "ring-teal-300 bg-teal-50/80" },
-    amber: { border: "border-amber-100", icon: "bg-amber-100 text-amber-600", active: "ring-amber-300 bg-amber-50/80" },
-    green: { border: "border-emerald-100", icon: "bg-emerald-100 text-emerald-600", active: "ring-emerald-300 bg-emerald-50/80" },
-    violet: { border: "border-violet-100", icon: "bg-violet-100 text-violet-600", active: "ring-violet-300 bg-violet-50/80" },
-    danger: { border: "border-rose-100", icon: "bg-rose-100 text-rose-600", active: "ring-rose-300 bg-rose-50/80" },
+    blue: { border: "border-blue-100 dark:border-blue-500/40", gradient: "dark:from-blue-950 dark:to-slate-950", icon: "bg-blue-100 text-blue-600 dark:bg-blue-500/25 dark:text-blue-300", active: "ring-blue-300 dark:ring-blue-400/60 bg-blue-50/80 dark:bg-blue-950/70" },
+    teal: { border: "border-teal-100 dark:border-emerald-500/40", gradient: "dark:from-emerald-950 dark:to-slate-950", icon: "bg-teal-100 text-teal-600 dark:bg-emerald-500 dark:text-white", active: "ring-teal-300 dark:ring-emerald-400/60 bg-teal-50/80 dark:bg-emerald-950/70" },
+    amber: { border: "border-amber-100 dark:border-orange-500/40", gradient: "dark:from-orange-950 dark:to-slate-950", icon: "bg-amber-100 text-amber-600 dark:bg-orange-500/30 dark:text-orange-300", active: "ring-amber-300 dark:ring-orange-400/60 bg-amber-50/80 dark:bg-orange-950/70" },
+    green: { border: "border-emerald-100 dark:border-emerald-500/40", gradient: "dark:from-emerald-950 dark:to-slate-950", icon: "bg-emerald-100 text-emerald-600 dark:bg-emerald-500/25 dark:text-emerald-300", active: "ring-emerald-300 dark:ring-emerald-400/60 bg-emerald-50/80 dark:bg-emerald-950/70" },
+    violet: { border: "border-violet-100 dark:border-violet-500/40", gradient: "dark:from-violet-950 dark:to-slate-950", icon: "bg-violet-100 text-violet-600 dark:bg-violet-500 dark:text-white", active: "ring-violet-300 dark:ring-violet-400/60 bg-violet-50/80 dark:bg-violet-950/70" },
+    danger: { border: "border-rose-100 dark:border-red-500/40", gradient: "dark:from-red-950 dark:to-slate-950", icon: "bg-rose-100 text-rose-600 dark:bg-red-500 dark:text-white", active: "ring-rose-300 dark:ring-red-400/60 bg-rose-50/80 dark:bg-red-950/70" },
   };
   const style = tones[tone];
   return (
-    <button
-      type="button"
-      onClick={onClick}
-      disabled={!clickable}
-      className={`flex items-center gap-3 sm:gap-4 rounded-2xl border bg-linear-to-br p-3 sm:p-4 text-left shadow-sm transition-all ${t.card} ${
-        clickable ? "cursor-pointer hover:shadow-md" : "cursor-default"
-      } ${active ? "ring-2 ring-blue-500/60" : ""}`}
-    >
-      <div className={`flex h-10 w-10 sm:h-11 sm:w-11 shrink-0 items-center justify-center rounded-full ${t.icon}`}>
-        <Icon className="h-5 w-5" />
-      </div>
-      <div className="min-w-0">
-        <div className="truncate text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-300">{label}</div>
-        <div className="text-xl sm:text-2xl font-bold text-slate-800 dark:text-white">{value}</div>
-      </div>
-    <button type="button" onClick={onClick} className={`group flex min-w-0 items-center gap-3 rounded-2xl border ${style.border} bg-white p-3 text-left shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md dark:border-slate-800 dark:bg-slate-950/60 sm:p-4 ${active ? `ring-2 ${style.active}` : ""}`}>
-      <span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full ${style.icon} dark:bg-opacity-20`}><Icon className="h-5 w-5" /></span>
+    <button type="button" onClick={onClick} className={`group flex min-w-0 items-center gap-3 rounded-2xl border ${style.border} bg-white bg-gradient-to-br from-white to-white ${style.gradient} p-3 text-left shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md sm:p-4 ${active ? `ring-2 ${style.active}` : ""}`}>
+      <span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full ${style.icon}`}><Icon className="h-5 w-5" /></span>
       <span className="min-w-0">
-        <span className="block truncate text-[10px] font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 sm:text-xs">{label}</span>
+        <span className="block truncate text-[10px] font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-300 sm:text-xs">{label}</span>
         <span className="mt-0.5 block text-xl font-bold leading-tight text-slate-900 dark:text-white sm:text-2xl">{value}</span>
       </span>
     </button>
@@ -836,25 +908,13 @@ function StatCard({ label, value, icon: Icon, tone = "blue", onClick, active }: 
 
 function SlaCell({ dueAt, breached, responded }: { dueAt: string | null; breached: boolean; responded: boolean }) {
   if (!dueAt) return <span className="text-xs text-muted-foreground">—</span>;
-  if (responded) {
-    return (
-      <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-0.5 text-xs font-medium text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300">
-        <CheckCircle2 className="h-3 w-3" /> Responded
-      </span>
-    );
-  }
+  if (responded) return <span className="text-xs text-green-600">Responded</span>;
   const due = new Date(dueAt).getTime();
   const now = Date.now();
   const mins = Math.round((due - now) / 60000);
   const isBreach = breached || mins < 0;
   return (
-    <span
-      className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium ${
-        isBreach
-          ? "bg-rose-50 text-rose-700 dark:bg-rose-500/15 dark:text-rose-300"
-          : "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300"
-      }`}
-    >
+    <span className={`inline-flex items-center gap-1 text-xs ${isBreach ? "text-destructive" : "text-muted-foreground"}`}>
       {isBreach ? <AlertTriangle className="h-3 w-3" /> : <Clock className="h-3 w-3" />}
       {isBreach ? `Breached ${Math.abs(mins)}m` : mins > 60 ? `${Math.round(mins / 60)}h` : `${mins}m`}
     </span>
@@ -961,16 +1021,6 @@ function NewTicketDialog({ onClose }: { onClose: () => void }) {
   const currentUserLabel = user?.full_name || user?.email || "Current logged-in user";
 
   return (
-    <Dialog open onOpenChange={onClose}>
-      <DialogContent className="max-h-[90vh] max-w-lg overflow-y-auto rounded-2xl border-slate-200 dark:border-slate-800">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2.5">
-            <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-100 text-blue-600 dark:bg-blue-500/20 dark:text-blue-300">
-              <TicketIcon className="h-4 w-4" />
-            </span>
-            New Ticket
-          </DialogTitle>
-        </DialogHeader>
     <Dialog open onOpenChange={(open) => { if (!open) onClose(); }}>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader><DialogTitle>New Ticket</DialogTitle></DialogHeader>
@@ -1258,7 +1308,10 @@ function EditTicketDialog({ ticket, onClose }: { ticket: Ticket; onClose: () => 
 
   const attachmentHref = (url: string) => {
     if (/^https?:\/\//i.test(url)) return url;
-    const base = (import.meta as any).env?.VITE_API_BASE_URL ?? "";
+    
+    // Fallback to localhost:8000 if VITE_API_BASE_URL is not defined
+    const base = (import.meta as any).env?.VITE_API_BASE_URL ||"http://192.168.1.79:8000" || "http://localhost:8000";
+    
     return `${String(base).replace(/\/$/, "")}/${url.replace(/^\//, "")}`;
   };
 
@@ -1341,9 +1394,6 @@ function EditTicketDialog({ ticket, onClose }: { ticket: Ticket; onClose: () => 
       <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
         <DialogHeader><DialogTitle>Edit Ticket #{ticket.ticket_number}</DialogTitle></DialogHeader>
         <div className="space-y-4">
-          <div className="space-y-1.5">
-            <Label className={FIELD_LABEL}>Subject</Label>
-            <Input className={FIELD} value={form.subject} onChange={(e) => setForm({ ...form, subject: e.target.value })} maxLength={200} />
           <div>
             <Label>Subject</Label>
             <Input
@@ -1352,10 +1402,6 @@ function EditTicketDialog({ ticket, onClose }: { ticket: Ticket; onClose: () => 
               maxLength={500}
             />
           </div>
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-            <div className="space-y-1.5">
-              <Label className={FIELD_LABEL}>Requester email</Label>
-              <Input className={FIELD} type="email" value={form.requester_email} onChange={(e) => setForm({ ...form, requester_email: e.target.value })} />
           <div className="grid grid-cols-2 gap-3">
             <div>
               <Label>Requester email</Label>
@@ -1365,9 +1411,6 @@ function EditTicketDialog({ ticket, onClose }: { ticket: Ticket; onClose: () => 
                 onChange={(e) => setForm({ ...form, requester_email: e.target.value })}
               />
             </div>
-            <div className="space-y-1.5">
-              <Label className={FIELD_LABEL}>Requester name</Label>
-              <Input className={FIELD} value={form.requester_name} onChange={(e) => setForm({ ...form, requester_name: e.target.value })} />
             <div>
               <Label>Requester name</Label>
               <Input
@@ -1399,11 +1442,6 @@ function EditTicketDialog({ ticket, onClose }: { ticket: Ticket; onClose: () => 
               </Select>
             </div>
           </div>
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-            <div className="space-y-1.5">
-              <Label className={FIELD_LABEL}>Priority</Label>
-              <Select value={form.priority} onValueChange={(v) => setForm({ ...form, priority: v })}>
-                <SelectTrigger className={FIELD}><SelectValue /></SelectTrigger>
           <div className="grid grid-cols-2 gap-3">
             <div>
               <Label>Status</Label>
@@ -1429,10 +1467,6 @@ function EditTicketDialog({ ticket, onClose }: { ticket: Ticket; onClose: () => 
                 </SelectContent>
               </Select>
             </div>
-            <div className="space-y-1.5">
-              <Label className={FIELD_LABEL}>Urgency</Label>
-              <Select value={form.urgency} onValueChange={(v) => setForm({ ...form, urgency: v })}>
-                <SelectTrigger className={FIELD}><SelectValue /></SelectTrigger>
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div>
@@ -1456,15 +1490,6 @@ function EditTicketDialog({ ticket, onClose }: { ticket: Ticket; onClose: () => 
               <Input type="time" value={form.due_time} onChange={(e) => setForm({ ...form, due_time: e.target.value })} />
             </div>
           </div>
-          <div className="space-y-1.5">
-            <Label className={FIELD_LABEL}>Description</Label>
-            <Textarea
-              className="rounded-lg border-slate-200 dark:border-slate-700 dark:bg-slate-900/70"
-              rows={4}
-              value={form.description}
-              onChange={(e) => setForm({ ...form, description: e.target.value })}
-              maxLength={5000}
-            />
           <div>
             <Label>Description</Label>
             <Textarea
@@ -1557,7 +1582,7 @@ function EditTicketDialog({ ticket, onClose }: { ticket: Ticket; onClose: () => 
                 onChange={(event) => { if (event.target.files) addAttachmentFiles(event.target.files); event.currentTarget.value = ""; }}
               />
               <Paperclip className="mb-1 h-5 w-5 text-muted-foreground" />
-              <span className="text-sm font-medium">Click to add files or drag and drop</span>
+              <span className="text-sm font-medium">Click to add file or drag and drop</span>
               <span className="mt-1 text-xs text-muted-foreground">Images, PDF, DOCX, XLSX, TXT or CSV</span>
             </label>
             {pendingAttachments.length > 0 && (
@@ -1578,12 +1603,9 @@ function EditTicketDialog({ ticket, onClose }: { ticket: Ticket; onClose: () => 
             )}
           </div>
         </div>
-        <DialogFooter className="gap-2">
-          <Button variant="outline" className="rounded-lg" onClick={onClose}>Cancel</Button>
+        <DialogFooter>
+          <Button variant="outline" onClick={onClose}>Cancel</Button>
           <Button
-            className="rounded-lg bg-blue-600 text-white hover:bg-blue-700"
-            onClick={() => create.mutate()}
-            disabled={create.isPending || !form.subject || !form.requester_email}
             onClick={() => update.mutate()}
             disabled={update.isPending || !form.subject.trim() || !form.requester_email.trim()}
           >
