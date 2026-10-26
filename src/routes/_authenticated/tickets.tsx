@@ -485,24 +485,85 @@ function TicketsPage() {
                 className="h-10 rounded-xl border-slate-200 bg-slate-50/60 pl-9 dark:border-slate-700 dark:bg-slate-900/60 dark:text-slate-100 dark:placeholder:text-slate-500"
               />
             </div>
-            <Button
-              type="button"
-              variant="outline"
-              className="h-10 rounded-xl border-slate-200 bg-white px-4 font-medium text-slate-800 shadow-sm hover:bg-slate-50 hover:text-slate-900 disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-700 dark:bg-slate-900/60 dark:text-slate-100 dark:hover:bg-slate-800"
-              disabled={selectedTicketIds.size === 0 || bulkSaving}
-              onClick={() => setBulkActionsOpen((open) => !open)}
-              aria-expanded={bulkActionsOpen}
-              aria-controls="ticket-bulk-actions"
-              title={selectedTicketIds.size === 0 ? "Select one or more tickets to enable actions" : "Bulk actions for selected tickets"}
-            >
-              Actions
-              {selectedTicketIds.size > 0 && (
-                <span className="ml-2 flex h-5 min-w-5 items-center justify-center rounded-full bg-blue-600 px-1.5 text-xs font-semibold text-white">
-                  {selectedTicketIds.size}
-                </span>
+            <div className="relative">
+              <Button
+                type="button"
+                variant="outline"
+                className="h-10 rounded-xl border-slate-200 bg-white px-4 font-medium text-slate-800 shadow-sm hover:bg-slate-50 hover:text-slate-900 disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-700 dark:bg-slate-900/60 dark:text-slate-100 dark:hover:bg-slate-800"
+                disabled={selectedTicketIds.size === 0 || bulkSaving}
+                onClick={() => setBulkActionsOpen((open) => !open)}
+                aria-expanded={bulkActionsOpen}
+                aria-controls="ticket-bulk-actions"
+                title={selectedTicketIds.size === 0 ? "Select one or more tickets to enable actions" : "Bulk actions for selected tickets"}
+              >
+                Actions
+                {selectedTicketIds.size > 0 && (
+                  <span className="ml-2 flex h-5 min-w-5 items-center justify-center rounded-full bg-blue-600 px-1.5 text-xs font-semibold text-white">
+                    {selectedTicketIds.size}
+                  </span>
+                )}
+                <ChevronDown className="ml-2 h-4 w-4" />
+              </Button>
+              {bulkActionsOpen && selectedTicketIds.size > 0 && (
+                <div id="ticket-bulk-actions" className="absolute right-0 top-full z-50 mt-2 w-64 overflow-hidden rounded-xl border border-slate-200 bg-white py-1 shadow-xl dark:border-slate-700 dark:bg-slate-950">
+                  <div className="border-b border-slate-100 px-3 py-2 text-xs text-slate-500 dark:border-slate-800">
+                    {selectedTicketIds.size} ticket{selectedTicketIds.size === 1 ? "" : "s"} selected
+                  </div>
+                  {allowedBulkActions.map((action) => (
+                    <button
+                      key={action.value}
+                      type="button"
+                      onClick={() => {
+                        setBulkAction(action.value);
+                        setBulkActionValue(action.value === "status" ? "open" : action.value === "priority" ? "medium" : "");
+                      }}
+                      className={`flex w-full items-center justify-between px-3 py-2.5 text-left text-sm hover:bg-slate-50 dark:hover:bg-slate-900 ${bulkAction === action.value ? "bg-slate-50 font-medium dark:bg-slate-900" : ""} ${action.value === "delete" ? "text-red-600 dark:text-red-400" : "text-slate-700 dark:text-slate-200"}`}
+                    >
+                      <span>{action.value === "status" ? "Status Change" : action.value === "assign" ? "Assign To" : action.value === "priority" ? "Change Priority" : action.value === "escalate" ? "Escalate selected" : action.label}</span>
+                      <ChevronRight className="h-4 w-4 text-slate-400" />
+                    </button>
+                  ))}
+                  {bulkAction === "status" && (
+                    <div className="border-t border-slate-100 p-3 dark:border-slate-800">
+                      <label className="mb-1 block text-xs font-medium text-slate-500">New status</label>
+                      <Select value={bulkActionValue || "open"} onValueChange={setBulkActionValue}>
+                        <SelectTrigger className="h-9 rounded-lg"><SelectValue placeholder="Choose status" /></SelectTrigger>
+                        <SelectContent><SelectItem value="open">Open</SelectItem><SelectItem value="pending">Pending</SelectItem><SelectItem value="resolved">Resolved</SelectItem><SelectItem value="closed">Closed</SelectItem></SelectContent>
+                      </Select>
+                    </div>
+                  )}
+                  {bulkAction === "priority" && (
+                    <div className="border-t border-slate-100 p-3 dark:border-slate-800">
+                      <label className="mb-1 block text-xs font-medium text-slate-500">New priority</label>
+                      <Select value={bulkActionValue || "medium"} onValueChange={setBulkActionValue}>
+                        <SelectTrigger className="h-9 rounded-lg"><SelectValue placeholder="Choose priority" /></SelectTrigger>
+                        <SelectContent><SelectItem value="low">Low</SelectItem><SelectItem value="medium">Medium</SelectItem><SelectItem value="high">High</SelectItem><SelectItem value="urgent">Urgent</SelectItem></SelectContent>
+                      </Select>
+                    </div>
+                  )}
+                  {bulkAction === "assign" && (
+                    <div className="border-t border-slate-100 p-3 dark:border-slate-800">
+                      <label className="mb-1 block text-xs font-medium text-slate-500">Assign to</label>
+                      <Select value={bulkActionValue || ""} onValueChange={setBulkActionValue}>
+                        <SelectTrigger className="h-9 rounded-lg"><SelectValue placeholder={bulkAssigneesLoading ? "Loading users…" : "Choose user"} /></SelectTrigger>
+                        <SelectContent>{bulkAssignees.map((person) => <SelectItem key={String(person.id)} value={String(person.id)}>{person.full_name || person.name || person.email || `User ${person.id}`}</SelectItem>)}</SelectContent>
+                      </Select>
+                    </div>
+                  )}
+                  {(bulkAction === "escalate" || bulkAction === "delete") && (
+                    <p className={`border-t border-slate-100 px-3 py-2 text-xs dark:border-slate-800 ${bulkAction === "delete" ? "text-red-600 dark:text-red-400" : "text-slate-500"}`}>
+                      {bulkAction === "delete" ? "This action cannot be undone." : "Flag selected tickets for manager review."}
+                    </p>
+                  )}
+                  <div className="flex items-center justify-between gap-2 border-t border-slate-100 p-2 dark:border-slate-800">
+                    <Button type="button" variant="ghost" size="sm" className="h-8 px-2" onClick={() => { setSelectedTicketIds(new Set()); setBulkActionsOpen(false); }}>Clear</Button>
+                    <Button type="button" className="h-8 rounded-lg bg-blue-600 px-3 text-white hover:bg-blue-700" onClick={async () => { await applyBulkChanges(); setBulkActionsOpen(false); }} disabled={bulkSaving || (bulkAction === "assign" && (!bulkActionValue || bulkAssigneesLoading))}>
+                      {bulkSaving ? <Loader2 className="mr-1 h-4 w-4 animate-spin" /> : null} Save Changes
+                    </Button>
+                  </div>
+                </div>
               )}
-              <ChevronDown className={`ml-2 h-4 w-4 transition-transform ${bulkActionsOpen ? "rotate-180" : ""}`} />
-            </Button>
+            </div>
             <Button
               className="relative h-10 rounded-xl bg-blue-600 px-4 text-white shadow-sm hover:bg-blue-700 dark:border dark:border-blue-500 dark:bg-slate-900/80 dark:hover:bg-slate-800"
               onClick={() => setFiltersOpen((open) => !open)}
@@ -518,7 +579,7 @@ function TicketsPage() {
           </div>
 
           {filtersOpen && (
-            <div className="mb-4 overflow-hidden rounded-2xl border border-slate-200 bg-linear-to-br from-slate-50 to-white shadow-sm dark:border-slate-800 dark:from-slate-900/80 dark:to-slate-950/80">
+            <div className="mb-4 overflow-hidden rounded-2xl border border-slate-200 bg-gradient-to-br from-slate-50 to-white shadow-sm dark:border-slate-800 dark:from-slate-900/80 dark:to-slate-950/80">
               <div className="flex items-center justify-between gap-3 border-b border-slate-200/70 px-4 py-3.5 sm:px-5 dark:border-slate-800">
                 <div className="flex items-center gap-3">
                   <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-blue-100 text-blue-600 dark:bg-blue-500/15 dark:text-blue-300">
@@ -582,50 +643,6 @@ function TicketsPage() {
             </div>
           )}
 
-          {selectedTicketIds.size > 0 && (
-            <div className="mb-3 flex flex-col gap-3 rounded-xl border border-slate-200 bg-slate-50/80 p-3 shadow-sm dark:border-slate-800 dark:bg-slate-900/60 sm:flex-row sm:items-center sm:justify-between">
-              <div className="flex items-center gap-2 text-sm">
-                <span className="inline-flex h-7 min-w-7 items-center justify-center rounded-full bg-blue-100 px-2 text-xs font-semibold text-blue-700 dark:bg-blue-500/20 dark:text-blue-300">{selectedTicketIds.size}</span>
-                <span className="font-medium text-slate-800 dark:text-slate-100">ticket{selectedTicketIds.size === 1 ? "" : "s"} selected</span>
-                <Button type="button" variant="ghost" size="sm" className="h-7 px-2 text-xs text-muted-foreground" onClick={() => { setSelectedTicketIds(new Set()); setBulkActionsOpen(false); }}>Clear selection</Button>
-              </div>
-              <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-                <Select value={bulkAction} onValueChange={(value) => {
-                  setBulkAction(value);
-                  setBulkActionValue(value === "status" ? "open" : value === "priority" ? "medium" : "");
-                }}>
-                  <SelectTrigger className="h-9 w-full rounded-lg border-slate-200 bg-white dark:border-slate-700 dark:bg-slate-900 sm:w-48"><SelectValue placeholder="Choose action" /></SelectTrigger>
-                  <SelectContent>
-                    {allowedBulkActions.map((action) => <SelectItem key={action.value} value={action.value}>{action.label}</SelectItem>)}
-                  </SelectContent>
-                </Select>
-                {bulkAction === "status" && (
-                  <Select value={bulkActionValue || "open"} onValueChange={setBulkActionValue}>
-                    <SelectTrigger className="h-9 w-full rounded-lg border-slate-200 bg-white dark:border-slate-700 dark:bg-slate-900 sm:w-36"><SelectValue placeholder="Choose status" /></SelectTrigger>
-                    <SelectContent><SelectItem value="open">Open</SelectItem><SelectItem value="pending">Pending</SelectItem><SelectItem value="resolved">Resolved</SelectItem><SelectItem value="closed">Closed</SelectItem></SelectContent>
-                  </Select>
-                )}
-                {bulkAction === "priority" && (
-                  <Select value={bulkActionValue || "medium"} onValueChange={setBulkActionValue}>
-                    <SelectTrigger className="h-9 w-full rounded-lg border-slate-200 bg-white dark:border-slate-700 dark:bg-slate-900 sm:w-36"><SelectValue placeholder="Choose priority" /></SelectTrigger>
-                    <SelectContent><SelectItem value="low">Low</SelectItem><SelectItem value="medium">Medium</SelectItem><SelectItem value="high">High</SelectItem><SelectItem value="urgent">Urgent</SelectItem></SelectContent>
-                  </Select>
-                )}
-                {bulkAction === "assign" && (
-                  <Select value={bulkActionValue || ""} onValueChange={setBulkActionValue}>
-                    <SelectTrigger className="h-9 w-full rounded-lg border-slate-200 bg-white dark:border-slate-700 dark:bg-slate-900 sm:w-52"><SelectValue placeholder={bulkAssigneesLoading ? "Loading users…" : "Assign to user"} /></SelectTrigger>
-                    <SelectContent>{bulkAssignees.map((person) => <SelectItem key={String(person.id)} value={String(person.id)}>{person.full_name || person.name || person.email || `User ${person.id}`}</SelectItem>)}</SelectContent>
-                  </Select>
-                )}
-                {bulkAction === "escalate" && <span className="text-xs text-muted-foreground sm:max-w-48">Flag selected tickets for manager review.</span>}
-                {bulkAction === "delete" && <span className="text-xs text-red-600 dark:text-red-300">Cannot be undone.</span>}
-                <Button type="button" className="h-9 rounded-lg bg-blue-600 px-4 text-white hover:bg-blue-700 dark:bg-blue-600 dark:hover:bg-blue-700" onClick={applyBulkChanges} disabled={bulkSaving || (bulkAction === "assign" && (!bulkActionValue || bulkAssigneesLoading))}>
-                  {bulkSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <CheckCircle2 className="mr-2 h-4 w-4" />}
-                  Save Changes
-                </Button>
-              </div>
-            </div>
-          )}
 
           <div className="rounded-md border overflow-x-auto">
             <Table>
