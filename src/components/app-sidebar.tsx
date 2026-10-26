@@ -14,7 +14,7 @@ import {
   Landmark, Home, Laptop, Package, Stethoscope, GraduationCap, ShieldCheck, Car, Plane, Factory,
   Rocket, LifeBuoy, Radio, Crown, Layers, Inbox, TrendingUp, Activity, Wallet, HandCoins,
   Clock, IndianRupee, CreditCard, BookOpen, Store, Palette, ShoppingBag,Target, MapPin, Network,Handshake,
-  ArrowRight, ChevronDown,
+  ArrowRight, ChevronDown, CalendarClock,
   type LucideIcon,
 } from "lucide-react";
 
@@ -26,6 +26,7 @@ type NavItem = {
   superAdminOnly?: boolean;
   managerUp?: boolean;
   industries?: string[];
+  children?: NavItem[]; // sub tabs (nested under the item)
 };
 
 // Admin / Manager / Executive ke liye accordion group
@@ -163,13 +164,23 @@ const LEADS_ITEMS: NavItem[] = [
   { title: "Contacts", url: "/contacts", icon: UserCircle },
   { title: "Companies", url: "/companies", icon: Building2 },
   { title: "Pipeline", url: "/pipeline", icon: KanbanSquare },
+  { title: "Proposals", url: "/proposals", icon: FileText },
   { title: "Lead Sources", url: "/lead-sources", icon: TrendingUp },
 ];
 
 const ACTIVITY_ITEMS: NavItem[] = [
   { title: "Tasks", url: "/tasks", icon: CheckSquare },
   { title: "Tickets", url: "/tickets", icon: LifeBuoy },
-  { title: "Calendar", url: "/calendar", icon: Calendar },
+  {
+    // Calendar click -> /calendar (Task Calendar) opens by default
+    title: "Calendar",
+    url: "/calendar",
+    icon: Calendar,
+    children: [
+      { title: "Task Calendar", url: "/calendar", icon: CheckSquare },
+      { title: "Schedule Calendar", url: "/schedule-calendar", icon: CalendarClock },
+    ],
+  },
   { title: "Meetings", url: "/meetings", icon: Video },
 ];
 
@@ -210,6 +221,11 @@ export function AppSidebar() {
 
   // Accordion: ek time par sirf ek group open (sirf non-SuperAdmin ke liye use hota hai)
   const [openKey, setOpenKey] = useState<string | null>(null);
+
+  // Sub-tab sections (e.g. Calendar): manual open/close override.
+  // Route badalne par reset hota hai, tab section apne active state se khulta hai.
+  const [subOpen, setSubOpen] = useState<Record<string, boolean>>({});
+  useEffect(() => { setSubOpen({}); }, [pathname]);
 
   // Sidebar se CRM kholne par switcher ko usi group par sync karo.
   // Sirf pathname badalne par chalta hai, taaki switcher ki manual
@@ -337,12 +353,12 @@ export function AppSidebar() {
   // Sabse specific (longest) matching url hi "active" maana jaayega,
   // taaki /it aur /it/projects dono ek saath highlight na ho.
   const activeUrl = tenantGroups
-    .flatMap((g) => g.items)
+    .flatMap((g) => g.items.flatMap((i) => [i, ...(i.children ?? [])]))
     .filter((i) => isActive(i.url))
     .sort((a, b) => b.url.length - a.url.length)[0]?.url;
 
   const activeGroupKey = tenantGroups.find((g) =>
-    g.items.some((i) => i.url === activeUrl),
+    g.items.some((i) => i.url === activeUrl || i.children?.some((c) => c.url === activeUrl)),
   )?.key;
 
   // Route badalne par (ya page reload par) us route wala group khud open ho jaaye
@@ -415,7 +431,81 @@ export function AppSidebar() {
                   <div className="overflow-hidden">
                     <ul className="ml-5 mt-1 mb-1 space-y-0.5 border-l border-white/15 pl-2">
                       {group.items.map((item) => {
-                        const itemActive = item.url === activeUrl;
+                        const hasChildren = !!item.children?.length;
+                        const itemActive = hasChildren
+                          ? item.children!.some((c) => c.url === activeUrl)
+                          : item.url === activeUrl;
+
+                        // Item with sub tabs (e.g. Calendar): parent link opens the first
+                        // sub tab, sub tabs are shown while we are inside that section.
+                        if (hasChildren) {
+                          const expanded = subOpen[item.url] ?? itemActive;
+                          return (
+                            <li key={item.url}>
+                              <Link
+                                to={item.url}
+                                tabIndex={isOpen ? 0 : -1}
+                                aria-expanded={expanded}
+                                onClick={(e: { preventDefault: () => void; }) => {
+                                  // Already inside this section: click = open/close toggle
+                                  if (itemActive) {
+                                    e.preventDefault();
+                                    setSubOpen((p) => ({ ...p, [item.url]: !expanded }));
+                                  }
+                                }}
+                                className={
+                                  "flex h-9 items-center justify-between gap-3 rounded-lg px-3 text-[13.5px] transition-colors " +
+                                  (itemActive
+                                    ? "bg-white/10 font-medium text-white"
+                                    : "font-normal text-slate-300 hover:bg-white/10 hover:text-white")
+                                }
+                              >
+                                <span className="flex items-center gap-3">
+                                  <item.icon className="h-4 w-4 shrink-0" />
+                                  <span className="truncate">{item.title}</span>
+                                </span>
+                                <ChevronDown
+                                  className={
+                                    "h-3.5 w-3.5 shrink-0 text-slate-400 transition-transform duration-200 " +
+                                    (expanded ? "rotate-180" : "")
+                                  }
+                                />
+                              </Link>
+                              <div
+                                className={
+                                  "grid transition-all duration-200 ease-in-out " +
+                                  (expanded ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0")
+                                }
+                              >
+                                <div className="overflow-hidden">
+                                  <ul className="ml-4 mt-0.5 mb-1 space-y-0.5 border-l border-white/15 pl-2">
+                                    {item.children!.map((child) => {
+                                      const childActive = child.url === activeUrl;
+                                      return (
+                                        <li key={child.url}>
+                                          <Link
+                                            to={child.url}
+                                            tabIndex={isOpen && expanded ? 0 : -1}
+                                            className={
+                                              "flex h-8 items-center gap-2.5 rounded-lg px-3 text-[13px] transition-colors " +
+                                              (childActive
+                                                ? "bg-blue-600 font-medium text-white shadow-md shadow-blue-900/40"
+                                                : "font-normal text-slate-300 hover:bg-white/10 hover:text-white")
+                                            }
+                                          >
+                                            <child.icon className="h-3.5 w-3.5 shrink-0" />
+                                            <span className="truncate">{child.title}</span>
+                                          </Link>
+                                        </li>
+                                      );
+                                    })}
+                                  </ul>
+                                </div>
+                              </div>
+                            </li>
+                          );
+                        }
+
                         return (
                           <li key={item.url}>
                             <Link

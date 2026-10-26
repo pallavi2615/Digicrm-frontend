@@ -24,17 +24,15 @@ export const Route = defineRoute("/_authenticated/feature-matrix")({
 const ACTIONS: Action[] = ["view", "create", "edit", "delete"];
 
 function FeatureMatrixPage() {
-  const { user, isAdmin } = useAuth();
+  const { roles: authRoles, user } = useAuth();
 
-  // Build matrix client-side from MODULES constant
   const data = useMemo(() => {
-    const myRoles: AppRole[] = user?.roles ?? [];
-    const isSuperAdmin = myRoles.includes("super_admin");
+    const myRoles = (authRoles ?? user?.roles ?? []) as AppRole[];
+    const roles = ROLES.filter((r) => myRoles.includes(r.key));
 
     return {
-      full: isSuperAdmin || isAdmin,
-      roles: ROLES,
       myRoles,
+      roles,
       rows: MODULES.map((m) => ({
         key: m.key,
         label: m.label,
@@ -42,9 +40,9 @@ function FeatureMatrixPage() {
         route: m.route,
         description: m.description,
         perms: m.perms,
-      })),
+      })).filter((m) => roles.some((r) => (m.perms[r.key] ?? []).length > 0)),
     };
-  }, [user, isAdmin]);
+  }, [authRoles, user]);
 
   const downloadPdf = (role: AppRole) => {
     // PDF export not yet implemented — show message
@@ -77,12 +75,12 @@ function FeatureMatrixPage() {
       <div className="flex items-start justify-between flex-wrap gap-3">
         <div>
           <h1 className="text-3xl font-bold flex items-center gap-2">
-            <ShieldCheck className="h-7 w-7 text-primary" /> {data.full ? "Feature & Permission Matrix" : "My Access"}
+            <ShieldCheck className="h-7 w-7 text-primary" /> My Access
           </h1>
           <p className="text-muted-foreground text-sm mt-1">
-            {data.full
-              ? "Every module, panel by panel, with view / create / edit / delete rights per role."
-              : "The modules you can open, and what you may do in each one."}
+            {data.roles.length > 0
+              ? `Modules you can open as ${data.roles.map((r) => r.label).join(", ")}, and what you may do in each one.`
+              : "No role assigned to your account."}
           </p>
         </div>
         <Button size="sm" variant="outline" onClick={exportCsv}>
@@ -150,11 +148,10 @@ function FeatureMatrixPage() {
                               {ACTIONS.map((a) => (
                                 <span
                                   key={a}
-                                  className={`inline-flex items-center gap-0.5 rounded px-1.5 py-0.5 text-[10px] capitalize ${
-                                    perms.includes(a)
+                                  className={`inline-flex items-center gap-0.5 rounded px-1.5 py-0.5 text-[10px] capitalize ${perms.includes(a)
                                       ? "bg-success/15 text-success"
                                       : "bg-muted text-muted-foreground line-through"
-                                  }`}
+                                    }`}
                                 >
                                   {perms.includes(a) && <Check className="h-2.5 w-2.5" />}
                                   {a}
