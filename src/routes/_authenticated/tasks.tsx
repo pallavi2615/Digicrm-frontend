@@ -25,7 +25,7 @@ import {
   Plus, Loader2, CheckSquare, Trash2, Calendar, Pencil, Paperclip, X,
   Upload, FileText, Image as ImageIcon, Download, RefreshCw, Search,
   ClipboardList, Clock, PlayCircle, CheckCircle2, AlertTriangle, Users, User,
-  ChevronDown, Check, Flag, CircleDot, UserPlus,
+  ChevronDown, Check, Flag, CircleDot, UserPlus, ChevronLeft, ChevronRight
 } from "lucide-react";
 import { toast } from "sonner";
 import { DatePicker } from "@/components/ui/datetime-picker";
@@ -70,7 +70,7 @@ interface Task {
   due_date: string | null;
   completed_at: string | null;
   assigned_to: number | null;
-  assigned_to_name?: string | null; // optional – add to TaskResponse on backend for nicer team view
+  assigned_to_name?: string | null;
   created_by: number | null;
   lead_id: number | null;
   contact_id: number | null;
@@ -99,6 +99,18 @@ interface TeamMember {
   is_self: boolean;
 }
 
+interface TasksPaginatedResponse {
+  items: Task[];
+  meta: {
+    total_items: number;
+    total_pages: number;
+    current_page: number;
+    page_size: number;
+    has_next: boolean;
+    has_previous: boolean;
+  };
+}
+
 interface TaskCreatePayload {
   title: string;
   description?: string | null;
@@ -108,7 +120,6 @@ interface TaskCreatePayload {
   assigned_to?: number | null;
 }
 
-// Roles that can see the "My Team Tasks" section
 const TEAM_ROLES = ["super_admin", "admin", "manager"];
 
 const priorityStyles: Record<TaskPriority, string> = {
@@ -145,13 +156,10 @@ const empty: TaskCreatePayload = {
   due_date: null,
 };
 
-const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10 MB
+const MAX_FILE_SIZE = 10 * 1024 * 1024;
 
-// Row grid layouts (full literal strings so Tailwind can see them)
-const GRID_MY =
-  "md:grid-cols-[28px_minmax(0,3fr)_140px_120px_130px_84px]";
-const GRID_TEAM =
-  "md:grid-cols-[28px_minmax(0,3fr)_140px_120px_130px_190px_84px]";
+const GRID_MY = "md:grid-cols-[28px_minmax(0,3fr)_140px_120px_130px_84px]";
+const GRID_TEAM = "md:grid-cols-[28px_minmax(0,3fr)_140px_120px_130px_190px_84px]";
 
 type TaskPatch = Partial<{
   status: TaskStatus;
@@ -204,16 +212,12 @@ function StatCard({
   iconBg: string;
 }) {
   return (
-    <div
-      className={`flex items-center gap-4 rounded-2xl border p-4 shadow-sm transition-shadow hover:shadow-md ${tint}`}
-    >
+    <div className={`flex items-center gap-4 rounded-2xl border p-4 shadow-sm transition-shadow hover:shadow-md ${tint}`}>
       <div className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-full ${iconBg}`}>
         <Icon className="h-5 w-5" />
       </div>
       <div>
-        <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
-          {label}
-        </p>
+        <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">{label}</p>
         <p className="text-3xl font-bold leading-tight">{value}</p>
       </div>
     </div>
@@ -222,29 +226,18 @@ function StatCard({
 
 // ---------- Inline editable cells ----------
 
-function StatusCell({
-  task, onChange, className = "",
-}: { task: Task; onChange: (s: TaskStatus) => void; className?: string }) {
+function StatusCell({ task, onChange, className = "" }: { task: Task; onChange: (s: TaskStatus) => void; className?: string; }) {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <button
-          type="button"
-          className={`inline-flex w-fit items-center gap-1 rounded-full px-2.5 py-1 text-xs font-medium outline-none transition hover:ring-2 hover:ring-blue-300/60 focus-visible:ring-2 focus-visible:ring-blue-400 ${statusStyles[task.status]} ${className}`}
-        >
-          {statusLabel[task.status] ?? task.status}
+        <button type="button" className={`inline-flex w-fit items-center gap-1 rounded-full px-2.5 py-1 text-xs font-medium outline-none transition hover:ring-2 hover:ring-blue-300/60 focus-visible:ring-2 focus-visible:ring-blue-400 ${statusStyles[task.status as TaskStatus]} ${className}`}>
+          {statusLabel[task.status as TaskStatus] ?? task.status}
         </button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="start" className="w-44">
         {(Object.keys(statusLabel) as TaskStatus[]).map((s) => (
-          <DropdownMenuItem
-            key={s}
-            onClick={() => s !== task.status && onChange(s)}
-            className="flex items-center justify-between"
-          >
-            <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${statusStyles[s]}`}>
-              {statusLabel[s]}
-            </span>
+          <DropdownMenuItem key={s} onClick={() => s !== task.status && onChange(s)} className="flex items-center justify-between">
+            <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${statusStyles[s as TaskStatus]}`}>{statusLabel[s as TaskStatus]}</span>
             {task.status === s && <Check className="h-3.5 w-3.5" />}
           </DropdownMenuItem>
         ))}
@@ -253,31 +246,18 @@ function StatusCell({
   );
 }
 
-function PriorityCell({
-  task, onChange, className = "",
-}: { task: Task; onChange: (p: TaskPriority) => void; className?: string }) {
+function PriorityCell({ task, onChange, className = "" }: { task: Task; onChange: (p: TaskPriority) => void; className?: string; }) {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <button
-          type="button"
-          className={`inline-flex w-fit items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold capitalize outline-none transition hover:ring-2 hover:ring-blue-300/60 focus-visible:ring-2 focus-visible:ring-blue-400 ${
-            priorityStyles[task.priority] ?? priorityStyles.low
-          } ${className}`}
-        >
+        <button type="button" className={`inline-flex w-fit items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold capitalize outline-none transition hover:ring-2 hover:ring-blue-300/60 focus-visible:ring-2 focus-visible:ring-blue-400 ${priorityStyles[task.priority as TaskPriority] ?? priorityStyles.low} ${className}`}>
           {task.priority}
         </button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="start" className="w-40">
         {(["low", "medium", "high", "urgent"] as TaskPriority[]).map((p) => (
-          <DropdownMenuItem
-            key={p}
-            onClick={() => p !== task.priority && onChange(p)}
-            className="flex items-center justify-between"
-          >
-            <span className={`rounded-full px-2 py-0.5 text-xs font-semibold capitalize ${priorityStyles[p]}`}>
-              {p}
-            </span>
+          <DropdownMenuItem key={p} onClick={() => p !== task.priority && onChange(p)} className="flex items-center justify-between">
+            <span className={`rounded-full px-2 py-0.5 text-xs font-semibold capitalize ${priorityStyles[p]}`}>{p}</span>
             {task.priority === p && <Check className="h-3.5 w-3.5" />}
           </DropdownMenuItem>
         ))}
@@ -288,28 +268,15 @@ function PriorityCell({
 
 function MemberAvatar({ id, name, size = "h-7 w-7" }: { id: number | null; name: string; size?: string }) {
   return (
-    <span
-      className={`flex ${size} shrink-0 items-center justify-center rounded-full text-[10px] font-bold text-white ${
-        avatarColors[(id ?? 0) % avatarColors.length]
-      }`}
-    >
+    <span className={`flex ${size} shrink-0 items-center justify-center rounded-full text-[10px] font-bold text-white ${avatarColors[(id ?? 0) % avatarColors.length]}`}>
       {initials(name === "Unassigned" ? "?" : name.replace("#", ""))}
     </span>
   );
 }
 
-// Searchable list of assignees (search box appears when there are many members)
-function AssigneeList({
-  members, value, onPick, alwaysSearch = false,
-}: {
-  members: TeamMember[];
-  value: number | null;
-  onPick: (id: number) => void;
-  alwaysSearch?: boolean;
-}) {
+function AssigneeList({ members, value, onPick, alwaysSearch = false }: { members: TeamMember[]; value: number | null; onPick: (id: number) => void; alwaysSearch?: boolean; }) {
   const [q, setQ] = useState("");
   const showSearch = alwaysSearch || members.length > 5;
-  // Name-only search: 1 letter -> names/words STARTING with it; 2+ letters -> anywhere in the name
   const query = q.trim().toLowerCase();
   const list = members.filter((m) => {
     if (!query) return true;
@@ -323,36 +290,17 @@ function AssigneeList({
       {showSearch && (
         <div className="relative border-b p-2">
           <Search className="absolute left-4 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
-          <Input
-            autoFocus
-            value={q}
-            onChange={(e) => setQ(e.target.value)}
-            placeholder="Search members…"
-            className="h-8 rounded-lg pl-8 text-xs"
-          />
+          <Input autoFocus value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search members…" className="h-8 rounded-lg pl-8 text-xs" />
         </div>
       )}
       <div className="max-h-60 overflow-y-auto p-1">
-        {list.length === 0 && (
-          <p className="px-3 py-4 text-center text-xs text-muted-foreground">
-            {members.length === 0 ? "No members available." : "No match found."}
-          </p>
-        )}
+        {list.length === 0 && <p className="px-3 py-4 text-center text-xs text-muted-foreground">{members.length === 0 ? "No members available." : "No match found."}</p>}
         {list.map((m) => (
-          <button
-            key={m.id}
-            type="button"
-            onClick={() => onPick(m.id)}
-            className="flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left text-sm transition-colors hover:bg-muted"
-          >
+          <button key={m.id} type="button" onClick={() => onPick(m.id)} className="flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left text-sm transition-colors hover:bg-muted">
             <MemberAvatar id={m.id} name={m.name.replace(/\s*\(You\)$/, "")} />
             <span className="flex min-w-0 flex-1 items-baseline gap-1.5">
               <span className="truncate">{m.name}</span>
-              {m.role && (
-                <span className="shrink-0 text-xs text-muted-foreground">
-                  {m.role.replace(/_/g, " ")}
-                </span>
-              )}
+              {m.role && <span className="shrink-0 text-xs text-muted-foreground">{m.role.replace(/_/g, " ")}</span>}
             </span>
             {value === m.id && <Check className="h-3.5 w-3.5 shrink-0 text-blue-600" />}
           </button>
@@ -362,37 +310,18 @@ function AssigneeList({
   );
 }
 
-function AssigneeCell({
-  task, name, members, onPick, className = "",
-}: {
-  task: Task;
-  name: string;
-  members: TeamMember[];
-  onPick: (id: number) => void;
-  className?: string;
-}) {
+function AssigneeCell({ task, name, members, onPick, className = "" }: { task: Task; name: string; members: TeamMember[]; onPick: (id: number) => void; className?: string; }) {
   const [open, setOpen] = useState(false);
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
-        <button
-          type="button"
-          className={`flex min-w-0 max-w-full items-center gap-2 rounded-full py-0.5 pl-0.5 pr-2 text-sm outline-none transition hover:bg-muted focus-visible:ring-2 focus-visible:ring-blue-400 ${className}`}
-        >
+        <button type="button" className={`flex min-w-0 max-w-full items-center gap-2 rounded-full py-0.5 pl-0.5 pr-2 text-sm outline-none transition hover:bg-muted focus-visible:ring-2 focus-visible:ring-blue-400 ${className}`}>
           <MemberAvatar id={task.assigned_to} name={name} />
           <span className="truncate">{name}</span>
         </button>
       </PopoverTrigger>
       <PopoverContent align="start" className="w-64 p-0">
-        <AssigneeList
-          alwaysSearch
-          members={members}
-          value={task.assigned_to}
-          onPick={(id) => {
-            setOpen(false);
-            if (id !== task.assigned_to) onPick(id);
-          }}
-        />
+        <AssigneeList alwaysSearch members={members} value={task.assigned_to} onPick={(id) => { setOpen(false); if (id !== task.assigned_to) onPick(id); }} />
       </PopoverContent>
     </Popover>
   );
@@ -407,13 +336,10 @@ function TasksPage() {
   const { user } = useAuth();
   const { filter: filterParam } = Route.useSearch();
 
-  const role = String((user as any)?.role ?? "")
-    .toLowerCase()
-    .trim()
-    .replace(/[\s-]+/g, "_");
+  const role = String((user as any)?.role ?? "").toLowerCase().trim().replace(/[\s-]+/g, "_");
   const canViewTeam = TEAM_ROLES.includes(role);
 
-  const [scope, setScope] = useState<TaskScope>("my"); // "My Tasks" is the default
+  const [scope, setScope] = useState<TaskScope>("my");
   const effectiveScope: TaskScope = canViewTeam ? scope : "my";
 
   const [open, setOpen] = useState(false);
@@ -427,35 +353,47 @@ function TasksPage() {
   const [detailId, setDetailId] = useState<number | null>(null);
   const [pickedFiles, setPickedFiles] = useState<File[]>([]);
 
+  // Pagination State
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(20);
+
   useEffect(() => {
     if (filterParam) setFilter(filterParam);
   }, [filterParam]);
 
-  // -------- Fetch tasks (scoped) --------
-  const {
-    data: tasks,
-    isLoading,
-    refetch,
-    isFetching,
-  } = useQuery({
-    queryKey: ["tasks", effectiveScope],
-    queryFn: () =>
-      apiFetch<Task[]>(`/api/v1/tasks?scope=${effectiveScope}&limit=500`),
+  // -------- Fetch tasks (scoped & paginated) --------
+  const { data: tasksData, isLoading, refetch, isFetching } = useQuery({
+    queryKey: ["tasks", effectiveScope, page, pageSize, search, filter, memberFilter],
+    queryFn: async () => {
+      const params = new URLSearchParams();
+      params.append("scope", effectiveScope);
+      params.append("page", String(page));
+      params.append("size", String(pageSize));
+      
+      if (search) params.append("search", search);
+      if (filter === "today") params.append("due_today", "true");
+      if (filter === "done") params.append("status", "completed");
+      if (memberFilter !== "all") params.append("assigned_to", memberFilter);
+
+      const res = await apiFetch<TasksPaginatedResponse>(`/api/v1/tasks?${params.toString()}`);
+      if (Array.isArray(res)) {
+        return { items: res, meta: { total_items: res.length, total_pages: 1, current_page: 1, page_size: pageSize, has_next: false, has_previous: false } };
+      }
+      return res;
+    },
   });
+
+  const tasks = tasksData?.items ?? [];
+  const meta = tasksData?.meta;
 
   // -------- Fetch stats (scoped) --------
   const { data: stats } = useQuery({
     queryKey: ["task-stats", effectiveScope],
-    queryFn: () =>
-      apiFetch<TaskStats>(`/api/v1/tasks/stats?scope=${effectiveScope}`),
+    queryFn: () => apiFetch<TaskStats>(`/api/v1/tasks/stats?scope=${effectiveScope}`),
   });
 
-  // -------- Team members (assignee dropdown + names in team view) --------
-  const {
-    data: members,
-    isLoading: membersLoading,
-    isError: membersError,
-  } = useQuery({
+  // -------- Team members --------
+  const { data: members, isLoading: membersLoading, isError: membersError } = useQuery({
     queryKey: ["task-team-members"],
     queryFn: () => apiFetch<TeamMember[]>("/api/v1/tasks/team-members"),
     enabled: canViewTeam,
@@ -469,48 +407,30 @@ function TasksPage() {
     return id === user?.id ? "You" : `User #${id}`;
   };
 
+  // Local filtering for filter="open" | "done"
   const visibleTasks = useMemo(() => {
     const today = localToday();
-    const q = search.trim().toLowerCase();
     return (tasks ?? []).filter((t) => {
       if (filter === "open" && !["pending", "in_progress"].includes(t.status)) return false;
       if (filter === "done" && t.status !== "completed") return false;
       if (filter === "today") {
         if (!t.due_date || toDateInput(t.due_date) !== today) return false;
       }
-      if (
-        effectiveScope === "team" &&
-        memberFilter !== "all" &&
-        String(t.assigned_to) !== memberFilter
-      )
-        return false;
-      if (q) {
-        const hay = `${t.title} ${t.description ?? ""} ${t.assigned_to_name ?? ""}`.toLowerCase();
-        if (!hay.includes(q)) return false;
-      }
       return true;
     });
-  }, [tasks, filter, search, effectiveScope, memberFilter]);
+  }, [tasks, filter]);
 
   const detail = (tasks ?? []).find((t) => t.id === detailId) ?? null;
   const detailAttachments = detail?.attachments ?? [];
 
-  // Only act on rows that are currently visible AND ticked
   const selectedTasks = visibleTasks.filter((t) => selected.includes(t.id));
-  const allSelected =
-    visibleTasks.length > 0 && visibleTasks.every((t) => selected.includes(t.id));
+  const allSelected = visibleTasks.length > 0 && visibleTasks.every((t) => selected.includes(t.id));
   const someSelected = selectedTasks.length > 0 && !allSelected;
 
-  const toggleOne = (id: number) =>
-    setSelected((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
-
+  const toggleOne = (id: number) => setSelected((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
   const toggleAll = (checked: boolean) => {
     const visibleIds = visibleTasks.map((t) => t.id);
-    setSelected((prev) =>
-      checked
-        ? Array.from(new Set([...prev, ...visibleIds]))
-        : prev.filter((id) => !visibleIds.includes(id))
-    );
+    setSelected((prev) => checked ? Array.from(new Set([...prev, ...visibleIds])) : prev.filter((id) => !visibleIds.includes(id)));
   };
 
   const refreshAll = () => {
@@ -531,8 +451,7 @@ function TasksPage() {
     setPickedFiles((prev) => [...prev, ...valid]);
   };
 
-  const removeFile = (index: number) =>
-    setPickedFiles((prev) => prev.filter((_, i) => i !== index));
+  const removeFile = (index: number) => setPickedFiles((prev) => prev.filter((_, i) => i !== index));
 
   const openNew = () => {
     setEditingId(null);
@@ -567,11 +486,9 @@ function TasksPage() {
     }
   };
 
-  // -------- Create / Update --------
   const save = useMutation({
     mutationFn: async () => {
       if (!form.title.trim()) throw new Error("Please give the task a title.");
-
       const payload: any = {
         title: form.title,
         description: form.description || null,
@@ -583,29 +500,18 @@ function TasksPage() {
 
       let taskId: number;
       if (editingId) {
-        await apiFetch(`/api/v1/tasks/${editingId}`, {
-          method: "PUT",
-          body: JSON.stringify(payload),
-        });
+        await apiFetch(`/api/v1/tasks/${editingId}`, { method: "PUT", body: JSON.stringify(payload) });
         taskId = editingId;
       } else {
-        const created = await apiFetch<Task>("/api/v1/tasks", {
-          method: "POST",
-          body: JSON.stringify(payload),
-        });
+        const created = await apiFetch<Task>("/api/v1/tasks", { method: "POST", body: JSON.stringify(payload) });
         taskId = created.id;
       }
-
       if (pickedFiles.length > 0) await uploadAttachments(taskId, pickedFiles);
       return { taskId, attachmentsCount: pickedFiles.length };
     },
     onSuccess: (result) => {
       const verb = editingId ? "updated" : "created";
-      toast.success(
-        result.attachmentsCount
-          ? `Task ${verb} with ${result.attachmentsCount} attachment${result.attachmentsCount > 1 ? "s" : ""}`
-          : `Task ${verb}`
-      );
+      toast.success(result.attachmentsCount ? `Task ${verb} with ${result.attachmentsCount} attachment${result.attachmentsCount > 1 ? "s" : ""}` : `Task ${verb}`);
       refreshAll();
       setOpen(false);
       setForm(empty);
@@ -615,70 +521,39 @@ function TasksPage() {
     onError: (e: Error) => toast.error(e.message),
   });
 
-  // -------- Inline update (single task: status / priority / assignee) --------
   const updateField = useMutation({
-    mutationFn: ({ id, patch }: { id: number; patch: TaskPatch }) =>
-      apiFetch(`/api/v1/tasks/${id}`, {
-        method: "PUT",
-        body: JSON.stringify(patch),
-      }),
-    onSuccess: () => {
-      toast.success("Task updated");
-      refreshAll();
-    },
+    mutationFn: ({ id, patch }: { id: number; patch: TaskPatch }) => apiFetch(`/api/v1/tasks/${id}`, { method: "PUT", body: JSON.stringify(patch) }),
+    onSuccess: () => { toast.success("Task updated"); refreshAll(); },
     onError: (e: Error) => toast.error(e.message),
   });
 
-  // -------- Bulk update (selected tasks) --------
   const bulkUpdate = useMutation({
     mutationFn: async (patch: TaskPatch) => {
       const ids = selectedTasks.map((t) => t.id);
-      const results = await Promise.allSettled(
-        ids.map((id) =>
-          apiFetch(`/api/v1/tasks/${id}`, {
-            method: "PUT",
-            body: JSON.stringify(patch),
-          })
-        )
-      );
+      const results = await Promise.allSettled(ids.map((id) => apiFetch(`/api/v1/tasks/${id}`, { method: "PUT", body: JSON.stringify(patch) })));
       const failed = results.filter((r) => r.status === "rejected").length;
       return { total: ids.length, failed };
     },
     onSuccess: ({ total, failed }) => {
-      if (failed) {
-        toast.error(`${failed} of ${total} tasks could not be updated`);
-      } else {
-        toast.success(`${total} task${total > 1 ? "s" : ""} updated`);
-        setSelected([]);
-      }
+      if (failed) toast.error(`${failed} of ${total} tasks could not be updated`);
+      else { toast.success(`${total} task${total > 1 ? "s" : ""} updated`); setSelected([]); }
       refreshAll();
     },
     onError: (e: Error) => toast.error(e.message),
   });
 
-  // -------- Delete task --------
   const del = useMutation({
     mutationFn: (id: number) => apiFetch(`/api/v1/tasks/${id}`, { method: "DELETE" }),
-    onSuccess: () => {
-      toast.success("Task deleted");
-      setDetailId(null);
-      refreshAll();
-    },
+    onSuccess: () => { toast.success("Task deleted"); setDetailId(null); refreshAll(); },
     onError: (e: Error) => toast.error(e.message),
   });
 
-  // -------- Delete attachment --------
   const deleteAttachment = useMutation({
-    mutationFn: ({ taskId, attachmentId }: { taskId: number; attachmentId: number }) =>
-      apiFetch(`/api/v1/tasks/${taskId}/attachments/${attachmentId}`, { method: "DELETE" }),
-    onSuccess: () => {
-      toast.success("Attachment deleted");
-      refreshAll();
-    },
+    mutationFn: ({ taskId, attachmentId }: { taskId: number; attachmentId: number }) => apiFetch(`/api/v1/tasks/${taskId}/attachments/${attachmentId}`, { method: "DELETE" }),
+    onSuccess: () => { toast.success("Attachment deleted"); refreshAll(); },
     onError: (e: Error) => toast.error(e.message),
   });
 
-  // -------- Upload from detail dialog --------
   const [detailUploading, setDetailUploading] = useState(false);
   const handleDetailUpload = async (taskId: number, files: FileList | null) => {
     if (!files || files.length === 0) return;
@@ -704,14 +579,15 @@ function TasksPage() {
   };
 
   const isTeamView = effectiveScope === "team";
-  // Admin/manager can see + change the assignee in BOTH My Tasks and My Team Tasks
   const showAssignee = canViewTeam;
   const gridCols = showAssignee ? GRID_TEAM : GRID_MY;
   const todayStr = localToday();
 
-  // ============================================================
-  // RENDER
-  // ============================================================
+  const totalPages = meta?.total_pages ?? 1;
+  const totalItems = meta?.total_items ?? tasks.length;
+  const rangeStart = totalItems === 0 ? 0 : (page - 1) * pageSize + 1;
+  const rangeEnd = Math.min(totalItems, page * pageSize);
+
   return (
     <div className="space-y-6">
       {/* ---------- Header ---------- */}
@@ -723,59 +599,29 @@ function TasksPage() {
           <div>
             <h1 className="text-3xl font-bold tracking-tight">Tasks</h1>
             <p className="mt-1 text-sm text-muted-foreground">
-              {tasks?.length ?? 0} tasks · {effectiveScope === "team"
-                ? "Track what your team is working on."
-                : "Track your daily to-dos and deadlines."}
+              {totalItems} tasks · {effectiveScope === "team" ? "Track what your team is working on." : "Track your daily to-dos and deadlines."}
             </p>
           </div>
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
-          <Button
-            variant="outline"
-            className="h-11 rounded-xl px-5 shadow-sm"
-            onClick={() => refetch()}
-            disabled={isFetching}
-          >
-            <RefreshCw className={`mr-2 h-4 w-4 ${isFetching ? "animate-spin" : ""}`} />
-            Refresh
+          <Button variant="outline" className="h-11 rounded-xl px-5 shadow-sm" onClick={() => refetch()} disabled={isFetching}>
+            <RefreshCw className={`mr-2 h-4 w-4 ${isFetching ? "animate-spin" : ""}`} /> Refresh
           </Button>
-          <Button
-            className="h-11 rounded-xl bg-blue-600 px-5 text-white shadow-sm hover:bg-blue-700"
-            onClick={openNew}
-          >
+          <Button className="h-11 rounded-xl bg-blue-600 px-5 text-white shadow-sm hover:bg-blue-700" onClick={openNew}>
             <Plus className="mr-2 h-4 w-4" /> New Task
           </Button>
         </div>
       </div>
 
-      {/* ---------- Scope buttons (Admin / Manager only) ---------- */}
+      {/* ---------- Scope buttons ---------- */}
       {canViewTeam && (
         <div className="inline-flex rounded-2xl border bg-card p-1.5 shadow-sm">
-          {(
-            [
-              { key: "my", label: "My Tasks", icon: User },
-              { key: "team", label: "My Team Tasks", icon: Users },
-            ] as { key: TaskScope; label: string; icon: any }[]
-          ).map(({ key, label, icon: Icon }) => {
+          {([{ key: "my", label: "My Tasks", icon: User }, { key: "team", label: "My Team Tasks", icon: Users }] as { key: TaskScope; label: string; icon: any }[]).map(({ key, label, icon: Icon }) => {
             const active = effectiveScope === key;
             return (
-              <button
-                key={key}
-                type="button"
-                onClick={() => {
-                  setScope(key);
-                  setMemberFilter("all");
-                  setSelected([]);
-                }}
-                className={`flex items-center gap-2 rounded-xl px-5 py-2.5 text-sm font-medium transition-all ${
-                  active
-                    ? "bg-blue-600 text-white shadow-md"
-                    : "text-muted-foreground hover:bg-muted hover:text-foreground"
-                }`}
-              >
-                <Icon className="h-4 w-4" />
-                {label}
+              <button key={key} type="button" onClick={() => { setScope(key); setMemberFilter("all"); setSelected([]); setPage(1); }} className={`flex items-center gap-2 rounded-xl px-5 py-2.5 text-sm font-medium transition-all ${active ? "bg-blue-600 text-white shadow-md" : "text-muted-foreground hover:bg-muted hover:text-foreground"}`}>
+                <Icon className="h-4 w-4" /> {label}
               </button>
             );
           })}
@@ -784,41 +630,11 @@ function TasksPage() {
 
       {/* ---------- Stat cards ---------- */}
       <div className="grid grid-cols-2 gap-4 md:grid-cols-3 xl:grid-cols-5">
-        <StatCard
-          label="Total"
-          value={stats?.total ?? 0}
-          icon={ClipboardList}
-          tint="bg-gradient-to-br from-blue-50 to-white border-blue-100 dark:from-blue-950/50 dark:to-slate-950 dark:border-blue-900/40"
-          iconBg="bg-blue-100 text-blue-600 dark:bg-blue-500/20 dark:text-blue-400"
-        />
-        <StatCard
-          label="Pending"
-          value={stats?.pending ?? 0}
-          icon={Clock}
-          tint="bg-gradient-to-br from-orange-50 to-white border-orange-100 dark:from-orange-950/40 dark:to-slate-950 dark:border-orange-900/40"
-          iconBg="bg-orange-100 text-orange-600 dark:bg-orange-500/20 dark:text-orange-400"
-        />
-        <StatCard
-          label="In Progress"
-          value={stats?.in_progress ?? 0}
-          icon={PlayCircle}
-          tint="bg-gradient-to-br from-violet-50 to-white border-violet-100 dark:from-violet-950/40 dark:to-slate-950 dark:border-violet-900/40"
-          iconBg="bg-violet-500 text-white"
-        />
-        <StatCard
-          label="Completed"
-          value={stats?.completed ?? 0}
-          icon={CheckCircle2}
-          tint="bg-gradient-to-br from-emerald-50 to-white border-emerald-100 dark:from-emerald-950/40 dark:to-slate-950 dark:border-emerald-900/40"
-          iconBg="bg-emerald-100 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-400"
-        />
-        <StatCard
-          label="Overdue"
-          value={stats?.overdue ?? 0}
-          icon={AlertTriangle}
-          tint="bg-gradient-to-br from-red-50 to-white border-red-100 dark:from-red-950/40 dark:to-slate-950 dark:border-red-900/40"
-          iconBg="bg-red-500 text-white"
-        />
+        <StatCard label="Total" value={stats?.total ?? 0} icon={ClipboardList} tint="bg-gradient-to-br from-blue-50 to-white border-blue-100 dark:from-blue-950/50 dark:to-slate-950 dark:border-blue-900/40" iconBg="bg-blue-100 text-blue-600 dark:bg-blue-500/20 dark:text-blue-400" />
+        <StatCard label="Pending" value={stats?.pending ?? 0} icon={Clock} tint="bg-gradient-to-br from-orange-50 to-white border-orange-100 dark:from-orange-950/40 dark:to-slate-950 dark:border-orange-900/40" iconBg="bg-orange-100 text-orange-600 dark:bg-orange-500/20 dark:text-orange-400" />
+        <StatCard label="In Progress" value={stats?.in_progress ?? 0} icon={PlayCircle} tint="bg-gradient-to-br from-violet-50 to-white border-violet-100 dark:from-violet-950/40 dark:to-slate-950 dark:border-violet-900/40" iconBg="bg-violet-500 text-white" />
+        <StatCard label="Completed" value={stats?.completed ?? 0} icon={CheckCircle2} tint="bg-gradient-to-br from-emerald-50 to-white border-emerald-100 dark:from-emerald-950/40 dark:to-slate-950 dark:border-emerald-900/40" iconBg="bg-emerald-100 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-400" />
+        <StatCard label="Overdue" value={stats?.overdue ?? 0} icon={AlertTriangle} tint="bg-gradient-to-br from-red-50 to-white border-red-100 dark:from-red-950/40 dark:to-slate-950 dark:border-red-900/40" iconBg="bg-red-500 text-white" />
       </div>
 
       {/* ---------- Search + filter + list ---------- */}
@@ -826,103 +642,58 @@ function TasksPage() {
         <div className="flex flex-wrap gap-3">
           <div className="relative min-w-55 flex-1">
             <Search className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-            <Input
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder={showAssignee ? "Search task, description, assignee…" : "Search task or description…"}
-              className="h-11 rounded-xl pl-10"
-            />
+            <Input value={search} onChange={(e) => { setSearch(e.target.value); setPage(1); }} placeholder={showAssignee ? "Search task, description, assignee…" : "Search task or description…"} className="h-11 rounded-xl pl-10" />
           </div>
           {/* Bulk actions */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button
-                variant="outline"
-                className="h-11 rounded-xl px-4 shadow-sm"
-                disabled={selectedTasks.length === 0 || bulkUpdate.isPending}
-              >
+              <Button variant="outline" className="h-11 rounded-xl px-4 shadow-sm" disabled={selectedTasks.length === 0 || bulkUpdate.isPending}>
                 {bulkUpdate.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 Actions
-                {selectedTasks.length > 0 && (
-                  <span className="ml-2 rounded-full bg-blue-600 px-2 py-0.5 text-xs font-semibold text-white">
-                    {selectedTasks.length}
-                  </span>
-                )}
+                {selectedTasks.length > 0 && <span className="ml-2 rounded-full bg-blue-600 px-2 py-0.5 text-xs font-semibold text-white">{selectedTasks.length}</span>}
                 <ChevronDown className="ml-2 h-4 w-4" />
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-56">
-              <DropdownMenuLabel className="text-xs text-muted-foreground">
-                {selectedTasks.length} task{selectedTasks.length === 1 ? "" : "s"} selected
-              </DropdownMenuLabel>
+              <DropdownMenuLabel className="text-xs text-muted-foreground">{selectedTasks.length} task{selectedTasks.length === 1 ? "" : "s"} selected</DropdownMenuLabel>
               <DropdownMenuSeparator />
-
               <DropdownMenuSub>
-                <DropdownMenuSubTrigger>
-                  <CircleDot className="mr-2 h-4 w-4" />
-                  Change Status
-                </DropdownMenuSubTrigger>
+                <DropdownMenuSubTrigger><CircleDot className="mr-2 h-4 w-4" /> Change Status</DropdownMenuSubTrigger>
                 <DropdownMenuSubContent className="w-44">
                   {(Object.keys(statusLabel) as TaskStatus[]).map((st) => (
-                    <DropdownMenuItem key={st} onClick={() => bulkUpdate.mutate({ status: st })}>
-                      <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${statusStyles[st]}`}>
-                        {statusLabel[st]}
-                      </span>
+                    <DropdownMenuItem key={st} onClick={() => bulkUpdate.mutate({ status: st as TaskStatus })}>
+                      <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${statusStyles[st as TaskStatus]}`}>{statusLabel[st as TaskStatus]}</span>
                     </DropdownMenuItem>
                   ))}
                 </DropdownMenuSubContent>
               </DropdownMenuSub>
-
               <DropdownMenuSub>
-                <DropdownMenuSubTrigger>
-                  <Flag className="mr-2 h-4 w-4" />
-                  Change Priority
-                </DropdownMenuSubTrigger>
+                <DropdownMenuSubTrigger><Flag className="mr-2 h-4 w-4" /> Change Priority</DropdownMenuSubTrigger>
                 <DropdownMenuSubContent className="w-40">
                   {(["low", "medium", "high", "urgent"] as TaskPriority[]).map((pr) => (
-                    <DropdownMenuItem key={pr} onClick={() => bulkUpdate.mutate({ priority: pr })}>
-                      <span className={`rounded-full px-2 py-0.5 text-xs font-semibold capitalize ${priorityStyles[pr]}`}>
-                        {pr}
-                      </span>
+                    <DropdownMenuItem key={pr} onClick={() => bulkUpdate.mutate({ priority: pr as TaskPriority })}>
+                      <span className={`rounded-full px-2 py-0.5 text-xs font-semibold capitalize ${priorityStyles[pr]}`}>{pr}</span>
                     </DropdownMenuItem>
                   ))}
                 </DropdownMenuSubContent>
               </DropdownMenuSub>
-
-              {canViewTeam && (
-                <DropdownMenuItem onClick={() => setBulkAssignOpen(true)}>
-                  <UserPlus className="mr-2 h-4 w-4" />
-                  Assign To…
-                </DropdownMenuItem>
-              )}
-
+              {canViewTeam && <DropdownMenuItem onClick={() => setBulkAssignOpen(true)}><UserPlus className="mr-2 h-4 w-4" /> Assign To…</DropdownMenuItem>}
               <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={() => setSelected([])}>
-                <X className="mr-2 h-4 w-4" />
-                Clear selection
-              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setSelected([])}><X className="mr-2 h-4 w-4" /> Clear selection</DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
 
           {isTeamView && (
-            <Select value={memberFilter} onValueChange={setMemberFilter}>
-              <SelectTrigger className="h-11 w-48 rounded-xl">
-                <SelectValue placeholder="All members" />
-              </SelectTrigger>
+            <Select value={memberFilter} onValueChange={(v) => { setMemberFilter(v); setPage(1); }}>
+              <SelectTrigger className="h-11 w-48 rounded-xl"><SelectValue placeholder="All members" /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All members</SelectItem>
-                {teamOnly.map((m) => (
-                  <SelectItem key={m.id} value={String(m.id)}>
-                    {m.name}
-                  </SelectItem>
-                ))}
+                {teamOnly.map((m) => <SelectItem key={m.id} value={String(m.id)}>{m.name}</SelectItem>)}
               </SelectContent>
             </Select>
           )}
-          <Select value={filter} onValueChange={setFilter}>
-            <SelectTrigger className="h-11 w-40 rounded-xl border-0 bg-blue-600 text-white shadow-sm hover:bg-blue-700 [&>svg]:text-white [&>svg]:opacity-100">
-              <SelectValue />
-            </SelectTrigger>
+          <Select value={filter} onValueChange={(v) => { setFilter(v); setPage(1); }}>
+            <SelectTrigger className="h-11 w-40 rounded-xl border-0 bg-blue-600 text-white shadow-sm hover:bg-blue-700 [&>svg]:text-white [&>svg]:opacity-100"><SelectValue /></SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All</SelectItem>
               <SelectItem value="today">Today</SelectItem>
@@ -934,14 +705,8 @@ function TasksPage() {
 
         <div className="mt-4 overflow-hidden rounded-xl border">
           {/* column header */}
-          <div
-            className={`hidden items-center gap-3 border-b bg-muted/30 px-4 py-3 text-sm font-medium text-muted-foreground md:grid ${gridCols}`}
-          >
-            <Checkbox
-              checked={allSelected ? true : someSelected ? "indeterminate" : false}
-              onCheckedChange={(c) => toggleAll(c === true)}
-              aria-label="Select all"
-            />
+          <div className={`hidden items-center gap-3 border-b bg-muted/30 px-4 py-3 text-sm font-medium text-muted-foreground md:grid ${gridCols}`}>
+            <Checkbox checked={allSelected ? true : someSelected ? "indeterminate" : false} onCheckedChange={(c) => toggleAll(c === true)} aria-label="Select all" />
             <span>Task</span>
             <span>Status</span>
             <span>Priority</span>
@@ -950,22 +715,12 @@ function TasksPage() {
             <span className="text-right">Actions</span>
           </div>
 
-          {isLoading && (
-            <div className="py-14 text-center">
-              <Loader2 className="mx-auto h-5 w-5 animate-spin" />
-            </div>
-          )}
+          {isLoading && <div className="py-14 text-center"><Loader2 className="mx-auto h-5 w-5 animate-spin" /></div>}
 
           {!isLoading && visibleTasks.length === 0 && (
             <div className="py-16 text-center">
               <CheckSquare className="mx-auto mb-2 h-10 w-10 text-muted-foreground" />
-              <p className="text-sm text-muted-foreground">
-                {filter === "today"
-                  ? "No tasks due today."
-                  : isTeamView
-                  ? "No tasks assigned to your team members yet."
-                  : "No tasks. Create your first one."}
-              </p>
+              <p className="text-sm text-muted-foreground">{filter === "today" ? "No tasks due today." : isTeamView ? "No tasks assigned to your team members yet." : "No tasks. Create your first one."}</p>
             </div>
           )}
 
@@ -977,116 +732,60 @@ function TasksPage() {
             const assigneeName = t.assigned_to_name || nameOf(t.assigned_to);
 
             return (
-              <div
-                key={t.id}
-                className={`grid grid-cols-[28px_1fr_auto] items-center gap-3 border-b px-4 py-3.5 transition-colors last:border-b-0 hover:bg-muted/30 ${gridCols} ${
-                  done ? "opacity-60" : ""
-                } ${selected.includes(t.id) ? "bg-blue-50/70 dark:bg-blue-950/30" : ""}`}
-              >
-                <Checkbox
-                  checked={selected.includes(t.id)}
-                  onCheckedChange={() => toggleOne(t.id)}
-                  aria-label="Select task"
-                />
-
-                <button
-                  type="button"
-                  className="min-w-0 text-left"
-                  onClick={() => setDetailId(t.id)}
-                >
-                  <p className={`truncate text-sm font-semibold ${done ? "line-through" : ""}`}>
-                    {t.title}
-                  </p>
-                  {t.description && (
-                    <p className="mt-0.5 line-clamp-1 text-xs text-muted-foreground">
-                      {t.description}
-                    </p>
-                  )}
-                  {attachCount > 0 && (
-                    <span className="mt-1 inline-flex items-center gap-1 text-xs text-muted-foreground">
-                      <Paperclip className="h-3 w-3" />
-                      {attachCount}
-                    </span>
-                  )}
+              <div key={t.id} className={`grid grid-cols-[28px_1fr_auto] items-center gap-3 border-b px-4 py-3.5 transition-colors last:border-b-0 hover:bg-muted/30 ${gridCols} ${done ? "opacity-60" : ""} ${selected.includes(t.id) ? "bg-blue-50/70 dark:bg-blue-950/30" : ""}`}>
+                <Checkbox checked={selected.includes(t.id)} onCheckedChange={() => toggleOne(t.id)} aria-label="Select task" />
+                <button type="button" className="min-w-0 text-left" onClick={() => setDetailId(t.id)}>
+                  <p className={`truncate text-sm font-semibold ${done ? "line-through" : ""}`}>{t.title}</p>
+                  {t.description && <p className="mt-0.5 line-clamp-1 text-xs text-muted-foreground">{t.description}</p>}
+                  {attachCount > 0 && <span className="mt-1 inline-flex items-center gap-1 text-xs text-muted-foreground"><Paperclip className="h-3 w-3" />{attachCount}</span>}
                 </button>
-
-                {/* mobile: actions sit in the 3rd column; desktop: ordered by grid below */}
                 <div className="flex items-center justify-end gap-1 md:order-last">
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-8 w-8 rounded-lg"
-                    onClick={() => openEdit(t)}
-                  >
-                    <Pencil className="h-4 w-4 text-muted-foreground" />
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-8 w-8 rounded-lg"
-                    onClick={() => del.mutate(t.id)}
-                  >
-                    <Trash2 className="h-4 w-4 text-muted-foreground" />
-                  </Button>
+                  <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg" onClick={() => openEdit(t)}><Pencil className="h-4 w-4 text-muted-foreground" /></Button>
+                  <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg" onClick={() => del.mutate(t.id)}><Trash2 className="h-4 w-4 text-muted-foreground" /></Button>
                 </div>
-
-                <StatusCell
-                  task={t}
-                  className="col-start-2 md:col-auto"
-                  onChange={(status) => updateField.mutate({ id: t.id, patch: { status } })}
-                />
-
-                <PriorityCell
-                  task={t}
-                  className="col-start-2 md:col-auto"
-                  onChange={(priority) => updateField.mutate({ id: t.id, patch: { priority } })}
-                />
-
-                <span
-                  className={`col-start-2 flex items-center gap-1.5 text-sm md:col-auto ${
-                    overdue ? "font-medium text-destructive" : "text-muted-foreground"
-                  }`}
-                >
-                  <Calendar className="h-3.5 w-3.5" />
-                  {t.due_date ? new Date(t.due_date).toLocaleDateString() : "—"}
+                <StatusCell task={t as Task} className="col-start-2 md:col-auto" onChange={(status) => updateField.mutate({ id: t.id, patch: { status: status as TaskStatus } })} />
+                <PriorityCell task={t as Task} className="col-start-2 md:col-auto" onChange={(priority) => updateField.mutate({ id: t.id, patch: { priority: priority as TaskPriority } })} />
+                <span className={`col-start-2 flex items-center gap-1.5 text-sm md:col-auto ${overdue ? "font-medium text-destructive" : "text-muted-foreground"}`}>
+                  <Calendar className="h-3.5 w-3.5" /> {t.due_date ? new Date(t.due_date).toLocaleDateString() : "—"}
                 </span>
-
-                {showAssignee && (
-                  <AssigneeCell
-                    task={t}
-                    name={assigneeName}
-                    members={members ?? []}
-                    className="col-start-2 md:col-auto"
-                    onPick={(assigned_to) =>
-                      updateField.mutate({ id: t.id, patch: { assigned_to } })
-                    }
-                  />
-                )}
+                {showAssignee && <AssigneeCell task={t as Task} name={assigneeName} members={members ?? []} className="col-start-2 md:col-auto" onPick={(assigned_to) => updateField.mutate({ id: t.id, patch: { assigned_to } })} />}
               </div>
             );
           })}
         </div>
+
+        {/* PAGINATION CONTROLS */}
+        {!isLoading && tasks.length > 0 && (
+          <div className="flex items-center justify-between mt-4 flex-wrap gap-3">
+            <div className="flex items-center gap-3 text-sm text-muted-foreground flex-wrap">
+              <span>Showing <span className="font-semibold text-foreground">{rangeStart}–{rangeEnd}</span> of <span className="font-semibold text-foreground">{totalItems}</span> tasks</span>
+              <span className="hidden sm:inline text-border">|</span>
+              <div className="flex items-center gap-2">
+                <span>Rows per page</span>
+                <Select value={String(pageSize)} onValueChange={(v) => { setPageSize(Number(v)); setPage(1); }}>
+                  <SelectTrigger className="w-20 h-8"><SelectValue /></SelectTrigger>
+                  <SelectContent>{[5, 10, 20, 50].map(n => <SelectItem key={n} value={String(n)}>{n}</SelectItem>)}</SelectContent>
+                </Select>
+              </div>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <Button variant="outline" size="icon" className="h-8 w-8 rounded-lg" disabled={page <= 1} onClick={() => setPage(page - 1)}><ChevronLeft className="h-4 w-4" /></Button>
+              <span className="text-sm font-medium px-2">Page {page} of {totalPages}</span>
+              <Button variant="outline" size="icon" className="h-8 w-8 rounded-lg" disabled={page >= totalPages} onClick={() => setPage(page + 1)}><ChevronRight className="h-4 w-4" /></Button>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* ---------- Bulk assign dialog ---------- */}
       <Dialog open={bulkAssignOpen} onOpenChange={setBulkAssignOpen}>
         <DialogContent className="max-w-sm gap-0 rounded-2xl p-0">
           <DialogHeader className="p-4 pb-3">
-            <DialogTitle>
-              Assign {selectedTasks.length} task{selectedTasks.length === 1 ? "" : "s"}
-            </DialogTitle>
+            <DialogTitle>Assign {selectedTasks.length} task{selectedTasks.length === 1 ? "" : "s"}</DialogTitle>
             <DialogDescription>Choose who these tasks should be assigned to.</DialogDescription>
           </DialogHeader>
           <div className="border-t">
-            <AssigneeList
-              alwaysSearch
-              members={members ?? []}
-              value={null}
-              onPick={(id) => {
-                setBulkAssignOpen(false);
-                bulkUpdate.mutate({ assigned_to: id });
-              }}
-            />
+            <AssigneeList alwaysSearch members={members ?? []} value={null} onPick={(id) => { setBulkAssignOpen(false); bulkUpdate.mutate({ assigned_to: id }); }} />
           </div>
         </DialogContent>
       </Dialog>
@@ -1094,172 +793,52 @@ function TasksPage() {
       {/* ---------- Create / Edit dialog ---------- */}
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="max-h-[90vh] overflow-y-auto rounded-2xl">
-          <DialogHeader>
-            <DialogTitle>{editingId ? "Edit task" : "New task"}</DialogTitle>
-          </DialogHeader>
-
+          <DialogHeader><DialogTitle>{editingId ? "Edit task" : "New task"}</DialogTitle></DialogHeader>
           <div className="space-y-4 py-2">
-            <div className="space-y-1.5">
-              <Label>Title *</Label>
-              <Input
-                className="rounded-xl"
-                value={form.title}
-                onChange={(e) => setForm({ ...form, title: e.target.value })}
-              />
-            </div>
-
-            <div className="space-y-1.5">
-              <Label>Description</Label>
-              <Textarea
-                rows={3}
-                className="rounded-xl"
-                value={form.description ?? ""}
-                onChange={(e) => setForm({ ...form, description: e.target.value })}
-              />
-            </div>
-
+            <div className="space-y-1.5"><Label>Title *</Label><Input className="rounded-xl" value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} /></div>
+            <div className="space-y-1.5"><Label>Description</Label><Textarea rows={3} className="rounded-xl" value={form.description ?? ""} onChange={(e) => setForm({ ...form, description: e.target.value })} /></div>
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">
                 <Label>Status</Label>
-                <Select
-                  value={form.status}
-                  onValueChange={(v) => setForm({ ...form, status: v as TaskStatus })}
-                >
-                  <SelectTrigger className="rounded-xl">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="pending">Pending</SelectItem>
-                    <SelectItem value="in_progress">In Progress</SelectItem>
-                    <SelectItem value="completed">Completed</SelectItem>
-                    <SelectItem value="cancelled">Cancelled</SelectItem>
-                  </SelectContent>
+                <Select value={form.status} onValueChange={(v) => setForm({ ...form, status: v as TaskStatus })}>
+                  <SelectTrigger className="rounded-xl"><SelectValue /></SelectTrigger>
+                  <SelectContent><SelectItem value="pending">Pending</SelectItem><SelectItem value="in_progress">In Progress</SelectItem><SelectItem value="completed">Completed</SelectItem><SelectItem value="cancelled">Cancelled</SelectItem></SelectContent>
                 </Select>
               </div>
-
               <div className="space-y-1.5">
                 <Label>Priority</Label>
-                <Select
-                  value={form.priority}
-                  onValueChange={(v) => setForm({ ...form, priority: v as TaskPriority })}
-                >
-                  <SelectTrigger className="rounded-xl">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {(["low", "medium", "high", "urgent"] as TaskPriority[]).map((p) => (
-                      <SelectItem key={p} value={p} className="capitalize">
-                        {p}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
+                <Select value={form.priority} onValueChange={(v) => setForm({ ...form, priority: v as TaskPriority })}>
+                  <SelectTrigger className="rounded-xl"><SelectValue /></SelectTrigger>
+                  <SelectContent>{(["low", "medium", "high", "urgent"] as TaskPriority[]).map((p) => (<SelectItem key={p} value={p} className="capitalize">{p}</SelectItem>))}</SelectContent>
                 </Select>
               </div>
             </div>
-
-            <div className="space-y-1.5">
-              <Label>Due Date</Label>
-              <DatePicker
-                value={form.due_date ?? ""}
-                onChange={(val) => setForm({ ...form, due_date: val })}
-                placeholder="Select Due Date"
-              />
-            </div>
-
+            <div className="space-y-1.5"><Label>Due Date</Label><DatePicker value={form.due_date ?? ""} onChange={(val) => setForm({ ...form, due_date: val })} placeholder="Select Due Date" /></div>
             {canViewTeam && (
               <div className="space-y-1.5">
-                <Label className="flex items-center gap-1.5">
-                  <Users className="h-3.5 w-3.5" />
-                  Assign To
-                </Label>
-                <Select
-                  value={String(form.assigned_to ?? user?.id ?? "")}
-                  onValueChange={(v) => setForm({ ...form, assigned_to: Number(v) })}
-                  disabled={membersLoading}
-                >
-                  <SelectTrigger className="rounded-xl">
-                    <SelectValue placeholder={membersLoading ? "Loading team…" : "Select assignee"} />
-                  </SelectTrigger>
+                <Label className="flex items-center gap-1.5"><Users className="h-3.5 w-3.5" /> Assign To</Label>
+                <Select value={String(form.assigned_to ?? user?.id ?? "")} onValueChange={(v) => setForm({ ...form, assigned_to: Number(v) })} disabled={membersLoading}>
+                  <SelectTrigger className="rounded-xl"><SelectValue placeholder={membersLoading ? "Loading team…" : "Select assignee"} /></SelectTrigger>
                   <SelectContent>
-                    {(members && members.length > 0
-                      ? members
-                      : user
-                      ? [{ id: user.id, name: "Me (You)", email: "", role: "", is_self: true }]
-                      : []
-                    ).map((m) => (
-                      <SelectItem key={m.id} value={String(m.id)}>
-                        {m.name}
-                      </SelectItem>
-                    ))}
+                    {(members && members.length > 0 ? members : user ? [{ id: user.id, name: "Me (You)", email: "", role: "", is_self: true }] : []).map((m) => (<SelectItem key={m.id} value={String(m.id)}>{m.name}</SelectItem>))}
                   </SelectContent>
                 </Select>
-                {membersError && (
-                  <p className="text-xs text-destructive">
-                    Couldn't load team members. Check that GET /tasks/team-members is registered
-                    above /tasks/{"{task_id}"}.
-                  </p>
-                )}
-                {!membersLoading && !membersError && (members ?? []).length <= 1 && (
-                  <p className="text-xs text-muted-foreground">
-                    No team members found — users must be invited by you or have you as their manager.
-                  </p>
-                )}
               </div>
             )}
-
             <div className="space-y-2">
-              <Label className="flex items-center gap-1.5">
-                <Paperclip className="h-3.5 w-3.5" />
-                Attachments (max 10 MB each)
-              </Label>
-
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                className="rounded-xl"
-                onClick={() => document.getElementById("task-file-input")?.click()}
-              >
-                <Upload className="mr-2 h-4 w-4" />
-                Choose Files
-              </Button>
-              <input
-                id="task-file-input"
-                type="file"
-                multiple
-                accept="image/*,application/pdf,.doc,.docx,.xls,.xlsx,.txt,.csv"
-                className="hidden"
-                onChange={(e) => {
-                  handleFilesPicked(e.target.files);
-                  e.target.value = "";
-                }}
-              />
-
+              <Label className="flex items-center gap-1.5"><Paperclip className="h-3.5 w-3.5" /> Attachments (max 10 MB each)</Label>
+              <Button type="button" variant="outline" size="sm" className="rounded-xl" onClick={() => document.getElementById("task-file-input")?.click()}><Upload className="mr-2 h-4 w-4" /> Choose Files</Button>
+              <input id="task-file-input" type="file" multiple accept="image/*,application/pdf,.doc,.docx,.xls,.xlsx,.txt,.csv" className="hidden" onChange={(e) => { handleFilesPicked(e.target.files); e.target.value = ""; }} />
               {pickedFiles.length > 0 && (
                 <div className="mt-2 space-y-1.5">
                   {pickedFiles.map((file, i) => {
                     const isImage = file.type.startsWith("image/");
                     return (
-                      <div
-                        key={i}
-                        className="flex items-center gap-2 rounded-xl border p-2 text-xs"
-                      >
-                        {isImage ? (
-                          <ImageIcon className="h-3.5 w-3.5 shrink-0 text-blue-500" />
-                        ) : (
-                          <FileText className="h-3.5 w-3.5 shrink-0 text-orange-500" />
-                        )}
+                      <div key={i} className="flex items-center gap-2 rounded-xl border p-2 text-xs">
+                        {isImage ? <ImageIcon className="h-3.5 w-3.5 shrink-0 text-blue-500" /> : <FileText className="h-3.5 w-3.5 shrink-0 text-orange-500" />}
                         <span className="flex-1 truncate">{file.name}</span>
                         <span className="text-muted-foreground">{formatFileSize(file.size)}</span>
-                        <Button
-                          type="button"
-                          size="icon"
-                          variant="ghost"
-                          className="h-5 w-5"
-                          onClick={() => removeFile(i)}
-                        >
-                          <X className="h-3 w-3" />
-                        </Button>
+                        <Button type="button" size="icon" variant="ghost" className="h-5 w-5" onClick={() => removeFile(i)}><X className="h-3 w-3" /></Button>
                       </div>
                     );
                   })}
@@ -1267,16 +846,9 @@ function TasksPage() {
               )}
             </div>
           </div>
-
           <DialogFooter>
-            <Button variant="outline" className="rounded-xl" onClick={() => setOpen(false)}>
-              Cancel
-            </Button>
-            <Button
-              className="rounded-xl bg-blue-600 text-white hover:bg-blue-700"
-              onClick={() => save.mutate()}
-              disabled={save.isPending}
-            >
+            <Button variant="outline" className="rounded-xl" onClick={() => setOpen(false)}>Cancel</Button>
+            <Button className="rounded-xl bg-blue-600 text-white hover:bg-blue-700" onClick={() => save.mutate()} disabled={save.isPending}>
               {save.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               {editingId ? "Save changes" : "Create"}
             </Button>
@@ -1292,149 +864,47 @@ function TasksPage() {
               <DialogHeader>
                 <DialogTitle>{detail.title}</DialogTitle>
                 <DialogDescription className="flex flex-wrap items-center gap-2 pt-1">
-                  <span
-                    className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${statusStyles[detail.status]}`}
-                  >
-                    {statusLabel[detail.status]}
-                  </span>
-                  <span
-                    className={`rounded-full px-2.5 py-0.5 text-xs font-semibold capitalize ${priorityStyles[detail.priority]}`}
-                  >
-                    {detail.priority}
-                  </span>
+                  <StatusCell task={detail as Task} className="col-start-2 md:col-auto" onChange={(status) => updateField.mutate({ id: detail.id, patch: { status: status as TaskStatus } })} />
+                  <PriorityCell task={detail as Task} className="col-start-2 md:col-auto" onChange={(priority) => updateField.mutate({ id: detail.id, patch: { priority: priority as TaskPriority } })} />
                 </DialogDescription>
               </DialogHeader>
-
               <div className="space-y-4 text-sm">
-                <div className="rounded-xl border bg-muted/20 p-3">
-                  <p className="mb-1 text-xs text-muted-foreground">Description</p>
-                  <p className="whitespace-pre-wrap">{detail.description || "—"}</p>
-                </div>
-
+                <div className="rounded-xl border bg-muted/20 p-3"><p className="mb-1 text-xs text-muted-foreground">Description</p><p className="whitespace-pre-wrap">{detail.description || "—"}</p></div>
                 <div className="grid grid-cols-2 gap-3">
-                  <div className="rounded-xl border bg-muted/20 p-3">
-                    <p className="text-xs text-muted-foreground">Assigned to</p>
-                    <p className="font-medium">
-                      {detail.assigned_to_name || nameOf(detail.assigned_to)}
-                    </p>
-                  </div>
-                  <div className="rounded-xl border bg-muted/20 p-3">
-                    <p className="text-xs text-muted-foreground">Due date</p>
-                    <p className="font-medium">
-                      {detail.due_date ? new Date(detail.due_date).toLocaleDateString() : "—"}
-                    </p>
-                  </div>
-                  <div className="rounded-xl border bg-muted/20 p-3">
-                    <p className="text-xs text-muted-foreground">Created</p>
-                    <p className="font-medium">
-                      {new Date(detail.created_at).toLocaleDateString()}
-                    </p>
-                  </div>
+                  <div className="rounded-xl border bg-muted/20 p-3"><p className="text-xs text-muted-foreground">Assigned to</p><p className="font-medium">{detail.assigned_to_name || nameOf(detail.assigned_to)}</p></div>
+                  <div className="rounded-xl border bg-muted/20 p-3"><p className="text-xs text-muted-foreground">Due date</p><p className="font-medium">{detail.due_date ? new Date(detail.due_date).toLocaleDateString() : "—"}</p></div>
+                  <div className="rounded-xl border bg-muted/20 p-3"><p className="text-xs text-muted-foreground">Created</p><p className="font-medium">{new Date(detail.created_at).toLocaleDateString()}</p></div>
                 </div>
-
-                {/* Attachments */}
                 <div>
-                  <p className="mb-2 flex items-center gap-1.5 text-xs text-muted-foreground">
-                    <Paperclip className="h-3.5 w-3.5" />
-                    Attachments ({detailAttachments.length})
-                  </p>
-
+                  <p className="mb-2 flex items-center gap-1.5 text-xs text-muted-foreground"><Paperclip className="h-3.5 w-3.5" /> Attachments ({detailAttachments.length})</p>
                   <div className="mb-2 flex gap-2">
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      className="rounded-xl"
-                      onClick={() => document.getElementById("detail-file-input")?.click()}
-                      disabled={detailUploading}
-                    >
-                      {detailUploading ? (
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      ) : (
-                        <Upload className="mr-2 h-4 w-4" />
-                      )}
-                      Upload
+                    <Button type="button" variant="outline" size="sm" className="rounded-xl" onClick={() => document.getElementById("detail-file-input")?.click()} disabled={detailUploading}>
+                      {detailUploading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Upload className="mr-2 h-4 w-4" />} Upload
                     </Button>
-                    <input
-                      id="detail-file-input"
-                      type="file"
-                      multiple
-                      accept="image/*,application/pdf,.doc,.docx,.xls,.xlsx,.txt,.csv"
-                      className="hidden"
-                      onChange={(e) => {
-                        handleDetailUpload(detail.id, e.target.files);
-                        e.target.value = "";
-                      }}
-                    />
+                    <input id="detail-file-input" type="file" multiple accept="image/*,application/pdf,.doc,.docx,.xls,.xlsx,.txt,.csv" className="hidden" onChange={(e) => { handleDetailUpload(detail.id, e.target.files); e.target.value = ""; }} />
                   </div>
-
-                  {detailAttachments.length === 0 && (
-                    <p className="text-xs italic text-muted-foreground">No attachments yet.</p>
-                  )}
-
+                  {detailAttachments.length === 0 && <p className="text-xs italic text-muted-foreground">No attachments yet.</p>}
                   <div className="space-y-1.5">
-                    {detailAttachments.map((a) => {
+                    {detailAttachments.map((a: TaskAttachment) => {
                       const isImage = a.file_type?.startsWith("image/");
                       return (
-                        <div
-                          key={a.id}
-                          className="flex items-center gap-2 rounded-xl border p-2 text-xs"
-                        >
-                          {isImage ? (
-                            <ImageIcon className="h-3.5 w-3.5 shrink-0 text-blue-500" />
-                          ) : (
-                            <FileText className="h-3.5 w-3.5 shrink-0 text-orange-500" />
-                          )}
+                        <div key={a.id} className="flex items-center gap-2 rounded-xl border p-2 text-xs">
+                          {isImage ? <ImageIcon className="h-3.5 w-3.5 shrink-0 text-blue-500" /> : <FileText className="h-3.5 w-3.5 shrink-0 text-orange-500" />}
                           <span className="flex-1 truncate">{a.file_name}</span>
                           <span className="text-muted-foreground">{formatFileSize(a.file_size)}</span>
-                          <a
-                            href={a.file_url}
-                            target="_blank"
-                            rel="noreferrer"
-                            className="text-primary hover:underline"
-                          >
-                            <Download className="h-3.5 w-3.5" />
-                          </a>
-                          <Button
-                            type="button"
-                            size="icon"
-                            variant="ghost"
-                            className="h-5 w-5"
-                            onClick={() =>
-                              deleteAttachment.mutate({ taskId: detail.id, attachmentId: a.id })
-                            }
-                            disabled={deleteAttachment.isPending}
-                          >
-                            <X className="h-3 w-3 text-destructive" />
-                          </Button>
+                          <a href={a.file_url} target="_blank" rel="noreferrer" className="text-primary hover:underline"><Download className="h-3.5 w-3.5" /></a>
+                          <Button type="button" size="icon" variant="ghost" className="h-5 w-5" onClick={() => deleteAttachment.mutate({ taskId: detail.id, attachmentId: a.id })} disabled={deleteAttachment.isPending}><X className="h-3 w-3 text-destructive" /></Button>
                         </div>
                       );
                     })}
                   </div>
                 </div>
               </div>
-
               <DialogFooter>
-                <Button variant="outline" className="rounded-xl" onClick={() => setDetailId(null)}>
-                  Close
-                </Button>
-                <Button
-                  className="rounded-xl bg-blue-600 text-white hover:bg-blue-700"
-                  onClick={() => {
-                    setDetailId(null);
-                    openEdit(detail);
-                  }}
-                >
-                  Edit
-                </Button>
-                <Button
-                  variant="destructive"
-                  className="rounded-xl"
-                  onClick={() => del.mutate(detail.id)}
-                  disabled={del.isPending}
-                >
-                  {del.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                  Delete
+                <Button variant="outline" className="rounded-xl" onClick={() => setDetailId(null)}>Close</Button>
+                <Button className="rounded-xl bg-blue-600 text-white hover:bg-blue-700" onClick={() => { setDetailId(null); openEdit(detail); }}>Edit</Button>
+                <Button variant="destructive" className="rounded-xl" onClick={() => del.mutate(detail.id)} disabled={del.isPending}>
+                  {del.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />} Delete
                 </Button>
               </DialogFooter>
             </>

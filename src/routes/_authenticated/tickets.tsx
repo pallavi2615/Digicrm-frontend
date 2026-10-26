@@ -518,7 +518,7 @@ function TicketsPage() {
           </div>
 
           {filtersOpen && (
-            <div className="mb-4 overflow-hidden rounded-2xl border border-slate-200 bg-gradient-to-br from-slate-50 to-white shadow-sm dark:border-slate-800 dark:from-slate-900/80 dark:to-slate-950/80">
+            <div className="mb-4 overflow-hidden rounded-2xl border border-slate-200 bg-linear-to-br from-slate-50 to-white shadow-sm dark:border-slate-800 dark:from-slate-900/80 dark:to-slate-950/80">
               <div className="flex items-center justify-between gap-3 border-b border-slate-200/70 px-4 py-3.5 sm:px-5 dark:border-slate-800">
                 <div className="flex items-center gap-3">
                   <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-blue-100 text-blue-600 dark:bg-blue-500/15 dark:text-blue-300">

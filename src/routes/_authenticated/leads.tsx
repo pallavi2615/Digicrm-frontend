@@ -46,6 +46,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { Lead360Dialog } from "@/components/leads/Lead360Dialog";
+import { ExportLeadsDialog } from "@/components/leads/ExportLeadsDialog";
 
 const VALID_STATUSES = ["new", "attempt_to_call", "call_again", "contacted", "qualified", "proposal_sent", "won", "lost"];
 
@@ -176,6 +177,18 @@ interface LeadStats {
   lost: number;
 }
 
+interface LeadsPaginatedResponse {
+  items: Lead[];
+  meta: {
+    total_items: number;
+    total_pages: number;
+    current_page: number;
+    page_size: number;
+    has_next: boolean;
+    has_previous: boolean;
+  };
+}
+
 interface CreateLeadPayload {
   name: string;
   email: string;
@@ -225,8 +238,8 @@ interface ScheduleForm {
   meeting_url: string;
 }
 
-const PAGE_SIZE = 20;
-const FETCH_BATCH = 100;
+const PAGE_SIZE_OPTIONS = [10, 20, 50, 100];
+const DEFAULT_PAGE_SIZE = 10;
 const FETCH_MAX_BATCHES = 50;
 
 // ════════════════════════════════════════════════════════════
@@ -547,6 +560,7 @@ function LeadsPage() {
   const currentUserId = user?.id ? Number(user.id) : null;
 
   const [page, setPage] = useState(0);
+  const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE);
   const [search, setSearch] = useState("");
   const { status: urlStatus } = Route.useSearch();
   const [statusFilter, setStatusFilter] = useState(urlStatus ?? "all");
@@ -578,29 +592,36 @@ function LeadsPage() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [importResultOpen, setImportResultOpen] = useState(false);
   const [importResult, setImportResult] = useState<ImportLeadsResult | null>(null);
+  const [exportOpen, setExportOpen] = useState(false);
 
-  const { data: leads, isLoading, isFetching, error } = useQuery({
-    queryKey: ["leads", isSuperadmin, search, statusFilter, tenantFilter],
+  const { data: leadsData, isLoading, isFetching, error } = useQuery({
+    queryKey: ["leads", isSuperadmin, page, pageSize, search, statusFilter, priorityFilter, tenantFilter, dateFrom, dateTo],
     enabled: !authLoading,
     queryFn: async () => {
       const base = isSuperadmin ? "/api/v1/superadmin/leads" : "/api/v1/leads";
-      const all: Lead[] = [];
-      for (let i = 0; i < FETCH_MAX_BATCHES; i++) {
-        const params = new URLSearchParams();
-        if (search) params.append("search", search);
-        if (statusFilter !== "all") params.append("status", statusFilter);
-        if (isSuperadmin && tenantFilter !== "all") params.append("tenant_id", tenantFilter);
-        params.append("limit", String(FETCH_BATCH));
-        params.append("offset", String(i * FETCH_BATCH));
-        const batch = await apiFetch<LeadsResponse>(`${base}?${params.toString()}`);
-        const rows = Array.isArray(batch) ? batch : [];
-        all.push(...rows);
-        if (rows.length < FETCH_BATCH) break;
+      const params = new URLSearchParams();
+
+      params.append("page", String(page + 1));
+      params.append("size", String(pageSize));
+
+      if (search) params.append("search", search);
+      if (statusFilter !== "all") params.append("status", statusFilter);
+      if (priorityFilter !== "all") params.append("priority", priorityFilter);
+      if (dateFrom) params.append("from_date", dateFrom);
+      if (dateTo) params.append("to_date", dateTo);
+
+      if (isSuperadmin && tenantFilter !== "all") params.append("tenant_id", tenantFilter);
+
+      const res = await apiFetch<LeadsPaginatedResponse>(`${base}?${params.toString()}`);
+
+      // Backward compatibility fallback (Agar backend purana array bhej raha ho)
+      if (Array.isArray(res)) {
+        return { items: res, meta: { total_items: res.length, total_pages: 1, current_page: 1, page_size: 100, has_next: false, has_previous: false } };
       }
-      return all;
+
+      return res;
     },
   });
-
   const { data: stats } = useQuery({
     queryKey: ["leads", "stats"],
     queryFn: () => apiFetch<LeadStats>("/api/v1/leads/stats"),
@@ -1071,28 +1092,9 @@ function LeadsPage() {
     e.target.value = "";
   };
 
-  const items = leads ?? [];
-
-  const scopedItems = useMemo(() => {
-    if (isExecutive && currentUserId) {
-      return items.filter((l) => l.assigned_to === currentUserId);
-    }
-    return items;
-  }, [items, isExecutive, currentUserId]);
-
-  const filteredItems = useMemo(() => {
-    const start = dateFrom ? new Date(`${dateFrom}T00:00:00`) : null;
-    const end = dateTo ? new Date(`${dateTo}T23:59:59.999`) : null;
-    return scopedItems.filter((lead) => {
-      if (priorityFilter !== "all" && lead.priority !== priorityFilter) return false;
-      if (start || end) {
-        const created = new Date(lead.created_at);
-        if (start && created < start) return false;
-        if (end && created > end) return false;
-      }
-      return true;
-    });
-  }, [scopedItems, priorityFilter, dateFrom, dateTo]);
+  // ✅ Backend se aaya hua data
+  const items = leadsData?.items ?? [];
+  const meta = leadsData?.meta;
 
   const activeFilterCount =
     (statusFilter !== "all" ? 1 : 0) +
@@ -1108,15 +1110,12 @@ function LeadsPage() {
     setPage(0);
   };
 
-  const totalFiltered = filteredItems.length;
-  const totalPages = Math.max(1, Math.ceil(totalFiltered / PAGE_SIZE));
-  const safePage = Math.min(page, totalPages - 1);
-  const pagedItems = useMemo(
-    () => filteredItems.slice(safePage * PAGE_SIZE, safePage * PAGE_SIZE + PAGE_SIZE),
-    [filteredItems, safePage]
-  );
-  const rangeStart = totalFiltered === 0 ? 0 : safePage * PAGE_SIZE + 1;
-  const rangeEnd = Math.min(totalFiltered, (safePage + 1) * PAGE_SIZE);
+  // ✅ Backend Meta se Pagination Details
+  const totalFiltered = meta?.total_items ?? items.length;
+  const totalPages = meta?.total_pages ?? 1;
+  const safePage = meta?.current_page ? meta.current_page - 1 : 0;
+  const rangeStart = totalFiltered === 0 ? 0 : safePage * pageSize + 1;
+  const rangeEnd = Math.min(totalFiltered, (safePage + 1) * pageSize);
 
   const pageNumbers = useMemo(() => {
     const maxButtons = 5;
@@ -1130,15 +1129,15 @@ function LeadsPage() {
 
   useEffect(() => {
     setPage(0);
-  }, [search, statusFilter, priorityFilter, tenantFilter, dateFrom, dateTo]);
+  }, [search, statusFilter, priorityFilter, tenantFilter, dateFrom, dateTo, pageSize]);
 
   useEffect(() => {
     setSelectedIds(new Set());
-  }, [search, statusFilter, priorityFilter, tenantFilter, dateFrom, dateTo, page]);
+  }, [search, statusFilter, priorityFilter, tenantFilter, dateFrom, dateTo, page, pageSize]);
 
-  const selectedLeads = pagedItems.filter((l) => selectedIds.has(l.id));
+  const selectedLeads = items.filter((l) => selectedIds.has(l.id));
   const allSelected =
-    pagedItems.length > 0 && selectedLeads.length === pagedItems.length;
+    items.length > 0 && selectedLeads.length === items.length;
   const someSelected = selectedLeads.length > 0 && !allSelected;
   const allPrioritized =
     selectedLeads.length > 0 &&
@@ -1152,7 +1151,7 @@ function LeadsPage() {
       return next;
     });
   const toggleAll = () =>
-    setSelectedIds(allSelected ? new Set() : new Set(pagedItems.map((l) => l.id)));
+    setSelectedIds(allSelected ? new Set() : new Set(items.map((l) => l.id)));
 
   const total = isSuperadmin ? items.length : stats?.total ?? items.length;
   const colCount = (isSuperadmin ? 9 : isExecutive ? 7 : 8) + (canBulk ? 1 : 0);
@@ -1220,7 +1219,7 @@ function LeadsPage() {
             </>
           )}
 
-          <Button variant="outline" className="h-9 rounded-lg border-emerald-200 bg-emerald-50 text-emerald-700 shadow-sm hover:bg-emerald-100 hover:text-emerald-800 dark:border-emerald-500/50 dark:bg-emerald-500/15 dark:text-emerald-300 dark:hover:bg-emerald-500/25 dark:hover:text-emerald-200" onClick={() => exportLeads.mutate()} disabled={exportLeads.isPending}>
+          <Button variant="outline" onClick={() => setExportOpen(true)} className="h-9 rounded-lg border-emerald-200 bg-emerald-50 text-emerald-700 shadow-sm hover:bg-emerald-100 hover:text-emerald-800 dark:border-emerald-500/50 dark:bg-emerald-500/15 dark:text-emerald-300 dark:hover:bg-emerald-500/25 dark:hover:text-emerald-200" >
             {exportLeads.isPending ? (
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
             ) : (
@@ -1228,6 +1227,8 @@ function LeadsPage() {
             )}
             Export
           </Button>
+
+          <ExportLeadsDialog open={exportOpen} onOpenChange={setExportOpen} />
 
           {canWrite && (
             <Dialog open={createOpen} onOpenChange={setCreateOpen}>
@@ -1627,7 +1628,7 @@ function LeadsPage() {
                   </TableRow>
                 )}
 
-                {!showLoading && !error && pagedItems.length === 0 && (
+                {!showLoading && !error && items.length === 0 && (
                   <TableRow>
                     <TableCell colSpan={colCount} className="text-center py-16">
                       <Users className="h-9 w-10 mx-auto text-muted-foreground mb-2" />
@@ -1636,7 +1637,7 @@ function LeadsPage() {
                   </TableRow>
                 )}
 
-                {!showLoading && !error && pagedItems.map((lead) => {
+                {!showLoading && !error && items.map((lead) => {
                   const amount = getLeadAmount(lead);
                   const assigneeName = getUserDisplayName(lead.assigned_to, users);
                   const assigneeUser = lead.assigned_to
@@ -1875,64 +1876,76 @@ function LeadsPage() {
           </div>
 
           {totalFiltered > 0 && (
-            <div className="flex items-center justify-between flex-wrap gap-3 mt-4 text-sm">
-              <span className="text-muted-foreground">
-                Showing {rangeStart}–{rangeEnd} of {totalFiltered} leads
-              </span>
-              <div className="flex flex-wrap items-center gap-1.5">
+            <div className="mt-4 flex flex-wrap items-center justify-between gap-3 text-sm">
+              {/* LEFT: showing + rows per page */}
+              <div className="flex flex-wrap items-center gap-3 text-slate-500 dark:text-slate-400">
+                <span>
+                  Showing{" "}
+                  <span className="font-semibold text-slate-900 dark:text-white">
+                    {rangeStart}–{rangeEnd}
+                  </span>{" "}
+                  of{" "}
+                  <span className="font-semibold text-slate-900 dark:text-white">{totalFiltered}</span>{" "}
+                  leads
+                </span>
+
+                <span className="hidden h-4 w-px bg-slate-300 dark:bg-slate-700 sm:block" />
+
+                <div className="flex items-center gap-2">
+                  <span>Rows per page</span>
+                  <Select
+                    value={String(pageSize)}
+                    onValueChange={(v) => {
+                      setPageSize(Number(v));
+                      setPage(0);
+                    }}
+                  >
+                    <SelectTrigger className="h-9 w-24 rounded-xl border-slate-200 bg-white text-slate-700 shadow-sm dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {PAGE_SIZE_OPTIONS.map((n) => (
+                        <SelectItem key={n} value={String(n)}>{n}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              {/* RIGHT: Prev  1 2  Next */}
+              <div className="flex items-center gap-1.5">
                 <Button
                   variant="outline"
-                  size="icon"
-                  className="h-7 w-7 rounded-lg border-slate-200 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800"
-                  title="First page"
-                  disabled={safePage === 0}
-                  onClick={() => setPage(0)}
-                >
-                  <ChevronsLeft className="h-3.5 w-3.5" />
-                </Button>
-                <Button
-                  variant="outline"
-                  size="icon"
-                  className="h-7 w-7 rounded-lg border-slate-200 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800"
-                  title="Previous page"
+                  className="h-9 gap-1 rounded-xl border-slate-200 bg-white px-3 font-medium text-slate-700 shadow-none hover:bg-slate-50 disabled:text-slate-400 disabled:opacity-60 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800"
                   disabled={safePage === 0}
                   onClick={() => setPage(safePage - 1)}
                 >
-                  <ChevronLeft className="h-3.5 w-3.5" />
+                  <ChevronLeft className="h-4 w-4" />
+                  Prev
                 </Button>
+
                 {pageNumbers.map((p) => (
                   <Button
                     key={p}
-                    size="icon"
                     variant="outline"
-                    className={`h-7 w-7 rounded-lg ${p === safePage
-                      ? "border-blue-600 bg-blue-600 text-white hover:bg-blue-700 hover:text-white"
-                      : "border-slate-200 bg-white dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800"
+                    className={`h-9 w-9 rounded-xl p-0 font-medium shadow-none ${p === safePage
+                        ? "border-blue-600 bg-blue-600 text-white hover:bg-blue-700 hover:text-white"
+                        : "border-slate-200 bg-white text-slate-900 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800"
                       }`}
                     onClick={() => setPage(p)}
                   >
                     {p + 1}
                   </Button>
                 ))}
+
                 <Button
                   variant="outline"
-                  size="icon"
-                  className="h-7 w-7 rounded-lg border-slate-200 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800"
-                  title="Next page"
+                  className="h-9 gap-1 rounded-xl border-slate-200 bg-white px-3 font-medium text-slate-900 shadow-none hover:bg-slate-50 disabled:text-slate-400 disabled:opacity-60 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800"
                   disabled={safePage + 1 >= totalPages}
                   onClick={() => setPage(safePage + 1)}
                 >
-                  <ChevronRight className="h-3.5 w-3.5" />
-                </Button>
-                <Button
-                  variant="outline"
-                  size="icon"
-                  className="h-7 w-7 rounded-lg border-slate-200 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800"
-                  title="Last page"
-                  disabled={safePage + 1 >= totalPages}
-                  onClick={() => setPage(totalPages - 1)}
-                >
-                  <ChevronsRight className="h-3.5 w-3.5" />
+                  Next
+                  <ChevronRight className="h-4 w-4" />
                 </Button>
               </div>
             </div>
