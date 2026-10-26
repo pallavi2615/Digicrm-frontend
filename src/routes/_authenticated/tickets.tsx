@@ -1,4 +1,4 @@
-import { defineRoute, Link, useNavigate } from "@/lib/router-compat";
+import { defineRoute, Link } from "@/lib/router-compat";
 import { useMutation, useQuery, useQueryClient } from "@/lib/react-data-client";
 import { apiFetch, apiUpload } from "@/lib/api";
 import { useEffect, useMemo, useState } from "react";
@@ -11,6 +11,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import {
   Ticket as TicketIcon,
   Plus,
@@ -20,6 +21,7 @@ import {
   Clock,
   ChevronLeft,
   ChevronRight,
+  ChevronDown,
   Eye,
   Pencil,
   CalendarClock,
@@ -41,7 +43,7 @@ import {
   Trash2,
 } from "lucide-react";
 import { toast } from "sonner";
-import { Ticket360Drawer } from "@/routes/_authenticated/Ticket360Drawer";
+import { Ticket360Drawer } from "@/components/Ticket360Drawer";
 import { useAuth } from "@/hooks/use-auth";
 
 export const Route = defineRoute("/_authenticated/tickets")({
@@ -127,10 +129,11 @@ type SavedTicketFilters = {
   search: string;
   dateFrom: string;
   dateTo: string;
+  slaBreachedOnly: boolean;
 };
 
 const DEFAULT_TICKET_FILTERS: SavedTicketFilters = {
-  status: "all", priority: "all", urgency: "all", search: "", dateFrom: "", dateTo: "",
+  status: "all", priority: "all", urgency: "all", search: "", dateFrom: "", dateTo: "", slaBreachedOnly: false,
 };
 
 function readSavedTicketFilters(): SavedTicketFilters {
@@ -144,6 +147,10 @@ function readSavedTicketFilters(): SavedTicketFilters {
 }
 
 function TicketsPage() {
+  const { isAdmin, user } = useAuth();
+  const roleValue = String((user as any)?.role ?? (user as any)?.role_name ?? (user as any)?.user_role ?? "").toLowerCase();
+  const isManager = !isAdmin && (roleValue.includes("manager") || roleValue.includes("team_lead"));
+  const isExecutive = !isAdmin && !isManager;
   const [initialFilters] = useState<SavedTicketFilters>(readSavedTicketFilters);
   const [status, setStatus] = useState<string>(initialFilters.status);
   const [priority, setPriority] = useState<string>(initialFilters.priority);
@@ -152,28 +159,35 @@ function TicketsPage() {
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [dateFrom, setDateFrom] = useState(initialFilters.dateFrom);
   const [dateTo, setDateTo] = useState(initialFilters.dateTo);
+  const [slaBreachedOnly, setSlaBreachedOnly] = useState<boolean>(initialFilters.slaBreachedOnly);
   const [showNew, setShowNew] = useState(false);
   const [view360TicketId, setView360TicketId] = useState<number | null>(null);
   const [editingTicket, setEditingTicket] = useState<Ticket | null>(null);
   const [schedulingTicket, setSchedulingTicket] = useState<Ticket | null>(null);
   const [selectedTicketIds, setSelectedTicketIds] = useState<Set<number>>(new Set());
+  const [bulkActionsOpen, setBulkActionsOpen] = useState(false);
+  useEffect(() => {
+    if (selectedTicketIds.size === 0) setBulkActionsOpen(false);
+  }, [selectedTicketIds.size]);
+  const [bulkAction, setBulkAction] = useState<string>("status");
+  const [bulkActionValue, setBulkActionValue] = useState<string>("open");
+  const [bulkSaving, setBulkSaving] = useState(false);
  
   // Pagination State
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(20);
 
-  const navigate = useNavigate();
 
   // Preserve selected filters and search across page refreshes until cleared.
   useEffect(() => {
     try {
       window.localStorage.setItem(TICKET_FILTERS_STORAGE_KEY, JSON.stringify({
-        status, priority, urgency, search, dateFrom, dateTo,
+        status, priority, urgency, search, dateFrom, dateTo, slaBreachedOnly,
       }));
     } catch {
       // Browser storage may be unavailable; filters still work for this session.
     }
-  }, [status, priority, urgency, search, dateFrom, dateTo]);
+  }, [status, priority, urgency, search, dateFrom, dateTo, slaBreachedOnly]);
 
   // API Call with Pagination
   const { data: ticketsData, isLoading } = useQuery({
@@ -193,6 +207,120 @@ function TicketsPage() {
   });
 
   const queryClient = useQueryClient();
+
+  const { data: bulkAssignees = [], isLoading: bulkAssigneesLoading } = useQuery({
+    queryKey: ["ticket-assignees"],
+    queryFn: async () => {
+      const res = await apiFetch<any>("/api/v1/users/assignees");
+      const list = Array.isArray(res) ? res : res?.data ?? res?.items ?? res?.users ?? [];
+      return list as Array<{ id: number | string; full_name?: string | null; name?: string | null; email?: string | null }>;
+    },
+  });
+
+  const allowedBulkActions = [
+    ...(isAdmin ? [{ value: "delete", label: "Delete selected" }] : []),
+    ...(!isExecutive ? [{ value: "assign", label: "Assign to" }] : []),
+    { value: "status", label: "Change status" },
+    { value: "priority", label: "Change priority" },
+    { value: "escalate", label: "Escalate selected" },
+  ];
+
+  // Only admins are shown the delete action. The backend must also enforce admin permissions.
+  const deleteTicket = useMutation({
+    mutationFn: (ticket: Ticket) =>
+      apiFetch(`/api/v1/tickets/${ticket.id}`, { method: "DELETE" }),
+    onSuccess: (_result, ticket) => {
+      toast.success(`Ticket #${ticket.ticket_number} deleted`);
+      queryClient.invalidateQueries({ queryKey: ["tickets"] });
+      queryClient.invalidateQueries({ queryKey: ["tickets", "stats"] });
+      queryClient.invalidateQueries({ queryKey: ["ticket", String(ticket.id)] });
+      setSelectedTicketIds((current) => {
+        const next = new Set(current);
+        next.delete(ticket.id);
+        return next;
+      });
+    },
+    onError: (error: Error) => toast.error(error.message || "Failed to delete ticket"),
+  });
+
+  const handleDeleteTicket = (ticket: Ticket) => {
+    if (!isAdmin) return;
+    const confirmed = window.confirm(
+      `Delete ticket #${ticket.ticket_number} — "${ticket.subject}"? This action cannot be undone.`,
+    );
+    if (confirmed) deleteTicket.mutate(ticket);
+  };
+
+  const applyBulkChanges = async () => {
+    const ids = Array.from(selectedTicketIds);
+    if (!ids.length || bulkSaving) return;
+    if (!allowedBulkActions.some((action) => action.value === bulkAction)) {
+      toast.error("You do not have permission to perform this bulk action");
+      return;
+    }
+    if (bulkAction === "assign" && !bulkActionValue) {
+      toast.error("Choose a user to assign the selected tickets to");
+      return;
+    }
+    if (bulkAction === "delete") {
+      if (!isAdmin) {
+        toast.error("Only admins can delete tickets");
+        return;
+      }
+      if (!window.confirm(`Delete ${ids.length} selected ticket${ids.length === 1 ? "" : "s"}? This action cannot be undone.`)) return;
+    }
+
+    setBulkSaving(true);
+    let succeeded = 0;
+    const failed: number[] = [];
+    try {
+      for (const id of ids) {
+        try {
+          if (bulkAction === "delete") {
+            await apiFetch(`/api/v1/tickets/${id}`, { method: "DELETE" });
+          } else if (bulkAction === "status") {
+            await apiFetch(`/api/v1/tickets/${id}`, { method: "PUT", body: JSON.stringify({ status: bulkActionValue }) });
+          } else if (bulkAction === "priority") {
+            await apiFetch(`/api/v1/tickets/${id}`, { method: "PUT", body: JSON.stringify({ priority: bulkActionValue }) });
+          } else if (bulkAction === "assign") {
+            await apiFetch(`/api/v1/tickets/${id}`, { method: "PUT", body: JSON.stringify({ assigned_to: Number(bulkActionValue) }) });
+          } else if (bulkAction === "escalate") {
+            const current = await apiFetch<Ticket>(`/api/v1/tickets/${id}`);
+            await apiFetch(`/api/v1/tickets/${id}`, {
+              method: "PUT",
+              body: JSON.stringify({
+                custom_fields: {
+                  ...(current?.custom_fields ?? {}),
+                  escalated: true,
+                  escalation_requested: true,
+                  escalation_requested_at: new Date().toISOString(),
+                },
+              }),
+            });
+          }
+          succeeded += 1;
+        } catch {
+          failed.push(id);
+        }
+      }
+
+      if (succeeded > 0) {
+        const label = allowedBulkActions.find((action) => action.value === bulkAction)?.label ?? "Bulk changes";
+        toast.success(`${label}: ${succeeded} ticket${succeeded === 1 ? "" : "s"} updated`);
+      }
+      if (failed.length) toast.error(`Could not update ${failed.length} ticket${failed.length === 1 ? "" : "s"} (ID${failed.length === 1 ? "" : "s"}: ${failed.join(", ")})`);
+      if (succeeded > 0) {
+        setSelectedTicketIds(new Set());
+        await Promise.all([
+          queryClient.invalidateQueries({ queryKey: ["tickets"] }),
+          queryClient.invalidateQueries({ queryKey: ["tickets", "stats"] }),
+        ]);
+      }
+    } finally {
+      setBulkSaving(false);
+    }
+  };
+
   const togglePriorityMarker = useMutation({
     mutationFn: (ticket: Ticket) =>
       apiFetch(`/api/v1/tickets/${ticket.id}`, {
@@ -211,6 +339,22 @@ function TicketsPage() {
     onError: (error: Error) => toast.error(error.message),
   });
 
+  // Allow status and priority to be updated directly from the table.
+  const updateTicketField = useMutation({
+    mutationFn: ({ id, field, value }: { id: number; field: "status" | "priority"; value: string }) =>
+      apiFetch(`/api/v1/tickets/${id}`, {
+        method: "PUT",
+        body: JSON.stringify({ [field]: value }),
+      }),
+    onSuccess: (_result, variables) => {
+      toast.success(`Ticket ${variables.field} updated`);
+      queryClient.invalidateQueries({ queryKey: ["tickets"] });
+      queryClient.invalidateQueries({ queryKey: ["ticket", String(variables.id)] });
+      queryClient.invalidateQueries({ queryKey: ["tickets", "stats"] });
+    },
+    onError: (error: Error) => toast.error(error.message || "Failed to update ticket"),
+  });
+
   // Local Filters (Search, Status, etc.) on the current page data
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -220,6 +364,11 @@ function TicketsPage() {
       if (status !== "all" && t.status !== status) return false;
       if (priority !== "all" && t.priority !== priority) return false;
       if (urgency !== "all" && t.urgency !== urgency) return false;
+      if (slaBreachedOnly) {
+        const dueAt = t.sla_due_at ? new Date(t.sla_due_at).getTime() : Number.NaN;
+        const overdueWithoutResponse = !t.first_response_at && Number.isFinite(dueAt) && dueAt < Date.now();
+        if (!t.sla_breached && !overdueWithoutResponse) return false;
+      }
       if (start || end) {
         const created = new Date(t.created_at);
         if (start && created < start) return false;
@@ -233,14 +382,15 @@ function TicketsPage() {
         String(t.id).includes(q)
       );
     });
-  }, [tickets, status, priority, urgency, search, dateFrom, dateTo]);
+  }, [tickets, status, priority, urgency, search, dateFrom, dateTo, slaBreachedOnly]);
 
   const activeFilterCount =
     (status !== "all" ? 1 : 0) +
     (priority !== "all" ? 1 : 0) +
     (urgency !== "all" ? 1 : 0) +
     (dateFrom ? 1 : 0) +
-    (dateTo ? 1 : 0);
+    (dateTo ? 1 : 0) +
+    (slaBreachedOnly ? 1 : 0);
 
   const clearFilters = () => {
     setStatus("all");
@@ -249,6 +399,7 @@ function TicketsPage() {
     setDateFrom("");
     setDateTo("");
     setSearch("");
+    setSlaBreachedOnly(false);
     setPage(1);
     try {
       window.localStorage.removeItem(TICKET_FILTERS_STORAGE_KEY);
@@ -308,7 +459,18 @@ function TicketsPage() {
         <StatCard label="Pending" value={counts.pending} icon={Hourglass} tone="amber" onClick={() => setStatus("pending")} active={status === "pending"} />
         <StatCard label="Resolved" value={counts.resolved} icon={CheckCircle2} tone="green" onClick={() => setStatus("resolved")} active={status === "resolved"} />
         <StatCard label="Closed" value={counts.closed} icon={Archive} tone="violet" onClick={() => setStatus("closed")} active={status === "closed"} />
-        <StatCard label="SLA Breached" value={counts.sla_breached} icon={AlertTriangle} tone="danger" />
+        <StatCard
+          label="SLA Breached"
+          value={counts.sla_breached}
+          icon={AlertTriangle}
+          tone="danger"
+          onClick={() => {
+            setStatus("all");
+            setSlaBreachedOnly((current) => !current);
+            setPage(1);
+          }}
+          active={slaBreachedOnly}
+        />
       </div>
 
       <Card>
@@ -323,6 +485,24 @@ function TicketsPage() {
                 className="h-10 rounded-xl border-slate-200 bg-slate-50/60 pl-9 dark:border-slate-700 dark:bg-slate-900/60 dark:text-slate-100 dark:placeholder:text-slate-500"
               />
             </div>
+            <Button
+              type="button"
+              variant="outline"
+              className="h-10 rounded-xl border-slate-200 bg-white px-4 font-medium text-slate-800 shadow-sm hover:bg-slate-50 hover:text-slate-900 disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-700 dark:bg-slate-900/60 dark:text-slate-100 dark:hover:bg-slate-800"
+              disabled={selectedTicketIds.size === 0 || bulkSaving}
+              onClick={() => setBulkActionsOpen((open) => !open)}
+              aria-expanded={bulkActionsOpen}
+              aria-controls="ticket-bulk-actions"
+              title={selectedTicketIds.size === 0 ? "Select one or more tickets to enable actions" : "Bulk actions for selected tickets"}
+            >
+              Actions
+              {selectedTicketIds.size > 0 && (
+                <span className="ml-2 flex h-5 min-w-5 items-center justify-center rounded-full bg-blue-600 px-1.5 text-xs font-semibold text-white">
+                  {selectedTicketIds.size}
+                </span>
+              )}
+              <ChevronDown className={`ml-2 h-4 w-4 transition-transform ${bulkActionsOpen ? "rotate-180" : ""}`} />
+            </Button>
             <Button
               className="relative h-10 rounded-xl bg-blue-600 px-4 text-white shadow-sm hover:bg-blue-700 dark:border dark:border-blue-500 dark:bg-slate-900/80 dark:hover:bg-slate-800"
               onClick={() => setFiltersOpen((open) => !open)}
@@ -402,6 +582,51 @@ function TicketsPage() {
             </div>
           )}
 
+          {selectedTicketIds.size > 0 && (
+            <div className="mb-3 flex flex-col gap-3 rounded-xl border border-slate-200 bg-slate-50/80 p-3 shadow-sm dark:border-slate-800 dark:bg-slate-900/60 sm:flex-row sm:items-center sm:justify-between">
+              <div className="flex items-center gap-2 text-sm">
+                <span className="inline-flex h-7 min-w-7 items-center justify-center rounded-full bg-blue-100 px-2 text-xs font-semibold text-blue-700 dark:bg-blue-500/20 dark:text-blue-300">{selectedTicketIds.size}</span>
+                <span className="font-medium text-slate-800 dark:text-slate-100">ticket{selectedTicketIds.size === 1 ? "" : "s"} selected</span>
+                <Button type="button" variant="ghost" size="sm" className="h-7 px-2 text-xs text-muted-foreground" onClick={() => { setSelectedTicketIds(new Set()); setBulkActionsOpen(false); }}>Clear selection</Button>
+              </div>
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                <Select value={bulkAction} onValueChange={(value) => {
+                  setBulkAction(value);
+                  setBulkActionValue(value === "status" ? "open" : value === "priority" ? "medium" : "");
+                }}>
+                  <SelectTrigger className="h-9 w-full rounded-lg border-slate-200 bg-white dark:border-slate-700 dark:bg-slate-900 sm:w-48"><SelectValue placeholder="Choose action" /></SelectTrigger>
+                  <SelectContent>
+                    {allowedBulkActions.map((action) => <SelectItem key={action.value} value={action.value}>{action.label}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+                {bulkAction === "status" && (
+                  <Select value={bulkActionValue || "open"} onValueChange={setBulkActionValue}>
+                    <SelectTrigger className="h-9 w-full rounded-lg border-slate-200 bg-white dark:border-slate-700 dark:bg-slate-900 sm:w-36"><SelectValue placeholder="Choose status" /></SelectTrigger>
+                    <SelectContent><SelectItem value="open">Open</SelectItem><SelectItem value="pending">Pending</SelectItem><SelectItem value="resolved">Resolved</SelectItem><SelectItem value="closed">Closed</SelectItem></SelectContent>
+                  </Select>
+                )}
+                {bulkAction === "priority" && (
+                  <Select value={bulkActionValue || "medium"} onValueChange={setBulkActionValue}>
+                    <SelectTrigger className="h-9 w-full rounded-lg border-slate-200 bg-white dark:border-slate-700 dark:bg-slate-900 sm:w-36"><SelectValue placeholder="Choose priority" /></SelectTrigger>
+                    <SelectContent><SelectItem value="low">Low</SelectItem><SelectItem value="medium">Medium</SelectItem><SelectItem value="high">High</SelectItem><SelectItem value="urgent">Urgent</SelectItem></SelectContent>
+                  </Select>
+                )}
+                {bulkAction === "assign" && (
+                  <Select value={bulkActionValue || ""} onValueChange={setBulkActionValue}>
+                    <SelectTrigger className="h-9 w-full rounded-lg border-slate-200 bg-white dark:border-slate-700 dark:bg-slate-900 sm:w-52"><SelectValue placeholder={bulkAssigneesLoading ? "Loading users…" : "Assign to user"} /></SelectTrigger>
+                    <SelectContent>{bulkAssignees.map((person) => <SelectItem key={String(person.id)} value={String(person.id)}>{person.full_name || person.name || person.email || `User ${person.id}`}</SelectItem>)}</SelectContent>
+                  </Select>
+                )}
+                {bulkAction === "escalate" && <span className="text-xs text-muted-foreground sm:max-w-48">Flag selected tickets for manager review.</span>}
+                {bulkAction === "delete" && <span className="text-xs text-red-600 dark:text-red-300">Cannot be undone.</span>}
+                <Button type="button" className="h-9 rounded-lg bg-blue-600 px-4 text-white hover:bg-blue-700 dark:bg-blue-600 dark:hover:bg-blue-700" onClick={applyBulkChanges} disabled={bulkSaving || (bulkAction === "assign" && (!bulkActionValue || bulkAssigneesLoading))}>
+                  {bulkSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <CheckCircle2 className="mr-2 h-4 w-4" />}
+                  Save Changes
+                </Button>
+              </div>
+            </div>
+          )}
+
           <div className="rounded-md border overflow-x-auto">
             <Table>
               <TableHeader>
@@ -421,7 +646,7 @@ function TicketsPage() {
                   <TableHead>Requester</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead>Priority</TableHead>
-                  <TableHead>SLA &amp; Due Date</TableHead>
+                  <TableHead>SLA & Due Date</TableHead>
                   <TableHead>Actions</TableHead>
                 </TableRow>
               </TableHeader>
@@ -436,8 +661,7 @@ function TicketsPage() {
                   return (
                     <TableRow
                       key={t.id}
-                      className={`cursor-pointer hover:bg-muted/40 ${selectedTicketIds.has(t.id) ? "bg-primary/5" : ""}`}
-                      onClick={() => navigate({ to: "/tickets/$id", params: { id: String(t.id) } })}
+                      className={`${selectedTicketIds.has(t.id) ? "bg-primary/5" : ""}`}
                     >
                       <TableCell onClick={(e) => e.stopPropagation()}>
                         <input
@@ -454,11 +678,51 @@ function TicketsPage() {
                         <div>{t.requester_name ?? t.requester_email}</div>
                         {t.requester_name && <div className="text-xs text-muted-foreground">{t.requester_email}</div>}
                       </TableCell>
-                      <TableCell>
-                        <Badge variant="outline" className={STATUS_COLORS[t.status] ?? ""}>{t.status}</Badge>
+                      <TableCell onClick={(e) => e.stopPropagation()}>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <button
+                              type="button"
+                              aria-label={`Change status for ticket ${t.ticket_number}`}
+                              disabled={updateTicketField.isPending && updateTicketField.variables?.id === t.id}
+                              className={`inline-flex h-7 items-center rounded-full border px-2.5 text-xs font-medium capitalize transition-opacity hover:opacity-80 disabled:cursor-wait disabled:opacity-60 ${STATUS_COLORS[t.status] ?? "bg-muted text-foreground border-border"}`}
+                            >
+                              {t.status}
+                            </button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="start">
+                            {["open", "pending", "resolved", "closed"].map((value) => (
+                              <DropdownMenuItem key={value} disabled={value === t.status} onSelect={() => updateTicketField.mutate({ id: t.id, field: "status", value })}>
+                                <span className={`mr-2 inline-block h-2 w-2 rounded-full ${value === "open" ? "bg-blue-500" : value === "pending" ? "bg-yellow-500" : value === "resolved" ? "bg-green-500" : "bg-gray-500"}`} />
+                                <span className="capitalize">{value}</span>
+                                {value === t.status && <CheckCircle2 className="ml-2 h-3.5 w-3.5" />}
+                              </DropdownMenuItem>
+                            ))}
+                          </DropdownMenuContent>
+                        </DropdownMenu>
                       </TableCell>
-                      <TableCell>
-                        <span className={`text-xs px-2 py-1 rounded ${PRIORITY_COLORS[t.priority] ?? ""}`}>{t.priority}</span>
+                      <TableCell onClick={(e) => e.stopPropagation()}>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <button
+                              type="button"
+                              aria-label={`Change priority for ticket ${t.ticket_number}`}
+                              disabled={updateTicketField.isPending && updateTicketField.variables?.id === t.id}
+                              className={`inline-flex h-7 items-center rounded-full border border-transparent px-2.5 text-xs font-medium capitalize transition-opacity hover:opacity-80 disabled:cursor-wait disabled:opacity-60 ${PRIORITY_COLORS[t.priority] ?? "bg-muted text-foreground"}`}
+                            >
+                              {t.priority}
+                            </button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="start">
+                            {["low", "medium", "high", "urgent"].map((value) => (
+                              <DropdownMenuItem key={value} disabled={value === t.priority} onSelect={() => updateTicketField.mutate({ id: t.id, field: "priority", value })}>
+                                <span className={`mr-2 inline-block h-2 w-2 rounded-full ${value === "low" ? "bg-slate-500" : value === "medium" ? "bg-blue-500" : value === "high" ? "bg-orange-500" : "bg-red-500"}`} />
+                                <span className="capitalize">{value}</span>
+                                {value === t.priority && <CheckCircle2 className="ml-2 h-3.5 w-3.5" />}
+                              </DropdownMenuItem>
+                            ))}
+                          </DropdownMenuContent>
+                        </DropdownMenu>
                       </TableCell>
                       <TableCell>
                         <div className="space-y-1">
@@ -478,17 +742,58 @@ function TicketsPage() {
                           >
                             <Eye className="h-3.5 w-3.5" />
                           </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-7 w-7 rounded-lg bg-slate-50 text-slate-600 hover:bg-slate-100 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700"
-                            title="Edit ticket"
-                            aria-label="Edit ticket"
-                            onClick={() => setEditingTicket(t)}
-                          >
-                            <Pencil className="h-3.5 w-3.5" />
-                          </Button>
-                          <Button
+                          {isAdmin ? (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-7 w-7 rounded-lg bg-slate-50 text-slate-600 hover:bg-slate-100 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700"
+                              title="Edit ticket details (admin)"
+                              aria-label="Edit ticket details (admin)"
+                              onClick={() => setEditingTicket(t)}
+                            >
+                              <Pencil className="h-3.5 w-3.5" />
+                            </Button>
+                          ) : (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-7 w-7 rounded-lg bg-slate-50 text-slate-600 hover:bg-slate-100 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700"
+                              title="Open ticket details"
+                              aria-label="Open ticket details"
+                              onClick={() => { window.location.href = `/tickets/${t.id}`; }}
+                            >
+                              <Pencil className="h-3.5 w-3.5" />
+                            </Button>
+                          )}
+                          {isAdmin && (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-7 w-7 rounded-lg bg-violet-50 text-violet-600 hover:bg-violet-100 dark:bg-violet-500/20 dark:text-violet-300 dark:hover:bg-violet-500/30"
+                              title="Open ticket detail page"
+                              aria-label="Open ticket detail page"
+                              onClick={() => { window.location.href = `/tickets/${t.id}`; }}
+                            >
+                              <ExternalLink className="h-3.5 w-3.5" />
+                            </Button>
+                          )}
+                          {isAdmin && (
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="icon"
+                              className="h-7 w-7 shrink-0 rounded-lg bg-red-50 text-red-600 hover:bg-red-100 hover:text-red-700 dark:bg-red-500/20 dark:text-red-300 dark:hover:bg-red-500/30"
+                              title="Delete ticket (admin only)"
+                              aria-label={`Delete ticket ${t.ticket_number}`}
+                              disabled={deleteTicket.isPending && deleteTicket.variables?.id === t.id}
+                              onClick={() => handleDeleteTicket(t)}
+                            >
+                              {deleteTicket.isPending && deleteTicket.variables?.id === t.id
+                                ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                                : <Trash2 className="h-3.5 w-3.5" />}
+                            </Button>
+                          )}
+                          {/* <Button
                             variant="ghost"
                             size="icon"
                             className="h-7 w-7 rounded-lg bg-indigo-50 text-indigo-600 hover:bg-indigo-100 hover:text-indigo-700 dark:bg-indigo-500/20 dark:text-indigo-300 dark:hover:bg-indigo-500/30 dark:hover:text-indigo-200"
@@ -497,7 +802,7 @@ function TicketsPage() {
                             onClick={() => setSchedulingTicket(t)}
                           >
                             <CalendarClock className="h-3.5 w-3.5" />
-                          </Button>
+                          </Button> */}
                           <Button
                             variant="ghost"
                             size="icon"
@@ -551,7 +856,7 @@ function TicketsPage() {
           onClose={() => setView360TicketId(null)}
         />
       )}
-      {editingTicket && (
+      {isAdmin && editingTicket && (
         <EditTicketDialog
           ticket={editingTicket}
           onClose={() => setEditingTicket(null)}
@@ -565,19 +870,19 @@ function StatCard({ label, value, icon: Icon, tone = "blue", onClick, active }: 
   label: string; value: number; icon: React.ComponentType<{ className?: string }>; tone?: "blue" | "teal" | "amber" | "green" | "violet" | "danger"; onClick?: () => void; active?: boolean;
 }) {
   const tones = {
-    blue: { border: "border-blue-100", icon: "bg-blue-100 text-blue-600", active: "ring-blue-300 bg-blue-50/80" },
-    teal: { border: "border-teal-100", icon: "bg-teal-100 text-teal-600", active: "ring-teal-300 bg-teal-50/80" },
-    amber: { border: "border-amber-100", icon: "bg-amber-100 text-amber-600", active: "ring-amber-300 bg-amber-50/80" },
-    green: { border: "border-emerald-100", icon: "bg-emerald-100 text-emerald-600", active: "ring-emerald-300 bg-emerald-50/80" },
-    violet: { border: "border-violet-100", icon: "bg-violet-100 text-violet-600", active: "ring-violet-300 bg-violet-50/80" },
-    danger: { border: "border-rose-100", icon: "bg-rose-100 text-rose-600", active: "ring-rose-300 bg-rose-50/80" },
+    blue: { border: "border-blue-100 dark:border-blue-500/40", gradient: "dark:from-blue-950 dark:to-slate-950", icon: "bg-blue-100 text-blue-600 dark:bg-blue-500/25 dark:text-blue-300", active: "ring-blue-300 dark:ring-blue-400/60 bg-blue-50/80 dark:bg-blue-950/70" },
+    teal: { border: "border-teal-100 dark:border-emerald-500/40", gradient: "dark:from-emerald-950 dark:to-slate-950", icon: "bg-teal-100 text-teal-600 dark:bg-emerald-500 dark:text-white", active: "ring-teal-300 dark:ring-emerald-400/60 bg-teal-50/80 dark:bg-emerald-950/70" },
+    amber: { border: "border-amber-100 dark:border-orange-500/40", gradient: "dark:from-orange-950 dark:to-slate-950", icon: "bg-amber-100 text-amber-600 dark:bg-orange-500/30 dark:text-orange-300", active: "ring-amber-300 dark:ring-orange-400/60 bg-amber-50/80 dark:bg-orange-950/70" },
+    green: { border: "border-emerald-100 dark:border-emerald-500/40", gradient: "dark:from-emerald-950 dark:to-slate-950", icon: "bg-emerald-100 text-emerald-600 dark:bg-emerald-500/25 dark:text-emerald-300", active: "ring-emerald-300 dark:ring-emerald-400/60 bg-emerald-50/80 dark:bg-emerald-950/70" },
+    violet: { border: "border-violet-100 dark:border-violet-500/40", gradient: "dark:from-violet-950 dark:to-slate-950", icon: "bg-violet-100 text-violet-600 dark:bg-violet-500 dark:text-white", active: "ring-violet-300 dark:ring-violet-400/60 bg-violet-50/80 dark:bg-violet-950/70" },
+    danger: { border: "border-rose-100 dark:border-red-500/40", gradient: "dark:from-red-950 dark:to-slate-950", icon: "bg-rose-100 text-rose-600 dark:bg-red-500 dark:text-white", active: "ring-rose-300 dark:ring-red-400/60 bg-rose-50/80 dark:bg-red-950/70" },
   };
   const style = tones[tone];
   return (
-    <button type="button" onClick={onClick} className={`group flex min-w-0 items-center gap-3 rounded-2xl border ${style.border} bg-white p-3 text-left shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md dark:border-slate-800 dark:bg-slate-950/60 sm:p-4 ${active ? `ring-2 ${style.active}` : ""}`}>
-      <span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full ${style.icon} dark:bg-opacity-20`}><Icon className="h-5 w-5" /></span>
+    <button type="button" onClick={onClick} className={`group flex min-w-0 items-center gap-3 rounded-2xl border ${style.border} bg-white bg-gradient-to-br from-white to-white ${style.gradient} p-3 text-left shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md sm:p-4 ${active ? `ring-2 ${style.active}` : ""}`}>
+      <span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full ${style.icon}`}><Icon className="h-5 w-5" /></span>
       <span className="min-w-0">
-        <span className="block truncate text-[10px] font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 sm:text-xs">{label}</span>
+        <span className="block truncate text-[10px] font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-300 sm:text-xs">{label}</span>
         <span className="mt-0.5 block text-xl font-bold leading-tight text-slate-900 dark:text-white sm:text-2xl">{value}</span>
       </span>
     </button>
@@ -986,7 +1291,10 @@ function EditTicketDialog({ ticket, onClose }: { ticket: Ticket; onClose: () => 
 
   const attachmentHref = (url: string) => {
     if (/^https?:\/\//i.test(url)) return url;
-    const base = (import.meta as any).env?.VITE_API_BASE_URL ?? "";
+    
+    // Fallback to localhost:8000 if VITE_API_BASE_URL is not defined
+    const base = (import.meta as any).env?.VITE_API_BASE_URL ||"http://192.168.1.79:8000" || "http://localhost:8000";
+    
     return `${String(base).replace(/\/$/, "")}/${url.replace(/^\//, "")}`;
   };
 
