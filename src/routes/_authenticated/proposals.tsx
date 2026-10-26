@@ -333,9 +333,16 @@ function ProposalsPage() {
   });
 
   const { data: leads } = useQuery({
-    queryKey: ["proposal-leads"],
-    queryFn: () => apiFetch<Lead[]>("/api/v1/leads"),
-  });
+  queryKey: ["proposal-leads"],
+  queryFn: async (): Promise<Lead[]> => {
+    const res = await apiFetch<
+      Lead[] | { items?: Lead[]; data?: Lead[]; results?: Lead[] }
+    >("/api/v1/leads?page=1&size=100");
+
+    if (Array.isArray(res)) return res;          // old plain-array shape
+    return res.items ?? res.data ?? res.results ?? [];  // paginated shape
+  },
+});
 
   const relatedLeadOptions = useMemo(
     () =>

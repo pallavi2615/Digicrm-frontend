@@ -238,7 +238,8 @@ interface ScheduleForm {
   meeting_url: string;
 }
 
-const PAGE_SIZE = 20;
+const PAGE_SIZE_OPTIONS = [10, 20, 50, 100];
+const DEFAULT_PAGE_SIZE = 10;
 const FETCH_MAX_BATCHES = 50;
 
 // ════════════════════════════════════════════════════════════
@@ -559,6 +560,7 @@ function LeadsPage() {
   const currentUserId = user?.id ? Number(user.id) : null;
 
   const [page, setPage] = useState(0);
+  const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE);
   const [search, setSearch] = useState("");
   const { status: urlStatus } = Route.useSearch();
   const [statusFilter, setStatusFilter] = useState(urlStatus ?? "all");
@@ -592,31 +594,31 @@ function LeadsPage() {
   const [importResult, setImportResult] = useState<ImportLeadsResult | null>(null);
   const [exportOpen, setExportOpen] = useState(false);
 
-   const { data: leadsData, isLoading, isFetching, error } = useQuery({
-    queryKey: ["leads", isSuperadmin, page, search, statusFilter, priorityFilter, tenantFilter, dateFrom, dateTo],
+  const { data: leadsData, isLoading, isFetching, error } = useQuery({
+    queryKey: ["leads", isSuperadmin, page, pageSize, search, statusFilter, priorityFilter, tenantFilter, dateFrom, dateTo],
     enabled: !authLoading,
     queryFn: async () => {
       const base = isSuperadmin ? "/api/v1/superadmin/leads" : "/api/v1/leads";
       const params = new URLSearchParams();
-      
+
       params.append("page", String(page + 1));
-      params.append("size", String(PAGE_SIZE));
-      
+      params.append("size", String(pageSize));
+
       if (search) params.append("search", search);
       if (statusFilter !== "all") params.append("status", statusFilter);
       if (priorityFilter !== "all") params.append("priority", priorityFilter);
       if (dateFrom) params.append("from_date", dateFrom);
       if (dateTo) params.append("to_date", dateTo);
-      
+
       if (isSuperadmin && tenantFilter !== "all") params.append("tenant_id", tenantFilter);
 
       const res = await apiFetch<LeadsPaginatedResponse>(`${base}?${params.toString()}`);
-      
+
       // Backward compatibility fallback (Agar backend purana array bhej raha ho)
       if (Array.isArray(res)) {
         return { items: res, meta: { total_items: res.length, total_pages: 1, current_page: 1, page_size: 100, has_next: false, has_previous: false } };
       }
-      
+
       return res;
     },
   });
@@ -1090,7 +1092,7 @@ function LeadsPage() {
     e.target.value = "";
   };
 
-   // ✅ Backend se aaya hua data
+  // ✅ Backend se aaya hua data
   const items = leadsData?.items ?? [];
   const meta = leadsData?.meta;
 
@@ -1112,8 +1114,8 @@ function LeadsPage() {
   const totalFiltered = meta?.total_items ?? items.length;
   const totalPages = meta?.total_pages ?? 1;
   const safePage = meta?.current_page ? meta.current_page - 1 : 0;
-  const rangeStart = totalFiltered === 0 ? 0 : safePage * PAGE_SIZE + 1;
-  const rangeEnd = Math.min(totalFiltered, (safePage + 1) * PAGE_SIZE);
+  const rangeStart = totalFiltered === 0 ? 0 : safePage * pageSize + 1;
+  const rangeEnd = Math.min(totalFiltered, (safePage + 1) * pageSize);
 
   const pageNumbers = useMemo(() => {
     const maxButtons = 5;
@@ -1127,11 +1129,11 @@ function LeadsPage() {
 
   useEffect(() => {
     setPage(0);
-  }, [search, statusFilter, priorityFilter, tenantFilter, dateFrom, dateTo]);
+  }, [search, statusFilter, priorityFilter, tenantFilter, dateFrom, dateTo, pageSize]);
 
   useEffect(() => {
     setSelectedIds(new Set());
-  }, [search, statusFilter, priorityFilter, tenantFilter, dateFrom, dateTo, page]);
+  }, [search, statusFilter, priorityFilter, tenantFilter, dateFrom, dateTo, page, pageSize]);
 
   const selectedLeads = items.filter((l) => selectedIds.has(l.id));
   const allSelected =
@@ -1874,64 +1876,76 @@ function LeadsPage() {
           </div>
 
           {totalFiltered > 0 && (
-            <div className="flex items-center justify-between flex-wrap gap-3 mt-4 text-sm">
-              <span className="text-muted-foreground">
-                Showing {rangeStart}–{rangeEnd} of {totalFiltered} leads
-              </span>
-              <div className="flex flex-wrap items-center gap-1.5">
+            <div className="mt-4 flex flex-wrap items-center justify-between gap-3 text-sm">
+              {/* LEFT: showing + rows per page */}
+              <div className="flex flex-wrap items-center gap-3 text-slate-500 dark:text-slate-400">
+                <span>
+                  Showing{" "}
+                  <span className="font-semibold text-slate-900 dark:text-white">
+                    {rangeStart}–{rangeEnd}
+                  </span>{" "}
+                  of{" "}
+                  <span className="font-semibold text-slate-900 dark:text-white">{totalFiltered}</span>{" "}
+                  leads
+                </span>
+
+                <span className="hidden h-4 w-px bg-slate-300 dark:bg-slate-700 sm:block" />
+
+                <div className="flex items-center gap-2">
+                  <span>Rows per page</span>
+                  <Select
+                    value={String(pageSize)}
+                    onValueChange={(v) => {
+                      setPageSize(Number(v));
+                      setPage(0);
+                    }}
+                  >
+                    <SelectTrigger className="h-9 w-24 rounded-xl border-slate-200 bg-white text-slate-700 shadow-sm dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {PAGE_SIZE_OPTIONS.map((n) => (
+                        <SelectItem key={n} value={String(n)}>{n}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              {/* RIGHT: Prev  1 2  Next */}
+              <div className="flex items-center gap-1.5">
                 <Button
                   variant="outline"
-                  size="icon"
-                  className="h-7 w-7 rounded-lg border-slate-200 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800"
-                  title="First page"
-                  disabled={safePage === 0}
-                  onClick={() => setPage(0)}
-                >
-                  <ChevronsLeft className="h-3.5 w-3.5" />
-                </Button>
-                <Button
-                  variant="outline"
-                  size="icon"
-                  className="h-7 w-7 rounded-lg border-slate-200 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800"
-                  title="Previous page"
+                  className="h-9 gap-1 rounded-xl border-slate-200 bg-white px-3 font-medium text-slate-700 shadow-none hover:bg-slate-50 disabled:text-slate-400 disabled:opacity-60 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800"
                   disabled={safePage === 0}
                   onClick={() => setPage(safePage - 1)}
                 >
-                  <ChevronLeft className="h-3.5 w-3.5" />
+                  <ChevronLeft className="h-4 w-4" />
+                  Prev
                 </Button>
+
                 {pageNumbers.map((p) => (
                   <Button
                     key={p}
-                    size="icon"
                     variant="outline"
-                    className={`h-7 w-7 rounded-lg ${p === safePage
-                      ? "border-blue-600 bg-blue-600 text-white hover:bg-blue-700 hover:text-white"
-                      : "border-slate-200 bg-white dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800"
+                    className={`h-9 w-9 rounded-xl p-0 font-medium shadow-none ${p === safePage
+                        ? "border-blue-600 bg-blue-600 text-white hover:bg-blue-700 hover:text-white"
+                        : "border-slate-200 bg-white text-slate-900 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800"
                       }`}
                     onClick={() => setPage(p)}
                   >
                     {p + 1}
                   </Button>
                 ))}
+
                 <Button
                   variant="outline"
-                  size="icon"
-                  className="h-7 w-7 rounded-lg border-slate-200 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800"
-                  title="Next page"
+                  className="h-9 gap-1 rounded-xl border-slate-200 bg-white px-3 font-medium text-slate-900 shadow-none hover:bg-slate-50 disabled:text-slate-400 disabled:opacity-60 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800"
                   disabled={safePage + 1 >= totalPages}
                   onClick={() => setPage(safePage + 1)}
                 >
-                  <ChevronRight className="h-3.5 w-3.5" />
-                </Button>
-                <Button
-                  variant="outline"
-                  size="icon"
-                  className="h-7 w-7 rounded-lg border-slate-200 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800"
-                  title="Last page"
-                  disabled={safePage + 1 >= totalPages}
-                  onClick={() => setPage(totalPages - 1)}
-                >
-                  <ChevronsRight className="h-3.5 w-3.5" />
+                  Next
+                  <ChevronRight className="h-4 w-4" />
                 </Button>
               </div>
             </div>
