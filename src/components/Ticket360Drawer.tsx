@@ -62,7 +62,7 @@ export function Ticket360Drawer({
     // Keep the same backend base path used by the Tickets page for uploaded files.
     const base =
       (import.meta as any).env?.VITE_API_BASE_URL ||
-      "http://192.168.1.79:8000";
+      "http://192.168.0.105:8000";
     return `${String(base).replace(/\/$/, "")}/${url.replace(/^\//, "")}`;
   };
 

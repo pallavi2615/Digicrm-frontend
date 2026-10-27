@@ -41,6 +41,8 @@ import {
   Hourglass,
   Archive,
   Trash2,
+  User,
+  Users,
 } from "lucide-react";
 import { toast } from "sonner";
 import { Ticket360Drawer } from "@/components/Ticket360Drawer";
@@ -104,6 +106,8 @@ const STATUS_COLORS: Record<string, string> = {
   pending: "bg-yellow-500/10 text-yellow-500 border-yellow-500/20",
   resolved: "bg-green-500/10 text-green-500 border-green-500/20",
   closed: "bg-gray-500/10 text-gray-500 border-gray-500/20",
+  reopened: "bg-cyan-500/10 text-cyan-600 border-cyan-500/20",
+  reassigned: "bg-violet-500/10 text-violet-600 border-violet-500/20",
 };
 const PRIORITY_COLORS: Record<string, string> = {
   low: "bg-slate-500/10 text-slate-500",
@@ -151,6 +155,9 @@ function TicketsPage() {
   const roleValue = String((user as any)?.role ?? (user as any)?.role_name ?? (user as any)?.user_role ?? "").toLowerCase();
   const isManager = !isAdmin && (roleValue.includes("manager") || roleValue.includes("team_lead"));
   const isExecutive = !isAdmin && !isManager;
+  const canViewTeam = isAdmin || isManager;
+  const [ticketScope, setTicketScope] = useState<"my" | "team">("my");
+  const currentUserId = Number((user as any)?.id);
   const [initialFilters] = useState<SavedTicketFilters>(readSavedTicketFilters);
   const [status, setStatus] = useState<string>(initialFilters.status);
   const [priority, setPriority] = useState<string>(initialFilters.priority);
@@ -164,8 +171,17 @@ function TicketsPage() {
   const [view360TicketId, setView360TicketId] = useState<number | null>(null);
   const [editingTicket, setEditingTicket] = useState<Ticket | null>(null);
   const [schedulingTicket, setSchedulingTicket] = useState<Ticket | null>(null);
+  const [reassignTicket, setReassignTicket] = useState<Ticket | null>(null);
+  const [reassignTo, setReassignTo] = useState("");
+  const [reopenTicket, setReopenTicket] = useState<Ticket | null>(null);
+  const [reopenReason, setReopenReason] = useState("");
+  const [reopenPriority, setReopenPriority] = useState("medium");
+  const [reopenAssignedTo, setReopenAssignedTo] = useState("");
   const [selectedTicketIds, setSelectedTicketIds] = useState<Set<number>>(new Set());
   const [bulkActionsOpen, setBulkActionsOpen] = useState(false);
+  const [selectAllMenuOpen, setSelectAllMenuOpen] = useState(false);
+  const [showAllEntries, setShowAllEntries] = useState(false);
+  const [allEntriesSelectionPending, setAllEntriesSelectionPending] = useState(false);
   useEffect(() => {
     if (selectedTicketIds.size === 0) setBulkActionsOpen(false);
   }, [selectedTicketIds.size]);
@@ -189,10 +205,29 @@ function TicketsPage() {
     }
   }, [status, priority, urgency, search, dateFrom, dateTo, slaBreachedOnly]);
 
-  // API Call with Pagination
+  // Fetch all backend pages so My Tickets / My Team Tickets are filtered accurately.
   const { data: ticketsData, isLoading } = useQuery({
-    queryKey: ["tickets", page, pageSize],
-    queryFn: () => apiFetch<TicketsPaginatedResponse>(`/api/v1/tickets?page=${page}&size=${pageSize}`),
+    queryKey: ["tickets", "scope-aware-all"],
+    queryFn: async (): Promise<TicketsPaginatedResponse & { all_entries_loaded?: boolean }> => {
+      const first = await apiFetch<TicketsPaginatedResponse>("/api/v1/tickets?page=1&size=100");
+      const allItems = [...(first.items ?? [])];
+      for (let currentPage = 2; currentPage <= (first.meta?.total_pages ?? 1); currentPage += 1) {
+        const next = await apiFetch<TicketsPaginatedResponse>(`/api/v1/tickets?page=${currentPage}&size=100`);
+        allItems.push(...(next.items ?? []));
+      }
+      return {
+        items: allItems,
+        meta: {
+          total_items: first.meta?.total_items ?? allItems.length,
+          total_pages: 1,
+          current_page: 1,
+          page_size: allItems.length,
+          has_next: false,
+          has_previous: false,
+        },
+        all_entries_loaded: true,
+      };
+    },
     refetchInterval: 30000,
   });
 
@@ -360,7 +395,10 @@ function TicketsPage() {
     const q = search.trim().toLowerCase();
     const start = dateFrom ? new Date(`${dateFrom}T00:00:00`) : null;
     const end = dateTo ? new Date(`${dateTo}T23:59:59.999`) : null;
-    return tickets.filter((t) => {
+    const scopeTickets = canViewTeam
+      ? tickets.filter((t) => ticketScope === "my" ? Number(t.assigned_to) === currentUserId : Number(t.assigned_to) !== currentUserId)
+      : tickets.filter((t) => Number(t.assigned_to) === currentUserId);
+    return scopeTickets.filter((t) => {
       if (status !== "all" && t.status !== status) return false;
       if (priority !== "all" && t.priority !== priority) return false;
       if (urgency !== "all" && t.urgency !== urgency) return false;
@@ -382,7 +420,7 @@ function TicketsPage() {
         String(t.id).includes(q)
       );
     });
-  }, [tickets, status, priority, urgency, search, dateFrom, dateTo, slaBreachedOnly]);
+  }, [tickets, canViewTeam, ticketScope, currentUserId, status, priority, urgency, search, dateFrom, dateTo, slaBreachedOnly]);
 
   const activeFilterCount =
     (status !== "all" ? 1 : 0) +
@@ -420,6 +458,13 @@ function TicketsPage() {
   const totalPages = meta?.total_pages ?? 1;
   const totalItems = meta?.total_items ?? tickets.length;
   const visibleTicketIds = filtered.map((ticket) => ticket.id);
+  useEffect(() => {
+    if (!allEntriesSelectionPending || !showAllEntries || !ticketsData?.all_entries_loaded || isLoading) return;
+    setSelectedTicketIds(new Set(visibleTicketIds));
+    setAllEntriesSelectionPending(false);
+    setSelectAllMenuOpen(false);
+    toast.success(`Selected ${visibleTicketIds.length} matching ticket${visibleTicketIds.length === 1 ? "" : "s"}`);
+  }, [allEntriesSelectionPending, showAllEntries, ticketsData, isLoading, visibleTicketIds]);
   const allVisibleSelected = visibleTicketIds.length > 0 && visibleTicketIds.every((id) => selectedTicketIds.has(id));
   const someVisibleSelected = visibleTicketIds.some((id) => selectedTicketIds.has(id));
   const toggleTicketSelection = (id: number, checked: boolean) => {
@@ -437,6 +482,20 @@ function TicketsPage() {
       else visibleTicketIds.forEach((id) => next.add(id));
       return next;
     });
+    setSelectAllMenuOpen(false);
+  };
+
+  const chooseAllEntries = () => {
+    setSelectAllMenuOpen(false);
+    setPage(1);
+    setShowAllEntries(true);
+    setAllEntriesSelectionPending(true);
+  };
+
+  const chooseCurrentPage = () => {
+    setShowAllEntries(false);
+    setAllEntriesSelectionPending(false);
+    toggleAllVisibleTickets();
   };
 
   return (
@@ -452,6 +511,36 @@ function TicketsPage() {
           <Plus className="h-4 w-4 mr-2" /> New Ticket
         </Button>
       </div>
+
+      {canViewTeam && (
+        <div className="inline-flex rounded-2xl border bg-card p-1.5 shadow-sm dark:border-slate-700">
+          {([
+            { key: "my", label: "My Tickets" },
+            { key: "team", label: "My Team Tickets" },
+          ] as const).map(({ key, label }) => {
+            const active = ticketScope === key;
+            return (
+              <button
+                key={key}
+                type="button"
+                onClick={() => {
+                  setTicketScope(key);
+                  setSelectedTicketIds(new Set());
+                  setBulkActionsOpen(false);
+                  setSelectAllMenuOpen(false);
+                  setAllEntriesSelectionPending(false);
+                  setShowAllEntries(false);
+                  setPage(1);
+                }}
+                className={`flex items-center gap-2 rounded-xl px-5 py-2.5 text-sm font-medium transition-all ${active ? "bg-blue-600 text-white shadow-md" : "text-muted-foreground hover:bg-muted hover:text-foreground"}`}
+              >
+                {key === "my" ? <User className="h-4 w-4" /> : <Users className="h-4 w-4" />}
+                {label}
+              </button>
+            );
+          })}
+        </div>
+      )}
 
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-6">
         <StatCard label="All Tickets" value={counts.all} icon={Inbox} tone="blue" onClick={() => setStatus("all")} active={status === "all"} />
@@ -528,7 +617,7 @@ function TicketsPage() {
                       <label className="mb-1 block text-xs font-medium text-slate-500">New status</label>
                       <Select value={bulkActionValue || "open"} onValueChange={setBulkActionValue}>
                         <SelectTrigger className="h-9 rounded-lg"><SelectValue placeholder="Choose status" /></SelectTrigger>
-                        <SelectContent><SelectItem value="open">Open</SelectItem><SelectItem value="pending">Pending</SelectItem><SelectItem value="resolved">Resolved</SelectItem><SelectItem value="closed">Closed</SelectItem></SelectContent>
+                        <SelectContent><SelectItem value="open">Open</SelectItem><SelectItem value="pending">Pending</SelectItem><SelectItem value="resolved">Resolved</SelectItem><SelectItem value="closed">Closed</SelectItem><SelectItem value="reopened">Reopened</SelectItem><SelectItem value="reassigned">Reassigned</SelectItem></SelectContent>
                       </Select>
                     </div>
                   )}
@@ -606,6 +695,8 @@ function TicketsPage() {
                       <SelectItem value="pending">Pending</SelectItem>
                       <SelectItem value="resolved">Resolved</SelectItem>
                       <SelectItem value="closed">Closed</SelectItem>
+                      <SelectItem value="reopened">Reopened</SelectItem>
+                      <SelectItem value="reassigned">Reassigned</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -649,14 +740,49 @@ function TicketsPage() {
               <TableHeader>
                 <TableRow>
                   <TableHead className="w-10 px-3">
-                    <input
-                      type="checkbox"
-                      aria-label={allVisibleSelected ? "Deselect all visible tickets" : "Select all visible tickets"}
-                      checked={allVisibleSelected}
-                      ref={(element) => { if (element) element.indeterminate = someVisibleSelected && !allVisibleSelected; }}
-                      onChange={toggleAllVisibleTickets}
-                      className="h-4 w-4 rounded border-border accent-primary"
-                    />
+                    <div className="relative inline-flex">
+                      <input
+                        type="checkbox"
+                        aria-label="Select tickets"
+                        checked={allVisibleSelected}
+                        ref={(element) => { if (element) element.indeterminate = someVisibleSelected && !allVisibleSelected; }}
+                        onClick={(event) => { event.preventDefault(); setSelectAllMenuOpen((open) => !open); }}
+                        onChange={() => undefined}
+                        className="h-4 w-4 cursor-pointer rounded border-border accent-primary"
+                      />
+                      {selectAllMenuOpen && (
+                        <>
+                          <button type="button" aria-label="Close select all menu" className="fixed inset-0 z-40 cursor-default" onClick={() => setSelectAllMenuOpen(false)} />
+                          <div className="absolute left-0 top-6 z-50 w-64 overflow-hidden rounded-xl border border-slate-200 bg-white p-1.5 shadow-xl dark:border-slate-700 dark:bg-slate-950">
+                            <button type="button" onClick={chooseCurrentPage} className="w-full rounded-lg px-3 py-2.5 text-left text-sm hover:bg-slate-50 dark:hover:bg-slate-900">
+                              <span className="block font-medium text-slate-900 dark:text-slate-100">Select entries on this page</span>
+                              <span className="mt-0.5 block text-xs text-slate-500">Select only the currently displayed tickets</span>
+                            </button>
+                            <button type="button" onClick={chooseAllEntries} className="w-full rounded-lg px-3 py-2.5 text-left text-sm hover:bg-slate-50 dark:hover:bg-slate-900">
+                              <span className="block font-medium text-slate-900 dark:text-slate-100">Select all entries</span>
+                              <span className="mt-0.5 block text-xs text-slate-500">Load all tickets into one scrollable table</span>
+                            </button>
+                            <div className="mt-1 flex justify-end border-t border-slate-100 px-1 pt-2 dark:border-slate-800">
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  // Cancel the selection operation and clear every selected ticket.
+                                  setSelectAllMenuOpen(false);
+                                  setAllEntriesSelectionPending(false);
+                                  setSelectedTicketIds(new Set());
+                                  setBulkActionsOpen(false);
+                                  setShowAllEntries(false);
+                                  setPage(1);
+                                }}
+                                className="inline-flex h-8 items-center justify-center rounded-full border border-slate-200 bg-white px-4 text-xs font-semibold text-slate-700 shadow-sm transition-colors hover:bg-slate-100 hover:text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800 dark:focus-visible:ring-offset-slate-950"
+                              >
+                                Cancel
+                              </button>
+                            </div>
+                          </div>
+                        </>
+                      )}
+                    </div>
                   </TableHead>
                   <TableHead className="w-14 px-3">Id</TableHead>
                   <TableHead>Subject</TableHead>
@@ -664,14 +790,15 @@ function TicketsPage() {
                   <TableHead>Status</TableHead>
                   <TableHead>Priority</TableHead>
                   <TableHead>SLA & Due Date</TableHead>
+                  <TableHead>Assigned To</TableHead>
                   <TableHead>Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {isLoading ? (
-                  <TableRow><TableCell colSpan={8} className="py-10 text-center"><Loader2 className="h-5 w-5 animate-spin inline" /></TableCell></TableRow>
+                  <TableRow><TableCell colSpan={9} className="py-10 text-center"><Loader2 className="h-5 w-5 animate-spin inline" /></TableCell></TableRow>
                 ) : filtered.length === 0 ? (
-                  <TableRow><TableCell colSpan={8} className="py-10 text-center text-muted-foreground">No tickets yet — try the customer portal or create one.</TableCell></TableRow>
+                  <TableRow><TableCell colSpan={9} className="py-10 text-center text-muted-foreground">No tickets yet — try the customer portal or create one.</TableCell></TableRow>
                 ) : filtered.map((t) => {
                   const dueDateValue = typeof t.custom_fields?.due_date === "string" ? t.custom_fields.due_date : "";
                   const dueDateLabel = dueDateValue ? new Date(dueDateValue).toLocaleString() : "—";
@@ -715,6 +842,14 @@ function TicketsPage() {
                                 {value === t.status && <CheckCircle2 className="ml-2 h-3.5 w-3.5" />}
                               </DropdownMenuItem>
                             ))}
+                            <DropdownMenuItem onSelect={() => { setReassignTicket(t); setReassignTo(t.assigned_to == null ? "" : String(t.assigned_to)); }}>
+                              <Users className="mr-2 h-3.5 w-3.5" /> Reassign
+                            </DropdownMenuItem>
+                            {t.status === "closed" && (
+                              <DropdownMenuItem onSelect={() => { setReopenTicket(t); setReopenReason(""); setReopenPriority(t.priority || "medium"); setReopenAssignedTo(t.assigned_to == null ? "unassigned" : String(t.assigned_to)); }}>
+                                <RefreshCw className="mr-2 h-3.5 w-3.5" /> Reopen
+                              </DropdownMenuItem>
+                            )}
                           </DropdownMenuContent>
                         </DropdownMenu>
                       </TableCell>
@@ -746,6 +881,12 @@ function TicketsPage() {
                           <SlaCell dueAt={t.sla_due_at} breached={t.sla_breached} responded={!!t.first_response_at} />
                           <div className="text-xs text-muted-foreground whitespace-nowrap">Due: {dueDateLabel}</div>
                         </div>
+                      </TableCell>
+                      <TableCell className="text-sm">
+                        {(() => {
+                          const assigned = bulkAssignees.find((person) => String(person.id) === String(t.assigned_to));
+                          return assigned ? (assigned.full_name || assigned.name || assigned.email || `User ${assigned.id}`) : (t.assigned_to == null ? "Unassigned" : `User ${t.assigned_to}`);
+                        })()}
                       </TableCell>
                       <TableCell onClick={(e) => e.stopPropagation()}>
                         <div className="flex items-center justify-start gap-1.5">
@@ -844,22 +985,23 @@ function TicketsPage() {
           {!isLoading && tickets.length > 0 && (
             <div className="flex items-center justify-between mt-4 flex-wrap gap-3">
               <div className="flex items-center gap-3 text-sm text-muted-foreground flex-wrap">
-                <span>Showing <span className="font-semibold text-foreground">{(page - 1) * pageSize + 1}–{Math.min(page * pageSize, totalItems)}</span> of <span className="font-semibold text-foreground">{totalItems}</span> tickets</span>
+                <span>{showAllEntries ? <>Showing <span className="font-semibold text-foreground">{filtered.length}</span> matching entries in one list</> : (activeFilterCount > 0 || search.trim() ? <>Showing <span className="font-semibold text-foreground">{filtered.length}</span> of <span className="font-semibold text-foreground">{totalItems}</span> tickets</> : <>Showing <span className="font-semibold text-foreground">{filtered.length === 0 ? 0 : (page - 1) * pageSize + 1}–{Math.min((page - 1) * pageSize + filtered.length, totalItems)}</span> of <span className="font-semibold text-foreground">{totalItems}</span> tickets</>)}</span>
                 <span className="hidden sm:inline text-border">|</span>
-                <div className="flex items-center gap-2">
+                {!showAllEntries && <div className="flex items-center gap-2">
                   <span>Rows per page</span>
                   <Select value={String(pageSize)} onValueChange={(v) => { setPageSize(Number(v)); setPage(1); }}>
                     <SelectTrigger className="w-20 h-8"><SelectValue /></SelectTrigger>
                     <SelectContent>{[5, 10, 20, 50].map(n => <SelectItem key={n} value={String(n)}>{n}</SelectItem>)}</SelectContent>
                   </Select>
-                </div>
+                </div>}
+                {showAllEntries && <Button type="button" variant="outline" size="sm" className="h-8 rounded-lg" onClick={() => { setShowAllEntries(false); setAllEntriesSelectionPending(false); setPage(1); }}>Return to page</Button>}
               </div>
 
-              <div className="flex items-center gap-1.5">
+              {!showAllEntries && <div className="flex items-center gap-1.5">
                 <button type="button" className={navBtn} disabled={page <= 1} onClick={() => setPage(page - 1)}><ChevronLeft className="h-4 w-4" /></button>
                 <span className="text-sm font-medium px-2">Page {page} of {totalPages}</span>
                 <button type="button" className={navBtn} disabled={page >= totalPages} onClick={() => setPage(page + 1)}><ChevronRight className="h-4 w-4" /></button>
-              </div>
+              </div>}
             </div>
           )}
 
@@ -867,6 +1009,61 @@ function TicketsPage() {
       </Card>
 
       {showNew && <NewTicketDialog onClose={() => setShowNew(false)} />}
+      <Dialog open={!!reassignTicket} onOpenChange={(open) => { if (!open) setReassignTicket(null); }}>
+        <DialogContent className="max-w-md">
+          <DialogHeader><DialogTitle>Reassign Ticket {reassignTicket ? `#${reassignTicket.ticket_number}` : ""}</DialogTitle></DialogHeader>
+          <div className="space-y-2 py-2">
+            <Label>Assign to</Label>
+            <Select value={reassignTo || "unassigned"} onValueChange={(value) => setReassignTo(value === "unassigned" ? "" : value)}>
+              <SelectTrigger><SelectValue placeholder="Choose a team member" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="unassigned">Unassigned</SelectItem>
+                {bulkAssignees.map((person) => <SelectItem key={String(person.id)} value={String(person.id)}>{person.full_name || person.name || person.email || `User ${person.id}`}</SelectItem>)}
+              </SelectContent>
+            </Select>
+            <p className="text-xs text-muted-foreground">Choose a member from the team list, then save to update the ticket assignment.</p>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setReassignTicket(null)}>Cancel</Button>
+            <Button disabled={!reassignTicket || updateTicketField.isPending} onClick={async () => {
+              if (!reassignTicket) return;
+              try {
+                await apiFetch(`/api/v1/tickets/${reassignTicket.id}`, { method: "PUT", body: JSON.stringify({ assigned_to: reassignTo ? Number(reassignTo) : null }) });
+                toast.success("Ticket reassigned");
+                await queryClient.invalidateQueries({ queryKey: ["tickets"] });
+                setReassignTicket(null);
+              } catch (error) { toast.error(error instanceof Error ? error.message : "Could not reassign ticket"); }
+            }}>Save assignment</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      <Dialog open={!!reopenTicket} onOpenChange={(open) => { if (!open) setReopenTicket(null); }}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader><DialogTitle>Reopen Ticket {reopenTicket ? `#${reopenTicket.ticket_number}` : ""}</DialogTitle></DialogHeader>
+          <div className="space-y-4 py-2">
+            <div className="space-y-1.5"><Label>Subject</Label><Input value={reopenTicket?.subject ?? ""} readOnly /></div>
+            <div className="space-y-1.5"><Label>Requester Email</Label><Input value={reopenTicket?.requester_email ?? ""} readOnly /></div>
+            <div className="space-y-1.5"><Label>Requester Name</Label><Input value={reopenTicket?.requester_name ?? ""} readOnly /></div>
+            <div className="space-y-1.5"><Label>Priority</Label><Select value={reopenPriority} onValueChange={setReopenPriority}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="low">Low</SelectItem><SelectItem value="medium">Medium</SelectItem><SelectItem value="high">High</SelectItem><SelectItem value="urgent">Urgent</SelectItem></SelectContent></Select></div>
+            <div className="space-y-1.5"><Label>Assign to</Label><Select value={reopenAssignedTo || "unassigned"} onValueChange={setReopenAssignedTo}><SelectTrigger><SelectValue placeholder={bulkAssigneesLoading ? "Loading users…" : "Select assignee"} /></SelectTrigger><SelectContent><SelectItem value="unassigned">Unassigned</SelectItem>{bulkAssignees.map((person) => <SelectItem key={String(person.id)} value={String(person.id)}>{person.full_name || person.name || person.email || `User ${person.id}`}</SelectItem>)}</SelectContent></Select></div>
+            <div className="space-y-1.5"><Label>Reopen Description / Reason <span className="text-destructive">*</span></Label><Textarea rows={5} maxLength={5000} value={reopenReason} onChange={(event) => setReopenReason(event.target.value)} placeholder="Explain why this ticket needs to be reopened and add the latest details…" /></div>
+            <p className="text-xs text-muted-foreground">The ticket will be marked Reopened, and this reason will be added to its existing description.</p>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setReopenTicket(null)}>Cancel</Button>
+            <Button disabled={!reopenTicket || !reopenReason.trim()} onClick={async () => {
+              if (!reopenTicket || !reopenReason.trim()) return;
+              try {
+                const updatedDescription = `${reopenTicket.description?.trim() ? `${reopenTicket.description.trim()}\n\n` : ""}Reopened on ${new Date().toLocaleString()}:\n${reopenReason.trim()}`;
+                await apiFetch(`/api/v1/tickets/${reopenTicket.id}`, { method: "PUT", body: JSON.stringify({ status: "reopened", priority: reopenPriority, assigned_to: reopenAssignedTo && reopenAssignedTo !== "unassigned" ? Number(reopenAssignedTo) : null, description: updatedDescription }) });
+                toast.success("Ticket reopened");
+                await Promise.all([queryClient.invalidateQueries({ queryKey: ["tickets"] }), queryClient.invalidateQueries({ queryKey: ["tickets", "stats"] })]);
+                setReopenTicket(null);
+              } catch (error) { toast.error(error instanceof Error ? error.message : "Could not reopen ticket"); }
+            }}>Reopen Ticket</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
       {view360TicketId !== null && (
         <Ticket360Drawer
           ticketId={view360TicketId}
@@ -991,6 +1188,16 @@ function NewTicketDialog({ onClose }: { onClose: () => void }) {
       selectedFiles.forEach((file) => body.append("files", file));
 
       const created = await apiUpload<Ticket>("/api/v1/tickets", body);
+
+      // Some backend create handlers accept multipart ticket fields but do not persist
+      // assigned_to from the multipart payload. Explicitly apply the assignment after
+      // creation so the selected assignee is saved against the newly created ticket.
+      if (created?.id && form.assigned_to) {
+        await apiFetch(`/api/v1/tickets/${created.id}`, {
+          method: "PUT",
+          body: JSON.stringify({ assigned_to: Number(form.assigned_to) }),
+        });
+      }
 
       // These additional form values are stored in the ticket's supported custom_fields
       // field so they can be retained without requiring new database columns.
@@ -1310,7 +1517,7 @@ function EditTicketDialog({ ticket, onClose }: { ticket: Ticket; onClose: () => 
     if (/^https?:\/\//i.test(url)) return url;
     
     // Fallback to localhost:8000 if VITE_API_BASE_URL is not defined
-    const base = (import.meta as any).env?.VITE_API_BASE_URL ||"http://192.168.1.79:8000" || "http://localhost:8000";
+    const base = (import.meta as any).env?.VITE_API_BASE_URL ||"http://192.168.0.105:8000" || "http://localhost:8000";
     
     return `${String(base).replace(/\/$/, "")}/${url.replace(/^\//, "")}`;
   };
