@@ -32,6 +32,7 @@ type MyPermissions = {
   permissions: Record<string, string[]>;
   industries: string[]; // subscribed industry keys, e.g. ["real_estate"]
   nav: Record<string, boolean>;
+  requires_onboarding?: boolean;
 };
 // const INDUSTRY_HOME: Record<string, string> = {
 //   it_company: "/it",
@@ -39,10 +40,13 @@ type MyPermissions = {
 //   coaching: "/coaching",
 // };
 const DEFAULT_HOME = "/dashboard";
+const ONBOARDING_HOME = "/onboarding";
+// Set at login when the backend says this admin still has to launch the CRM.
+// onboarding.tsx removes it after POST /api/v1/onboarding/launch succeeds.
+const ONBOARDING_FLAG = "requires_onboarding";
 
-function resolveHome(p: MyPermissions | null): string {
-  if (!p || p.is_super_admin) return DEFAULT_HOME; // super admin ke paas sab industries hain
-  const active = p.industries?.[0];
+function resolveHome(_p: MyPermissions | null, requiresOnboarding = false): string {
+  if (requiresOnboarding) return ONBOARDING_HOME;
   // return (active && INDUSTRY_HOME[active]) || DEFAULT_HOME;
   return DEFAULT_HOME;
 }
@@ -50,7 +54,8 @@ function resolveHome(p: MyPermissions | null): string {
 function homeFromStorage(): string {
   try {
     const raw = localStorage.getItem("permissions");
-    return resolveHome(raw ? (JSON.parse(raw) as MyPermissions) : null);
+    const perms = raw ? (JSON.parse(raw) as MyPermissions) : null;
+    return resolveHome(perms, localStorage.getItem(ONBOARDING_FLAG) === "true");
   } catch {
     return DEFAULT_HOME;
   }
@@ -59,6 +64,7 @@ function homeFromStorage(): string {
 function clearPermissionsStorage() {
   localStorage.removeItem("permissions");
   localStorage.removeItem("active_industry");
+  localStorage.removeItem(ONBOARDING_FLAG);
 }
 
 // Login ke turant baad permissions + industries fetch karke store karo.
@@ -171,13 +177,18 @@ function AuthPage() {
     const access = saveSession(data);
     const perms = await loadPermissions(access);
 
+    // signin response carries requires_onboarding; permissions is the fallback.
+    // (Set AFTER loadPermissions, because a failed load clears the storage.)
+    const needsOnboarding = Boolean(data?.requires_onboarding ?? perms?.requires_onboarding);
+    if (needsOnboarding) localStorage.setItem(ONBOARDING_FLAG, "true");
+
     if (!perms) {
       toast.warning("Signed in, but could not load your workspace permissions.");
-    } else if (!perms.is_super_admin && perms.industries.length === 0) {
+    } else if (!needsOnboarding && !perms.is_super_admin && perms.industries.length === 0) {
       toast.warning("No active industry is assigned to your workspace yet.");
     }
 
-    navigate({ to: resolveHome(perms) as any });
+    navigate({ to: resolveHome(perms, needsOnboarding) as any });
   };
 
   // ---------------- LOGIN ----------------

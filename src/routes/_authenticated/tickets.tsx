@@ -579,7 +579,7 @@ function TicketsPage() {
           </div>
 
           {filtersOpen && (
-            <div className="mb-4 overflow-hidden rounded-2xl border border-slate-200 bg-gradient-to-br from-slate-50 to-white shadow-sm dark:border-slate-800 dark:from-slate-900/80 dark:to-slate-950/80">
+            <div className="mb-4 overflow-hidden rounded-2xl border border-slate-200 bg-linear-to-br from-slate-50 to-white shadow-sm dark:border-slate-800 dark:from-slate-900/80 dark:to-slate-950/80">
               <div className="flex items-center justify-between gap-3 border-b border-slate-200/70 px-4 py-3.5 sm:px-5 dark:border-slate-800">
                 <div className="flex items-center gap-3">
                   <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-blue-100 text-blue-600 dark:bg-blue-500/15 dark:text-blue-300">
@@ -896,7 +896,7 @@ function StatCard({ label, value, icon: Icon, tone = "blue", onClick, active }: 
   };
   const style = tones[tone];
   return (
-    <button type="button" onClick={onClick} className={`group flex min-w-0 items-center gap-3 rounded-2xl border ${style.border} bg-white bg-gradient-to-br from-white to-white ${style.gradient} p-3 text-left shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md sm:p-4 ${active ? `ring-2 ${style.active}` : ""}`}>
+    <button type="button" onClick={onClick} className={`group flex min-w-0 items-center gap-3 rounded-2xl border ${style.border} bg-white bg-linear-to-br from-white to-white ${style.gradient} p-3 text-left shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md sm:p-4 ${active ? `ring-2 ${style.active}` : ""}`}>
       <span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full ${style.icon}`}><Icon className="h-5 w-5" /></span>
       <span className="min-w-0">
         <span className="block truncate text-[10px] font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-300 sm:text-xs">{label}</span>
