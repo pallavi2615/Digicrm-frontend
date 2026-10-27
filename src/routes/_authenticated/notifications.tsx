@@ -42,7 +42,7 @@ interface NotificationList {
 }
 
 const PAGE_SIZE = 50;
-const POLL_MS = 30_000; // replaces Supabase realtime
+const POLL_MS = 3_000; // check for new backend notifications every 3 seconds
 
 type Tab = "all" | "unread";
 
@@ -88,6 +88,7 @@ function NotificationsPage() {
     queryKey: ["notifications", tab, page],
     placeholderData: keepPreviousData,
     refetchInterval: POLL_MS,
+    refetchIntervalInBackground: true,
     refetchOnWindowFocus: true,
     queryFn: () => {
       const p = new URLSearchParams({ skip: String(page * PAGE_SIZE), limit: String(PAGE_SIZE) });
