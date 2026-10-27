@@ -49,7 +49,6 @@ import {
 import { useEffect, useMemo, useState } from "react";
 
 import { useRealtimeTable } from "@/lib/use-realtime-table";
-import { NotificationsButton } from "@/components/notifications-button";
 
 import {
   DndContext,
@@ -946,7 +945,7 @@ function Dashboard() {
             </kbd>
           </Button>
 
-          <NotificationsButton />
+          
 
           {editing && hidden.length > 0 && (
             <Button

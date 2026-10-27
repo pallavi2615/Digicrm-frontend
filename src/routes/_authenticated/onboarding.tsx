@@ -1,146 +1,237 @@
 import { defineRoute, useNavigate } from "@/lib/router-compat";
-import { useState } from "react";
-import { useMutation, useQueryClient } from "@/lib/react-data-client";
-import { supabase } from "@/integrations/supabase/client";
-import { useAllPacks } from "@/lib/pack-config";
+import { useEffect, useMemo, useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, ArrowRight, Check, Loader2, Plus, Trash2 } from "lucide-react";
+import { ArrowLeft, ArrowRight, Check, Loader2, Rocket } from "lucide-react";
 import { toast } from "sonner";
-import type { IndustryPack } from "@/lib/industry-packs";
-import { claimIndustry } from "@/lib/industry-access";
-import { setActiveIndustry } from "@/lib/active-industry";
+import { apiFetch } from "@/lib/api";
+import { notifyAuthChanged } from "@/hooks/use-auth";
 
-export const Route = defineRoute("/_authenticated/onboarding")({
+export const Route = defineRoute("/onboarding")({
   head: () => ({
     meta: [
       { title: "Set up your workspace | DigiCRM AI" },
-      { name: "description", content: "Create your workspace, pick the industry pack you sell with, and set your own pipeline stages and assistant prompts." },
-      { property: "og:title", content: "Set up your workspace | DigiCRM AI" },
-      { property: "og:description", content: "Create a workspace, pick a pack, set your stages and prompts." },
-      { property: "og:type", content: "website" },
-      { name: "twitter:card", content: "summary" },
+      { name: "description", content: "Configure your workspace and launch your CRM." },
       { name: "robots", content: "noindex" },
     ],
   }),
   component: Onboarding,
 });
 
-const slugify = (s: string) =>
-  s.toLowerCase().trim().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 40);
+// POST /api/v1/onboarding/launch
+type LaunchPayload = {
+  workspace_name: string;
+  industry: string;
+  business_type: string;
+  currency: string;
+  timezone: string;
+  language: string;
+  modules: string[];
+};
+type LaunchResponse = { status: string; message: string; redirect_url: string };
+
+const ONBOARDING_FLAG = "requires_onboarding";
+
+// `value` should match Industry.key in your database.
+const INDUSTRIES = [
+  { value: "real_estate", label: "Real Estate" },
+  { value: "it_company", label: "IT / Software Company" },
+  { value: "coaching", label: "Coaching & Education" },
+  { value: "healthcare", label: "Healthcare / Clinic" },
+  { value: "finance", label: "Finance & Loans" },
+  { value: "retail", label: "Retail & E-commerce" },
+  { value: "hospitality", label: "Hospitality & Restaurants" },
+  { value: "fitness", label: "Fitness & Wellness" },
+  { value: "other", label: "Other" },
+];
+
+const BUSINESS_TYPES = ["B2B", "B2C", "B2B2C", "Services / Agency", "Marketplace", "Other"];
+const CURRENCIES = ["INR", "USD", "EUR", "GBP", "AED", "SGD", "AUD", "CAD", "JPY"];
+const LANGUAGES = ["English", "Hindi", "Spanish", "French", "German", "Arabic"];
+const TIMEZONES = [
+  "Asia/Kolkata", "UTC", "America/New_York", "America/Chicago", "America/Los_Angeles",
+  "Europe/London", "Europe/Berlin", "Asia/Dubai", "Asia/Singapore", "Asia/Tokyo", "Australia/Sydney",
+];
+
+const MODULES = [
+  { key: "leads", label: "Leads", desc: "Capture and score leads" },
+  { key: "contacts", label: "Contacts", desc: "People you work with" },
+  { key: "companies", label: "Companies", desc: "Organisation records" },
+  { key: "pipeline", label: "Pipeline", desc: "Deal stages and board" },
+  { key: "follow_ups", label: "Follow-ups", desc: "Reminders and next steps" },
+  { key: "tasks", label: "Tasks", desc: "Team to-dos" },
+  { key: "calendar", label: "Calendar", desc: "Schedule and events" },
+  { key: "meetings", label: "Meetings", desc: "Meeting notes and links" },
+  { key: "tickets", label: "Tickets", desc: "Support requests" },
+  { key: "proposals", label: "Proposals", desc: "Quotes and proposals" },
+  { key: "automation", label: "Automation", desc: "Rules and workflows" },
+  { key: "reports", label: "Reports", desc: "Dashboards and analytics" },
+  { key: "ai_assistant", label: "AI Assistant", desc: "Built-in assistant" },
+  { key: "affiliates", label: "Affiliates", desc: "Partner tracking" },
+];
+const DEFAULT_MODULES = ["leads", "contacts", "companies", "pipeline", "follow_ups", "tasks", "reports"];
+
+const STEPS = ["Your business", "Region & language", "Modules"];
+
+function detectTimezone(): string {
+  try {
+    const tz = Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC";
+    return tz === "Asia/Calcutta" ? "Asia/Kolkata" : tz;
+  } catch {
+    return "UTC";
+  }
+}
+
+function storedTenantName(): string {
+  try {
+    const t = JSON.parse(localStorage.getItem("tenant") || "null");
+    const n: string = t?.name ?? "";
+    return n && n !== "Platform Admin" ? n : "";
+  } catch {
+    return "";
+  }
+}
+
+function NativeSelect({
+  id, value, onChange, children,
+}: {
+  id?: string;
+  value: string;
+  onChange: (v: string) => void;
+  children: React.ReactNode;
+}) {
+  return (
+    <select
+      id={id}
+      value={value}
+      onChange={(e) => onChange(e.target.value)}
+      className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+    >
+      {children}
+    </select>
+  );
+}
 
 function Onboarding() {
   const navigate = useNavigate();
-  const qc = useQueryClient();
-  const { packs, isLoading } = useAllPacks();
+
+  const detectedTz = useMemo(detectTimezone, []);
+  const timezoneOptions = useMemo(
+    () => (TIMEZONES.includes(detectedTz) ? TIMEZONES : [detectedTz, ...TIMEZONES]),
+    [detectedTz],
+  );
 
   const [step, setStep] = useState(0);
-  const [name, setName] = useState("");
-  const [slug, setSlug] = useState("");
-  const [tagline, setTagline] = useState("");
-  const [packKey, setPackKey] = useState("");
-  const [stages, setStages] = useState<string[]>([]);
-  const [agents, setAgents] = useState<IndustryPack["agents"]>([]);
+  const [submitting, setSubmitting] = useState(false);
 
-  const pack = packs.find((p) => `${p.group}::${p.slug}` === packKey);
+  const [workspaceName, setWorkspaceName] = useState(storedTenantName);
+  const [industry, setIndustry] = useState("");
+  const [businessType, setBusinessType] = useState("");
+  const [currency, setCurrency] = useState(detectedTz === "Asia/Kolkata" ? "INR" : "USD");
+  const [timezone, setTimezone] = useState(detectedTz);
+  const [language, setLanguage] = useState("English");
+  const [modules, setModules] = useState<string[]>(DEFAULT_MODULES);
 
-  const choosePack = (p: IndustryPack) => {
-    setPackKey(`${p.group}::${p.slug}`);
-    setStages([...p.stages]);
-    setAgents(p.agents.map((a) => ({ ...a })));
+  // Must be signed in to be here
+  useEffect(() => {
+    if (!localStorage.getItem("access_token")) {
+      navigate({ to: "/auth" as any, replace: true } as any);
+    }
+  }, [navigate]);
+
+  const toggleModule = (key: string) =>
+    setModules((xs) => (xs.includes(key) ? xs.filter((x) => x !== key) : [...xs, key]));
+
+  const canNext =
+    step === 0
+      ? workspaceName.trim().length >= 2 && !!industry && !!businessType
+      : step === 1
+        ? !!currency && !!timezone && !!language
+        : modules.length > 0;
+
+  // After a successful launch: refresh cached session data, then go to the CRM
+  const finishOnboarding = async (redirectUrl?: string) => {
+    const token = localStorage.getItem("access_token") ?? "";
+
+    try {
+      const p = await apiFetch("/api/v1/auth/my-permissions", {
+        method: "GET",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      localStorage.setItem("permissions", JSON.stringify(p));
+      const active = p?.is_super_admin ? null : p?.industries?.[0] ?? null;
+      if (active) localStorage.setItem("active_industry", active);
+      else localStorage.removeItem("active_industry");
+    } catch (err) {
+      console.error("Failed to refresh permissions:", err);
+    }
+
+    try {
+      const t = JSON.parse(localStorage.getItem("tenant") || "null");
+      if (t) localStorage.setItem("tenant", JSON.stringify({ ...t, name: workspaceName.trim() }));
+    } catch {
+      /* ignore */
+    }
+
+    localStorage.removeItem(ONBOARDING_FLAG);
+    notifyAuthChanged();
+
+    const to = redirectUrl && redirectUrl.startsWith("/") ? redirectUrl : "/dashboard";
+    navigate({ to: to as any, replace: true } as any);
   };
 
-  const finish = useMutation({
-    mutationFn: async () => {
-      if (!pack) throw new Error("Choose the pack you work with first.");
-      const { data: auth } = await supabase.auth.getUser();
-      const uid = auth.user?.id;
-      if (!uid) throw new Error("Please sign in again.");
+  const launch = async () => {
+    setSubmitting(true);
+    try {
+      const body: LaunchPayload = {
+        workspace_name: workspaceName.trim(),
+        industry,
+        business_type: businessType,
+        currency,
+        timezone,
+        language,
+        modules,
+      };
+      const res = (await apiFetch("/api/v1/onboarding/launch", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${localStorage.getItem("access_token") ?? ""}` },
+        body: JSON.stringify(body),
+      })) as LaunchResponse;
 
-      const finalSlug = slug || slugify(name) || `workspace-${Date.now()}`;
-      const { data: tenant, error: tErr } = await supabase
-        .from("tenants")
-        .insert({
-          name: name.trim(),
-          slug: finalSlug,
-          tagline: tagline.trim() || null,
-          plan: "lite",
-          industry: pack.groupName,
-          owner_id: uid,
-          is_active: true,
-        } as never)
-        .select("id, slug")
-        .single();
-      if (tErr) throw tErr;
-
-      await supabase.from("tenant_members").insert({
-        tenant_id: tenant.id,
-        user_id: uid,
-        member_role: "owner",
-      } as never);
-
-      const { error: pErr } = await supabase.from("pack_configs").insert({
-        tenant_id: tenant.id,
-        group_slug: pack.group,
-        pack_slug: pack.slug,
-        name: pack.name,
-        tagline: pack.tagline,
-        description: pack.tagline,
-        gradient: pack.groupGradient,
-        record_label: pack.recordLabel,
-        record_label_plural: pack.recordLabelPlural,
-        party_label: pack.partyLabel,
-        value_label: pack.valueLabel,
-        stages,
-        won_stages: pack.wonStages,
-        lost_stages: pack.lostStages,
-        fields: pack.fields,
-        agents,
-        kpi_labels: pack.kpiLabels,
-        verifications: pack.verifications,
-        is_custom: false,
-        created_by: uid,
-      } as never);
-      if (pErr) throw pErr;
-
-      // The pack they picked also sets the industry they may work in. The
-      // database refuses this quietly if an administrator already set one.
-      try {
-        await claimIndustry(uid, pack.group);
-        setActiveIndustry(pack.group);
-      } catch {
-        /* an industry is already assigned to this account */
+      toast.success(res?.message || "Your CRM is ready");
+      await finishOnboarding(res?.redirect_url);
+    } catch (error) {
+      const msg = error instanceof Error ? error.message : "Could not launch your CRM";
+      // Already launched earlier (e.g. double click / second device) -> just continue
+      if (/already onboarded/i.test(msg)) {
+        await finishOnboarding();
+        return;
       }
+      toast.error(msg);
+    } finally {
+      setSubmitting(false);
+    }
+  };
 
-      if (typeof window !== "undefined") localStorage.setItem("digicrm.active_tenant", tenant.id);
-      return tenant;
-    },
-    onSuccess: async () => {
-      await qc.invalidateQueries({ queryKey: ["my-tenants"] });
-      await qc.invalidateQueries({ queryKey: ["pack-configs"] });
-      toast.success("Your workspace is ready");
-      navigate({ to: "/tenant-dashboard" });
-    },
-    onError: (e: Error) => toast.error(e.message),
-  });
-
-  const canNext = step === 0 ? name.trim().length > 1 : step === 1 ? !!pack : stages.length > 0;
+  const industryLabel = INDUSTRIES.find((i) => i.value === industry)?.label ?? "—";
 
   return (
     <div className="mx-auto max-w-3xl space-y-6 p-4 md:p-6">
       <div>
         <h1 className="text-2xl font-bold">Set up your workspace</h1>
-        <p className="text-sm text-muted-foreground">Three short steps. You can change everything later in Pack Settings.</p>
+        <p className="text-sm text-muted-foreground">
+          Three short steps, then we launch your CRM. You can change these later in settings.
+        </p>
       </div>
 
-      <div className="flex items-center gap-2 text-xs">
-        {["Your business", "Your pack", "Stages & prompts"].map((label, i) => (
+      <div className="flex flex-wrap items-center gap-2 text-xs">
+        {STEPS.map((label, i) => (
           <Badge key={label} variant={i === step ? "default" : i < step ? "secondary" : "outline"} className="gap-1">
-            {i < step && <Check className="h-3 w-3" />}{i + 1}. {label}
+            {i < step && <Check className="h-3 w-3" />}
+            {i + 1}. {label}
           </Badge>
         ))}
       </div>
@@ -149,20 +240,35 @@ function Onboarding() {
         <Card>
           <CardHeader className="pb-3">
             <CardTitle className="text-base">Tell us about your business</CardTitle>
-            <CardDescription>This name appears across your workspace and your client portal.</CardDescription>
+            <CardDescription>This name appears across your workspace.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-3">
             <div className="space-y-1.5">
-              <Label>Business name</Label>
-              <Input value={name} onChange={(e) => { setName(e.target.value); if (!slug) setSlug(""); }} placeholder="Apex Finserv" />
+              <Label htmlFor="ws-name">Workspace name</Label>
+              <Input
+                id="ws-name"
+                value={workspaceName}
+                onChange={(e) => setWorkspaceName(e.target.value)}
+                placeholder="Apex Finserv"
+              />
             </div>
             <div className="space-y-1.5">
-              <Label>Web address</Label>
-              <Input value={slug || slugify(name)} onChange={(e) => setSlug(slugify(e.target.value))} placeholder="apex-finserv" />
+              <Label htmlFor="industry">Industry</Label>
+              <NativeSelect id="industry" value={industry} onChange={setIndustry}>
+                <option value="" disabled>Select your industry</option>
+                {INDUSTRIES.map((i) => (
+                  <option key={i.value} value={i.value}>{i.label}</option>
+                ))}
+              </NativeSelect>
             </div>
             <div className="space-y-1.5">
-              <Label>One-line description</Label>
-              <Input value={tagline} onChange={(e) => setTagline(e.target.value)} placeholder="Loans made simple for small businesses" />
+              <Label htmlFor="btype">Business type</Label>
+              <NativeSelect id="btype" value={businessType} onChange={setBusinessType}>
+                <option value="" disabled>Select business type</option>
+                {BUSINESS_TYPES.map((b) => (
+                  <option key={b} value={b}>{b}</option>
+                ))}
+              </NativeSelect>
             </div>
           </CardContent>
         </Card>
@@ -171,88 +277,105 @@ function Onboarding() {
       {step === 1 && (
         <Card>
           <CardHeader className="pb-3">
-            <CardTitle className="text-base">What do you sell?</CardTitle>
-            <CardDescription>Pick the closest match — it sets your stages, fields and assistant wording.</CardDescription>
+            <CardTitle className="text-base">Region & language</CardTitle>
+            <CardDescription>Used for amounts, dates and reminders.</CardDescription>
           </CardHeader>
-          <CardContent>
-            {isLoading ? (
-              <div className="p-8 text-center"><Loader2 className="h-5 w-5 animate-spin inline" /></div>
-            ) : (
-              <div className="grid gap-2 sm:grid-cols-2 max-h-[26rem] overflow-y-auto">
-                {packs.map((p) => {
-                  const k = `${p.group}::${p.slug}`;
-                  return (
-                    <button
-                      key={k}
-                      onClick={() => choosePack(p)}
-                      className={`rounded-lg border p-3 text-left transition-colors ${packKey === k ? "border-primary bg-primary/5" : "hover:bg-muted/50"}`}
-                    >
-                      <p className="text-sm font-medium">{p.name}</p>
-                      <p className="text-xs text-muted-foreground">{p.groupName} · {p.stages.length} stages</p>
-                    </button>
-                  );
-                })}
-              </div>
-            )}
+          <CardContent className="grid gap-3 sm:grid-cols-3">
+            <div className="space-y-1.5">
+              <Label htmlFor="currency">Currency</Label>
+              <NativeSelect id="currency" value={currency} onChange={setCurrency}>
+                {CURRENCIES.map((c) => <option key={c} value={c}>{c}</option>)}
+              </NativeSelect>
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="tz">Timezone</Label>
+              <NativeSelect id="tz" value={timezone} onChange={setTimezone}>
+                {timezoneOptions.map((t) => <option key={t} value={t}>{t}</option>)}
+              </NativeSelect>
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="lang">Language</Label>
+              <NativeSelect id="lang" value={language} onChange={setLanguage}>
+                {LANGUAGES.map((l) => <option key={l} value={l}>{l}</option>)}
+              </NativeSelect>
+            </div>
           </CardContent>
         </Card>
       )}
 
-      {step === 2 && pack && (
+      {step === 2 && (
         <div className="space-y-4">
           <Card>
             <CardHeader className="pb-3">
-              <CardTitle className="text-base">Your stages</CardTitle>
-              <CardDescription>Rename them to whatever your team says out loud.</CardDescription>
+              <CardTitle className="text-base">Choose your modules</CardTitle>
+              <CardDescription>Pick what your team needs. You can turn more on later.</CardDescription>
             </CardHeader>
-            <CardContent className="space-y-2">
-              {stages.map((s, i) => (
-                <div key={i} className="flex gap-2">
-                  <Input value={s} onChange={(e) => setStages((xs) => xs.map((x, idx) => (idx === i ? e.target.value : x)))} />
-                  <Button variant="ghost" size="icon" onClick={() => setStages((xs) => xs.filter((_, idx) => idx !== i))}>
-                    <Trash2 className="h-4 w-4 text-destructive" />
-                  </Button>
-                </div>
-              ))}
-              <Button variant="outline" size="sm" onClick={() => setStages((xs) => [...xs, "New stage"])}>
-                <Plus className="mr-2 h-4 w-4" />Add stage
-              </Button>
+            <CardContent>
+              <div className="grid gap-2 sm:grid-cols-2">
+                {MODULES.map((m) => {
+                  const on = modules.includes(m.key);
+                  return (
+                    <button
+                      type="button"
+                      key={m.key}
+                      onClick={() => toggleModule(m.key)}
+                      aria-pressed={on}
+                      className={`flex items-start gap-3 rounded-lg border p-3 text-left transition-colors ${
+                        on ? "border-primary bg-primary/5" : "hover:bg-muted/50"
+                      }`}
+                    >
+                      <span
+                        className={`mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded border ${
+                          on ? "border-primary bg-primary text-primary-foreground" : "border-input"
+                        }`}
+                      >
+                        {on && <Check className="h-3 w-3" />}
+                      </span>
+                      <span>
+                        <span className="block text-sm font-medium">{m.label}</span>
+                        <span className="block text-xs text-muted-foreground">{m.desc}</span>
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+              {modules.length === 0 && (
+                <p className="mt-3 text-xs text-destructive">Select at least one module.</p>
+              )}
             </CardContent>
           </Card>
 
           <Card>
             <CardHeader className="pb-3">
-              <CardTitle className="text-base">Assistant prompts</CardTitle>
-              <CardDescription>What the assistant should do for you, in your words.</CardDescription>
+              <CardTitle className="text-base">Summary</CardTitle>
             </CardHeader>
-            <CardContent className="space-y-3">
-              {agents.map((a, i) => (
-                <div key={a.key} className="space-y-1.5 rounded-lg border p-3">
-                  <Label className="text-xs">{a.label}</Label>
-                  <Textarea
-                    rows={3}
-                    value={a.instruction}
-                    onChange={(e) => setAgents((xs) => xs.map((x, idx) => (idx === i ? { ...x, instruction: e.target.value } : x)))}
-                  />
-                </div>
-              ))}
+            <CardContent className="grid gap-1 text-sm sm:grid-cols-2">
+              <div><span className="text-muted-foreground">Workspace: </span>{workspaceName.trim()}</div>
+              <div><span className="text-muted-foreground">Industry: </span>{industryLabel}</div>
+              <div><span className="text-muted-foreground">Business type: </span>{businessType}</div>
+              <div><span className="text-muted-foreground">Currency: </span>{currency}</div>
+              <div><span className="text-muted-foreground">Timezone: </span>{timezone}</div>
+              <div><span className="text-muted-foreground">Language: </span>{language}</div>
+              <div className="sm:col-span-2">
+                <span className="text-muted-foreground">Modules: </span>{modules.length} selected
+              </div>
             </CardContent>
           </Card>
         </div>
       )}
 
       <div className="flex items-center justify-between">
-        <Button variant="ghost" disabled={step === 0} onClick={() => setStep((s) => s - 1)}>
+        <Button variant="ghost" disabled={step === 0 || submitting} onClick={() => setStep((s) => s - 1)}>
           <ArrowLeft className="mr-2 h-4 w-4" />Back
         </Button>
-        {step < 2 ? (
+        {step < STEPS.length - 1 ? (
           <Button disabled={!canNext} onClick={() => setStep((s) => s + 1)}>
             Continue<ArrowRight className="ml-2 h-4 w-4" />
           </Button>
         ) : (
-          <Button disabled={!canNext || finish.isPending} onClick={() => finish.mutate()}>
-            {finish.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Check className="mr-2 h-4 w-4" />}
-            Create my workspace
+          <Button disabled={!canNext || submitting} onClick={launch}>
+            {submitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Rocket className="mr-2 h-4 w-4" />}
+            Launch CRM
           </Button>
         )}
       </div>
